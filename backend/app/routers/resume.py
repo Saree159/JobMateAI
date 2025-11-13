@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict
 import PyPDF2
+import docx
 import io
 import re
 
@@ -12,21 +13,50 @@ from .users import get_current_user
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 
-def parse_resume_pdf(file_content: bytes) -> Dict[str, any]:
+def extract_text_from_resume(file_content: bytes, filename: str) -> str:
     """
-    Parse PDF resume and extract relevant information
+    Extract text from resume file (PDF or DOCX)
+    Returns: extracted text as string
+    """
+    try:
+        if filename.endswith('.pdf'):
+            # Parse PDF
+            pdf_file = io.BytesIO(file_content)
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text() + "\n"
+            return text
+        
+        elif filename.endswith('.docx'):
+            # Parse DOCX
+            doc_file = io.BytesIO(file_content)
+            doc = docx.Document(doc_file)
+            text = ""
+            for paragraph in doc.paragraphs:
+                text += paragraph.text + "\n"
+            # Also extract text from tables
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        text += cell.text + " "
+                    text += "\n"
+            return text
+        
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format")
+    
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
+
+
+def parse_resume_text(text: str) -> Dict[str, any]:
+def parse_resume_text(text: str) -> Dict[str, any]:
+    """
+    Parse resume text and extract relevant information
     Returns: dict with extracted fields
     """
     try:
-        # Read PDF
-        pdf_file = io.BytesIO(file_content)
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        
-        # Extract all text
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        
         # Initialize result
         result = {
             "full_name": None,
@@ -95,7 +125,7 @@ def parse_resume_pdf(file_content: bytes) -> Dict[str, any]:
         return result
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse resume: {str(e)}")
 
 
 @router.post("/upload")
@@ -105,19 +135,22 @@ async def upload_resume(
     db: Session = Depends(get_db)
 ):
     """
-    Upload and parse resume PDF, return extracted information
+    Upload and parse resume (PDF or DOCX), return extracted information
     """
     # Validate file type
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    if not (file.filename.endswith('.pdf') or file.filename.endswith('.docx')):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
     
     # Validate file size (max 5MB)
     content = await file.read()
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File size must be less than 5MB")
     
-    # Parse resume
-    parsed_data = parse_resume_pdf(content)
+    # Extract text from file
+    text = extract_text_from_resume(content, file.filename)
+    
+    # Parse resume text
+    parsed_data = parse_resume_text(text)
     
     # Update user profile with parsed data (if fields are empty)
     user = db.query(User).filter(User.id == current_user.id).first()

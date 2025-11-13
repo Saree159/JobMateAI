@@ -65,8 +65,8 @@ export default function Profile() {
     if (!file) return;
     
     // Validate file type
-    if (!file.name.endsWith('.pdf')) {
-      toast.error('Please upload a PDF file');
+    if (!file.name.endsWith('.pdf') && !file.name.endsWith('.docx')) {
+      toast.error('Please upload a PDF or DOCX file');
       return;
     }
     
@@ -261,13 +261,13 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
-              Upload your resume (PDF) to automatically extract and populate your profile information
+              Upload your resume (PDF or DOCX) to automatically extract and populate your profile information
             </p>
             
             <div className="flex items-center gap-4">
               <input
                 type="file"
-                accept=".pdf"
+                accept=".pdf,.docx"
                 onChange={handleResumeUpload}
                 disabled={isUploading}
                 className="hidden"
@@ -289,7 +289,7 @@ export default function Profile() {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Choose PDF File
+                      Choose PDF or DOCX
                     </>
                   )}
                 </Button>
