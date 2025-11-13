@@ -90,6 +90,11 @@ class Job(Base):
     match_score = Column(Float, nullable=True)  # 0-100 score
     cover_letter = Column(Text, nullable=True)
     
+    # User notes and tracking
+    notes = Column(Text, nullable=True)  # Interview notes, follow-ups, etc.
+    applied_date = Column(DateTime, nullable=True)  # When application was submitted
+    interview_date = Column(DateTime, nullable=True)  # Scheduled interview date
+    
     status = Column(
         Enum(JobStatus),
         default=JobStatus.SAVED,

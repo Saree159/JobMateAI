@@ -83,6 +83,9 @@ class JobUpdate(BaseModel):
     description: Optional[str] = None
     apply_url: Optional[str] = None
     status: Optional[JobStatus] = None
+    notes: Optional[str] = None
+    applied_date: Optional[datetime] = None
+    interview_date: Optional[datetime] = None
 
 
 class JobResponse(JobBase):
@@ -91,6 +94,9 @@ class JobResponse(JobBase):
     user_id: int
     match_score: Optional[float] = None
     cover_letter: Optional[str] = None
+    notes: Optional[str] = None
+    applied_date: Optional[datetime] = None
+    interview_date: Optional[datetime] = None
     status: JobStatus
     created_at: datetime
     updated_at: datetime

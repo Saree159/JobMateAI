@@ -1,7 +1,7 @@
 import React from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
@@ -9,18 +9,25 @@ import {
   Building2, 
   MapPin, 
   Loader2,
+  StickyNote,
+  Save,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import CoverLetterGenerator from "../components/jobdetails/CoverLetterGenerator";
 import SaveJobButton from "../components/jobdetails/SaveJobButton";
+import { toast } from 'sonner';
 
 export default function JobDetails() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
+  const [notes, setNotes] = React.useState('');
+  const [isEditingNotes, setIsEditingNotes] = React.useState(false);
 
   const { data: job, isLoading: jobLoading } = useQuery({
     queryKey: ['job', jobId],
@@ -29,6 +36,29 @@ export default function JobDetails() {
     },
     enabled: !!jobId,
   });
+
+  // Initialize notes when job loads
+  React.useEffect(() => {
+    if (job?.notes) {
+      setNotes(job.notes);
+    }
+  }, [job]);
+
+  const updateNotesMutation = useMutation({
+    mutationFn: (noteText) => jobApi.update(parseInt(jobId), { notes: noteText }),
+    onSuccess: (updatedJob) => {
+      queryClient.setQueryData(['job', jobId], updatedJob);
+      setIsEditingNotes(false);
+      toast.success('Notes saved successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to save notes');
+    }
+  });
+
+  const handleSaveNotes = () => {
+    updateNotesMutation.mutate(notes);
+  };
 
   const calculateMatchScore = () => {
     if (!job) return 0;
@@ -139,6 +169,70 @@ export default function JobDetails() {
           <CoverLetterGenerator 
             job={job}
           />
+
+          {/* Interview Notes */}
+          <Card className="border border-gray-100">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-semibold flex items-center gap-2">
+                  <StickyNote className="w-5 h-5 text-indigo-600" />
+                  Notes & Reminders
+                </CardTitle>
+                {!isEditingNotes && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingNotes(true)}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isEditingNotes ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add interview notes, follow-up reminders, or any other information about this job..."
+                    className="min-h-[120px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveNotes}
+                      disabled={updateNotesMutation.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      {updateNotesMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setNotes(job?.notes || '');
+                        setIsEditingNotes(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {notes ? (
+                    <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
+                  ) : (
+                    <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
