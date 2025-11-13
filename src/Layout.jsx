@@ -8,7 +8,8 @@ import {
   User, 
   LogOut,
   Sparkles,
-  CreditCard
+  CreditCard,
+  BarChart3
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,6 +43,11 @@ const navigationItems = [
     title: "Applications",
     url: createPageUrl("Applications"),
     icon: FileText,
+  },
+  {
+    title: "Analytics",
+    url: createPageUrl("Analytics"),
+    icon: BarChart3,
   },
   {
     title: "Profile",
