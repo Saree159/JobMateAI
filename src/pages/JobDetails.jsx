@@ -11,6 +11,8 @@ import {
   Loader2,
   StickyNote,
   Save,
+  HelpCircle,
+  Lightbulb,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,30 @@ export default function JobDetails() {
   const jobId = urlParams.get('id');
   const [notes, setNotes] = React.useState('');
   const [isEditingNotes, setIsEditingNotes] = React.useState(false);
+  const [interviewQuestions, setInterviewQuestions] = React.useState(null);
+  const [showInterviewQuestions, setShowInterviewQuestions] = React.useState(false);
+
+  const generateQuestionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/interview-questions`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate questions');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setInterviewQuestions(data.questions);
+      setShowInterviewQuestions(true);
+      toast.success('Interview questions generated!');
+    },
+    onError: () => {
+      toast.error('Failed to generate interview questions');
+    }
+  });
 
   const { data: job, isLoading: jobLoading } = useQuery({
     queryKey: ['job', jobId],
@@ -230,6 +256,105 @@ export default function JobDetails() {
                     <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
                   )}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Interview Preparation */}
+          <Card className="border border-indigo-100 bg-indigo-50/30">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-semibold flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-indigo-600" />
+                  Interview Preparation
+                </CardTitle>
+                {!showInterviewQuestions && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateQuestionsMutation.mutate()}
+                    disabled={generateQuestionsMutation.isPending}
+                    className="text-indigo-600 border-indigo-300 hover:bg-indigo-100"
+                  >
+                    {generateQuestionsMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Lightbulb className="w-4 h-4 mr-2" />
+                        Generate Questions
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showInterviewQuestions && interviewQuestions ? (
+                <div className="space-y-6">
+                  {/* Behavioral Questions */}
+                  {interviewQuestions.behavioral && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        💼 Behavioral Questions
+                      </h4>
+                      <ul className="space-y-2">
+                        {interviewQuestions.behavioral.map((q, idx) => (
+                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                            {q}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Technical Questions */}
+                  {interviewQuestions.technical && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        ⚙️ Technical Questions
+                      </h4>
+                      <ul className="space-y-2">
+                        {interviewQuestions.technical.map((q, idx) => (
+                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                            {q}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Company-Specific Questions */}
+                  {interviewQuestions.company_specific && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        🏢 Questions to Ask Them
+                      </h4>
+                      <ul className="space-y-2">
+                        {interviewQuestions.company_specific.map((q, idx) => (
+                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                            {q}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateQuestionsMutation.mutate()}
+                    className="w-full"
+                  >
+                    🔄 Regenerate Questions
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 text-center py-4">
+                  Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.
+                </p>
               )}
             </CardContent>
           </Card>

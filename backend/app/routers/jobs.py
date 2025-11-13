@@ -246,3 +246,49 @@ async def generate_job_cover_letter(job_id: int, db: Session = Depends(get_db)):
         job_id=job.id,
         cover_letter=cover_letter
     )
+
+
+@router.get("/jobs/{job_id}/interview-questions")
+async def generate_interview_questions(job_id: int, db: Session = Depends(get_db)):
+    """
+    Generate AI-powered interview preparation questions for a job.
+    
+    Returns behavioral, technical, and company-specific questions based on:
+    - Job title and description
+    - Required skills and experience
+    - Company information
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with id {job_id} not found"
+        )
+    
+    user = db.query(User).filter(User.id == job.user_id).first()
+    
+    # Generate questions using AI
+    try:
+        from app.services.ai import generate_interview_questions
+        
+        questions = await generate_interview_questions(
+            job_title=job.title,
+            company=job.company,
+            job_description=job.description,
+            user_skills=user.skills_list if user else []
+        )
+        
+        return {
+            "job_id": job.id,
+            "job_title": job.title,
+            "company": job.company,
+            "questions": questions
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate interview questions: {str(e)}"
+        )
+
