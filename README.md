@@ -1,17 +1,36 @@
 # JobMate AI
 
-**A fully standalone, self-hosted AI-powered job search management platform.**
+**The ultimate AI-powered job search management platform - fully self-hosted and feature-rich.**
 
-Track applications, get AI match scores, and generate personalized cover letters - all without relying on external services.
+Track applications, get AI match scores, generate personalized cover letters, receive interview preparation, and get salary insights - all while maintaining complete control of your data.
 
-## 🚀 Features
+## 🚀 Core Features
 
-- **Profile Management**: Create a profile with skills, target role, and preferences
-- **Job Tracking**: Add and manage job postings through a pipeline (Saved → Applied → Interview → Offer → Rejected)
-- **AI Match Scoring**: Get compatibility scores based on your skills vs job requirements (0-100 score)
-- **Cover Letter Generation**: AI-generated personalized cover letters for each job using GPT-4
-- **Application Pipeline**: Visual tracking through the interview process
-- **Completely Self-Hosted**: Own your data, no external dependencies (except OpenAI for AI features)
+### Application Management
+- **Profile Management**: Comprehensive profile with skills, experience, target role, and preferences
+- **Job Tracking**: Manage job postings through a complete pipeline (Saved → Applied → Interview → Offer → Rejected)
+- **Smart Filtering**: Search jobs by title, company, or status with real-time filtering
+- **Application Notes**: Add timestamped notes to track follow-ups and communications
+- **Status Updates**: Visual pipeline with drag-and-drop status management
+
+### AI-Powered Intelligence
+- **Match Scoring**: Get 0-100 compatibility scores based on skills vs requirements (hybrid algorithm)
+- **Cover Letter Generation**: Personalized, professional cover letters using GPT-4o-mini
+- **Interview Preparation**: AI-generated behavioral, technical, and company-specific questions
+- **Salary Insights**: Real-time salary estimates with market analysis and range predictions
+
+### Power Features
+- **Resume Parsing**: Upload PDF or DOCX resumes for automatic skill extraction
+- **Export Functionality**: Export applications to CSV or professionally formatted PDF reports
+- **Email Notifications**: Interview reminders, follow-up alerts, and deadline notifications
+- **Visual Analytics**: Application statistics with match score trends and status breakdown
+
+### Production Ready
+- **Docker Support**: Complete containerization with PostgreSQL, multi-stage builds
+- **Security**: JWT authentication, bcrypt password hashing, CORS protection
+- **Validation**: Client and server-side validation with toast notifications
+- **Performance**: Skeleton loading states, optimized queries, responsive UI
+- **Self-Hosted**: Own your data, no external dependencies (except OpenAI for AI features)
 
 ## 🏗️ Architecture
 
@@ -38,20 +57,41 @@ Track applications, get AI match scores, and generate personalized cover letters
 
 ## 🛠️ Quick Start
 
-### Prerequisites
-- Node.js 18+ 
-- Python 3.9+
-- OpenAI API key (for AI features)
+### Option 1: Docker (Recommended for Production)
 
-### Installation
+**Prerequisites:**
+- Docker 20.10+
+- Docker Compose 2.0+
 
-#### 1. Clone the Repository
+**Steps:**
 ```bash
-git clone https://github.com/yourusername/JobMateAI.git
+# Clone repository
+git clone https://github.com/Saree159/JobMateAI.git
 cd JobMateAI
+
+# Configure environment
+cp .env.docker.example .env
+# Edit .env and add your OPENAI_API_KEY, SECRET_KEY, DB_PASSWORD
+
+# Build and start services
+docker-compose up -d
+
+# Access application
+# Frontend: http://localhost
+# Backend: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 ```
 
-#### 2. Setup Backend
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
+
+### Option 2: Local Development
+
+**Prerequisites:**
+- Node.js 18+
+- Python 3.9+
+- OpenAI API key
+
+**Backend Setup:**
 ```bash
 cd backend
 
@@ -60,7 +100,6 @@ python -m venv venv
 
 # Activate (Windows)
 venv\Scripts\activate
-
 # Activate (Mac/Linux)
 source venv/bin/activate
 
@@ -75,23 +114,22 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Backend will be available at: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+Backend available at: http://localhost:8000
 
-#### 3. Setup Frontend
+**Frontend Setup:**
 ```bash
-# In a new terminal, from project root
+# In new terminal, from project root
 npm install
 npm run dev
 ```
 
-Frontend will be available at: http://localhost:5173
+Frontend available at: http://localhost:5173
 
-#### 4. Create Your Account
+**Create Account:**
 1. Visit http://localhost:5173
-2. Click "Sign up" to create an account
-3. Complete your profile in the onboarding flow
-4. Start adding jobs!
+2. Click "Sign up"
+3. Complete onboarding
+4. Start tracking jobs!
 
 ---
 
@@ -138,22 +176,32 @@ JobMateAI/
 ## 🔌 API Endpoints
 
 ### Authentication
-- `POST /api/users` - Register
-- `POST /api/users/login` - Login (returns JWT)
+- `POST /api/users` - Register new account
+- `POST /api/users/login` - Login (returns JWT token)
 
-### Users
-- `GET /api/users/{id}` - Get profile
+### User Management
+- `GET /api/users/{id}` - Get user profile
 - `PUT /api/users/{id}` - Update profile
 
-### Jobs
-- `POST /api/users/{id}/jobs` - Create job
-- `GET /api/users/{id}/jobs` - List user's jobs
+### Job Management
+- `POST /api/users/{id}/jobs` - Create job posting
+- `GET /api/users/{id}/jobs` - List all jobs for user
 - `GET /api/jobs/{id}` - Get job details
 - `PUT /api/jobs/{id}` - Update job
-- `POST /api/jobs/{id}/match` - Calculate AI match score
-- `POST /api/jobs/{id}/cover-letter` - Generate cover letter
+- `DELETE /api/jobs/{id}` - Delete job
 
-Full API documentation: http://localhost:8000/docs
+### AI Features
+- `POST /api/jobs/{id}/match` - Calculate AI match score (0-100)
+- `POST /api/jobs/{id}/cover-letter` - Generate personalized cover letter
+- `GET /api/jobs/{id}/interview-questions` - Get interview prep questions (behavioral/technical/company)
+- `GET /api/jobs/{id}/salary-estimate` - Get salary range estimate with market insights
+
+### Resume & Notifications
+- `POST /api/resume/upload` - Upload and parse resume (PDF/DOCX)
+- `POST /api/notifications/send-test` - Send test email notification
+- `POST /api/notifications/jobs/{id}/send-reminder` - Send interview/follow-up reminder
+
+**Interactive API Documentation:** http://localhost:8000/docs
 
 ---
 

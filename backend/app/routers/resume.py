@@ -51,7 +51,6 @@ def extract_text_from_resume(file_content: bytes, filename: str) -> str:
 
 
 def parse_resume_text(text: str) -> Dict[str, any]:
-def parse_resume_text(text: str) -> Dict[str, any]:
     """
     Parse resume text and extract relevant information
     Returns: dict with extracted fields

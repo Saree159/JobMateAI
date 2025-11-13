@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: jobmate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jobmate
+      POSTGRES_USER: jobmate
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobmate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobmate-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jobmate-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://jobmate:${DB_PASSWORD:-changeme}@db:5432/jobmate
+      SECRET_KEY: ${SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 43200
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - jobmate-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobmate-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      VITE_API_URL: ${API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    networks:
+      - jobmate-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  jobmate-network:
+    driver: bridge
