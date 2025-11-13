@@ -136,3 +136,76 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """Token payload data."""
     email: Optional[str] = None
+
+
+# Job Alert Schemas
+class AlertFrequency(str, Enum):
+    """Alert frequency options."""
+    IMMEDIATE = "immediate"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+
+
+class JobAlertBase(BaseModel):
+    """Base job alert fields."""
+    keywords: str = Field(..., min_length=1, max_length=500)
+    location: Optional[str] = None
+    min_match_score: int = Field(default=70, ge=0, le=100)
+    frequency: AlertFrequency = AlertFrequency.DAILY
+
+
+class JobAlertCreate(JobAlertBase):
+    """Schema for creating a new job alert."""
+    pass
+
+
+class JobAlertUpdate(BaseModel):
+    """Schema for updating a job alert."""
+    keywords: Optional[str] = None
+    location: Optional[str] = None
+    min_match_score: Optional[int] = Field(default=None, ge=0, le=100)
+    frequency: Optional[AlertFrequency] = None
+    is_active: Optional[bool] = None
+
+
+class JobAlertResponse(JobAlertBase):
+    """Schema for job alert responses."""
+    id: int
+    user_id: int
+    is_active: bool
+    last_checked: Optional[datetime] = None
+    last_notified: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Analytics Schemas
+class ApplicationStats(BaseModel):
+    """Application statistics for analytics."""
+    total_applications: int
+    by_status: dict  # {status: count}
+    success_rate: float  # Percentage of offers
+    avg_match_score: Optional[float] = None
+    avg_time_to_interview: Optional[float] = None  # Days
+    avg_time_to_offer: Optional[float] = None  # Days
+
+
+class MonthlyTrend(BaseModel):
+    """Monthly application trends."""
+    month: str  # YYYY-MM
+    applications: int
+    interviews: int
+    offers: int
+    rejections: int
+
+
+class AnalyticsDashboard(BaseModel):
+    """Complete analytics dashboard data."""
+    stats: ApplicationStats
+    monthly_trends: List[MonthlyTrend]
+    match_score_distribution: dict  # {range: count} e.g. {"0-20": 5, "21-40": 10}
+    top_companies: List[dict]  # [{company: str, count: int}]
+    status_funnel: dict  # Conversion rates between stages

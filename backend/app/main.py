@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database import init_db
-from app.routers import users, jobs, resume, notifications
+from app.routers import users, jobs, resume, notifications, alerts, analytics
 
 
 @asynccontextmanager
@@ -67,6 +67,8 @@ app.include_router(users.router)
 app.include_router(jobs.router)
 app.include_router(resume.router)
 app.include_router(notifications.router)
+app.include_router(alerts.router)
+app.include_router(analytics.router)
 
 
 @app.get("/")

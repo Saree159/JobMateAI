@@ -185,6 +185,51 @@ JobMate AI Team
 """
         
         return self.send_email(user_email, subject, body, html)
+    
+    def send_job_alert(self, user_email: str, user_name: str, keywords: str, 
+                       matches_found: int, alert_url: str):
+        """Send job alert notification when matching jobs are found."""
+        subject = f"🎯 {matches_found} New Job{'s' if matches_found > 1 else ''} Matching Your Alert"
+        
+        body = f"""Hi {user_name},
+
+Great news! We found {matches_found} new job{'s' if matches_found > 1 else ''} matching your alert criteria:
+
+Keywords: {keywords}
+
+View matching jobs: {alert_url}
+
+Don't miss out on these opportunities!
+
+Best regards,
+JobMate AI Team
+"""
+        
+        html = f"""
+<html>
+<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <h2 style="color: #10B981;">🎯 New Job Alert!</h2>
+    <p>Hi {user_name},</p>
+    <p>Great news! We found <strong>{matches_found} new job{'s' if matches_found > 1 else ''}</strong> matching your alert criteria:</p>
+    <div style="background: #ECFDF5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+        <p style="margin: 5px 0;"><strong>Keywords:</strong> {keywords}</p>
+        <p style="margin: 5px 0;"><strong>Matches Found:</strong> {matches_found}</p>
+    </div>
+    <p>
+        <a href="{alert_url}" style="background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 10px 0;">
+            View Matching Jobs
+        </a>
+    </p>
+    <p>Don't miss out on these opportunities! 🚀</p>
+    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+        Best regards,<br>
+        JobMate AI Team
+    </p>
+</body>
+</html>
+"""
+        
+        return self.send_email(user_email, subject, body, html)
 
 
 # Singleton instance
