@@ -2,12 +2,21 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Filter, Loader2 } from "lucide-react";
+import { FileText, Filter, Loader2, Download, FileSpreadsheet, FileDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import ApplicationCard from "../components/applications/ApplicationCard";
 import ApplicationStats from "../components/applications/ApplicationStats";
+import { exportToCSV, exportToPDF } from "@/utils/exportUtils";
 
 export default function Applications() {
   const [statusFilter, setStatusFilter] = useState('all');
@@ -35,16 +44,58 @@ export default function Applications() {
     rejected: applications.filter(a => a.status === 'rejected').length,
   };
 
+  const handleExportCSV = () => {
+    try {
+      exportToCSV(filteredApplications);
+      toast.success('Applications exported to CSV successfully');
+    } catch (error) {
+      toast.error(error.message || 'Failed to export applications');
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      exportToPDF(filteredApplications);
+      toast.success('Applications exported to PDF successfully');
+    } catch (error) {
+      toast.error(error.message || 'Failed to export applications');
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-          My Applications
-        </h1>
-        <p className="text-gray-500">
-          Track and manage your job applications
-        </p>
+      <div className="mb-10 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+            My Applications
+          </h1>
+          <p className="text-gray-500">
+            Track and manage your job applications
+          </p>
+        </div>
+        
+        {/* Export Button */}
+        {applications.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
+                <FileDown className="w-4 h-4" />
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Stats */}
