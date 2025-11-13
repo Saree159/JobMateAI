@@ -29,6 +29,7 @@ export default function Jobs() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
+    status: 'all',
     job_type: 'all',
     experience_level: 'all',
     location: '',
@@ -84,7 +85,9 @@ export default function Jobs() {
       const matchesLocation = !filters.location || 
         job.location.toLowerCase().includes(filters.location.toLowerCase());
       
-      return matchesSearch && matchesLocation;
+      const matchesStatus = filters.status === 'all' || job.status === filters.status;
+      
+      return matchesSearch && matchesLocation && matchesStatus;
     })
     .map(job => ({
       ...job,

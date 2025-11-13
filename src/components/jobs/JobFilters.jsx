@@ -1,11 +1,28 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { MapPin } from "lucide-react";
+import { MapPin, CheckCircle } from "lucide-react";
 
 export default function JobFilters({ filters, setFilters }) {
   return (
     <div className="flex flex-wrap gap-3">
+      <Select 
+        value={filters.status || 'all'} 
+        onValueChange={(value) => setFilters({ ...filters, status: value })}
+      >
+        <SelectTrigger className="w-36">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          <SelectItem value="saved">Saved</SelectItem>
+          <SelectItem value="applied">Applied</SelectItem>
+          <SelectItem value="interview">Interview</SelectItem>
+          <SelectItem value="offer">Offer</SelectItem>
+          <SelectItem value="rejected">Rejected</SelectItem>
+        </SelectContent>
+      </Select>
+
       <Select 
         value={filters.job_type} 
         onValueChange={(value) => setFilters({ ...filters, job_type: value })}
