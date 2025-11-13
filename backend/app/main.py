@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database import init_db
-from app.routers import users, jobs, resume
+from app.routers import users, jobs, resume, notifications
 
 
 @asynccontextmanager
@@ -66,6 +66,7 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(jobs.router)
 app.include_router(resume.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2 } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -397,6 +397,59 @@ export default function Profile() {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Email Notifications */}
+        <Card className="border border-gray-100">
+          <CardHeader>
+            <CardTitle className="font-semibold flex items-center gap-2">
+              <Bell className="w-5 h-5 text-indigo-600" />
+              Email Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Get email reminders for important events (coming soon)
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Interview Reminders</p>
+                  <p className="text-sm text-gray-500">Get notified 24 hours before interviews</p>
+                </div>
+                <div className="text-indigo-600">
+                  <Mail className="w-5 h-5" />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Follow-Up Reminders</p>
+                  <p className="text-sm text-gray-500">Remind me to follow up after 7 days</p>
+                </div>
+                <div className="text-indigo-600">
+                  <Mail className="w-5 h-5" />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Deadline Alerts</p>
+                  <p className="text-sm text-gray-500">Alert me about upcoming application deadlines</p>
+                </div>
+                <div className="text-indigo-600">
+                  <Mail className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+            
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-sm text-blue-700">
+                💡 Configure SMTP settings in backend to enable email notifications
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
 
