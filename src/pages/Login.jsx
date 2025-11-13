@@ -28,6 +28,20 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate password
+    if (!formData.password || formData.password.length < 1) {
+      setError('Please enter your password');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
