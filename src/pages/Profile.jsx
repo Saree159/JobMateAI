@@ -13,6 +13,7 @@ import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown } fro
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { toast } from 'sonner';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -30,8 +31,12 @@ export default function Profile() {
       queryClient.setQueryData(['currentUser'], updatedUser);
       setIsEditing(false);
       setSuccess(true);
+      toast.success('Profile updated successfully!');
       setTimeout(() => setSuccess(false), 3000);
     },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update profile');
+    }
   });
 
   const startEditing = () => {

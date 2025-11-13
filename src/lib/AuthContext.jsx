@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { userApi } from '@/api/jobmate';
+import { toast } from 'sonner';
 
 const AuthContext = createContext();
 
@@ -67,12 +68,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         setUser(userData);
         setIsAuthenticated(true);
+        toast.success('Welcome back!');
         return { success: true, user: userData };
       } else {
         throw new Error('Failed to get user data');
       }
     } catch (error) {
       console.error('Login failed:', error);
+      toast.error(error.message || 'Login failed');
       setAuthError({
         type: 'login_failed',
         message: error.message || 'Login failed'
@@ -87,6 +90,7 @@ export const AuthProvider = ({ children }) => {
       
       // Create user
       const newUser = await userApi.create(userData);
+      toast.success('Account created successfully!');
       
       // Auto-login after registration
       const loginResult = await login(userData.email, userData.password);
@@ -94,6 +98,7 @@ export const AuthProvider = ({ children }) => {
       return loginResult;
     } catch (error) {
       console.error('Registration failed:', error);
+      toast.error(error.message || 'Registration failed');
       setAuthError({
         type: 'registration_failed',
         message: error.message || 'Registration failed'
@@ -107,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(USER_KEY);
     setUser(null);
     setIsAuthenticated(false);
+    toast.info('Logged out successfully');
     
     if (shouldRedirect) {
       window.location.href = '/login';
