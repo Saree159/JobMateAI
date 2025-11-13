@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2 } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -24,6 +24,61 @@ export default function Profile() {
   const [formData, setFormData] = useState({});
   const [skillInput, setSkillInput] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadResumeMutation = useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('http://localhost:8000/api/resume/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to upload resume');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['currentUser']);
+      toast.success(`Resume parsed! Updated: ${data.updated_fields.join(', ')}`);
+      // Update local user state
+      queryClient.setQueryData(['currentUser'], data.user);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to upload resume');
+    },
+    onSettled: () => {
+      setIsUploading(false);
+    }
+  });
+
+  const handleResumeUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.name.endsWith('.pdf')) {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+    
+    setIsUploading(true);
+    uploadResumeMutation.mutate(file);
+  };
 
   const updateUserMutation = useMutation({
     mutationFn: (data) => userApi.update(user.id, data),
@@ -191,6 +246,62 @@ export default function Profile() {
                 <p className="text-gray-700">{user.bio || 'Not set'}</p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Resume Upload */}
+        <Card className="border border-gray-100">
+          <CardHeader>
+            <CardTitle className="font-semibold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileUp className="w-5 h-5 text-indigo-600" />
+                Upload Resume
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Upload your resume (PDF) to automatically extract and populate your profile information
+            </p>
+            
+            <div className="flex items-center gap-4">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleResumeUpload}
+                disabled={isUploading}
+                className="hidden"
+                id="resume-upload"
+              />
+              <label htmlFor="resume-upload">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isUploading}
+                  className="cursor-pointer"
+                  onClick={() => document.getElementById('resume-upload').click()}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Parsing Resume...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose PDF File
+                    </>
+                  )}
+                </Button>
+              </label>
+              <span className="text-sm text-gray-500">Max 5MB</span>
+            </div>
+            
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-sm text-blue-700">
+                💡 We'll extract your skills, job title, and location from your resume
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
 
