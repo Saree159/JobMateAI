@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { jobApi } from "@/api/jobmate";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Filter, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,26 +10,16 @@ import ApplicationStats from "../components/applications/ApplicationStats";
 
 export default function Applications() {
   const [statusFilter, setStatusFilter] = useState('all');
-
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
+  const { user } = useAuth();
 
   const { data: applications = [], isLoading: appsLoading } = useQuery({
-    queryKey: ['applications'],
+    queryKey: ['applications', user?.id],
     queryFn: async () => {
-      const user = await base44.auth.me();
-      return await base44.entities.Application.filter({ user_email: user.email }, '-created_date');
+      if (!user?.id) return [];
+      return await jobApi.listByUser(user.id);
     },
+    enabled: !!user?.id,
   });
-
-  const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => base44.entities.Job.list(),
-  });
-
-  const getJobById = (jobId) => jobs.find(j => j.id === jobId);
 
   const filteredApplications = statusFilter === 'all' 
     ? applications 
@@ -93,16 +84,12 @@ export default function Applications() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {filteredApplications.map((application) => {
-            const job = getJobById(application.job_id);
-            return job ? (
-              <ApplicationCard 
-                key={application.id} 
-                application={application} 
-                job={job}
-              />
-            ) : null;
-          })}
+          {filteredApplications.map((application) => (
+            <ApplicationCard 
+              key={application.id} 
+              application={application}
+            />
+          ))}
         </div>
       )}
     </div>

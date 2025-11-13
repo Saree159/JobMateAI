@@ -1,6 +1,7 @@
 #env
 .env
 .env.*
+.env.local
 
 # Logs
 logs
@@ -27,4 +28,15 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
+# Python Backend
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/venv/
+backend/ENV/
+backend/.venv/
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/.env
+backend/jobmate.db

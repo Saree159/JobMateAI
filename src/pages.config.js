@@ -5,21 +5,23 @@ import Applications from './pages/Applications';
 import Profile from './pages/Profile';
 import JobDetails from './pages/JobDetails';
 import Pricing from './pages/Pricing';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Onboarding": Onboarding,
-    "Jobs": Jobs,
-    "Applications": Applications,
-    "Profile": Profile,
-    "JobDetails": JobDetails,
-    "Pricing": Pricing,
+    "dashboard": Dashboard,
+    "onboarding": Onboarding,
+    "jobs": Jobs,
+    "applications": Applications,
+    "profile": Profile,
+    "jobdetails": JobDetails,
+    "pricing": Pricing,
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
+    mainPage: "dashboard",
     Pages: PAGES,
     Layout: Layout,
 };

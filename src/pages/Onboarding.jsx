@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { userApi } from "@/api/jobmate";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,30 +16,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user, updateUser } = useAuth();
   
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     target_role: '',
     skills: [],
     location_preference: '',
-    salary_min: '',
-    salary_max: '',
-    experience_years: '',
+    work_mode_preference: 'remote',
     bio: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [error, setError] = useState('');
 
   const updateUserMutation = useMutation({
-    mutationFn: (data) => base44.auth.updateMe(data),
-    onSuccess: () => {
+    mutationFn: (data) => userApi.update(user.id, data),
+    onSuccess: (updatedUser) => {
+      updateUser(updatedUser);
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      navigate(createPageUrl("Dashboard"));
+      navigate(createPageUrl("dashboard"));
     },
     onError: (error) => {
       setError('Failed to save profile. Please try again.');
@@ -82,11 +78,10 @@ export default function Onboarding() {
     }
     
     updateUserMutation.mutate({
-      ...formData,
-      salary_min: formData.salary_min ? Number(formData.salary_min) : undefined,
-      salary_max: formData.salary_max ? Number(formData.salary_max) : undefined,
-      experience_years: formData.experience_years ? Number(formData.experience_years) : undefined,
-      onboarding_completed: true,
+      target_role: formData.target_role,
+      skills: formData.skills,
+      location_preference: formData.location_preference,
+      work_mode_preference: formData.work_mode_preference,
     });
   };
 

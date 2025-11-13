@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { jobApi } from "@/api/jobmate";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -22,39 +23,31 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  const { data: user, isLoading: userLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
   const { data: applications = [], isLoading: appsLoading } = useQuery({
-    queryKey: ['applications'],
+    queryKey: ['applications', user?.id],
     queryFn: async () => {
-      const user = await base44.auth.me();
-      return await base44.entities.Application.filter({ user_email: user.email }, '-created_date');
+      if (!user?.id) return [];
+      return await jobApi.listByUser(user.id);
     },
+    enabled: !!user?.id,
   });
-
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => base44.entities.Job.filter({ is_active: true }, '-created_date', 50),
-  });
-
-  useEffect(() => {
-    if (user && !user.onboarding_completed) {
-      navigate(createPageUrl("Onboarding"));
-    }
-  }, [user, navigate]);
 
   const stats = {
-    totalJobs: jobs.length,
+    totalJobs: applications.length,
     saved: applications.filter(a => a.status === 'saved').length,
     applied: applications.filter(a => a.status === 'applied').length,
     interviews: applications.filter(a => a.status === 'interview').length,
   };
 
-  const isLoading = userLoading || appsLoading || jobsLoading;
+  const isLoading = appsLoading;
+  
+  // Get top matches (jobs with highest match scores)
+  const topMatches = applications
+    .filter(a => a.match_score !== null)
+    .sort((a, b) => (b.match_score || 0) - (a.match_score || 0))
+    .slice(0, 5);
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -105,7 +98,7 @@ export default function Dashboard() {
         {/* Top Matches */}
         <div className="lg:col-span-2">
           <TopMatchesList 
-            jobs={jobs}
+            jobs={topMatches}
             applications={applications}
             userSkills={user?.skills || []}
             isLoading={isLoading}

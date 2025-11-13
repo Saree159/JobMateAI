@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { jobApi } from "@/api/jobmate";
 import { 
   Building2, 
   MapPin, 
@@ -31,19 +31,19 @@ const statusConfig = {
   rejected: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-300' },
 };
 
-export default function ApplicationCard({ application, job }) {
+export default function ApplicationCard({ application }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.Application.update(id, { status }),
+    mutationFn: ({ id, status }) => jobApi.update(id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
     },
   });
 
   const deleteApplicationMutation = useMutation({
-    mutationFn: (id) => base44.entities.Application.delete(id),
+    mutationFn: (id) => jobApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['applications'] });
     },
@@ -63,18 +63,18 @@ export default function ApplicationCard({ application, job }) {
               <div className="flex-1">
                 <h3 
                   className="text-lg font-semibold text-gray-900 hover:text-indigo-600 cursor-pointer"
-                  onClick={() => navigate(createPageUrl("JobDetails") + `?id=${job.id}`)}
+                  onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
                 >
-                  {job.title}
+                  {application.title}
                 </h3>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mt-1">
                   <span className="flex items-center gap-1">
                     <Building2 className="w-4 h-4" />
-                    {job.company}
+                    {application.company}
                   </span>
                   <span className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
-                    {job.location}
+                    {application.location || 'Remote'}
                   </span>
                   {application.match_score && (
                     <Badge variant="outline" className="text-xs">
@@ -114,17 +114,9 @@ export default function ApplicationCard({ application, job }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate(createPageUrl("JobDetails") + `?id=${job.id}`)}>
+              <DropdownMenuItem onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}>
                 View Job Details
               </DropdownMenuItem>
-              {job.apply_url && (
-                <DropdownMenuItem asChild>
-                  <a href={job.apply_url} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open Application Link
-                  </a>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'saved' })}>
                 Mark as Saved

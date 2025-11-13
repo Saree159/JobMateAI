@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { userApi } from "@/api/jobmate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,21 +17,17 @@ import { createPageUrl } from "@/utils";
 export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [skillInput, setSkillInput] = useState('');
   const [success, setSuccess] = useState(false);
 
   const updateUserMutation = useMutation({
-    mutationFn: (data) => base44.auth.updateMe(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+    mutationFn: (data) => userApi.update(user.id, data),
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(['currentUser'], updatedUser);
       setIsEditing(false);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -39,13 +36,11 @@ export default function Profile() {
 
   const startEditing = () => {
     setFormData({
-      target_role: user.target_role || '',
-      skills: user.skills || [],
-      location_preference: user.location_preference || '',
-      salary_min: user.salary_min || '',
-      salary_max: user.salary_max || '',
-      experience_years: user.experience_years || '',
-      bio: user.bio || '',
+      target_role: user?.target_role || '',
+      skills: user?.skills ? user.skills.split(',').map(s => s.trim()) : [],
+      location_preference: user?.location_preference || '',
+      work_mode_preference: user?.work_mode_preference || '',
+      bio: user?.bio || '',
     });
     setIsEditing(true);
   };
@@ -53,9 +48,7 @@ export default function Profile() {
   const handleSave = () => {
     updateUserMutation.mutate({
       ...formData,
-      salary_min: formData.salary_min ? Number(formData.salary_min) : undefined,
-      salary_max: formData.salary_max ? Number(formData.salary_max) : undefined,
-      experience_years: formData.experience_years ? Number(formData.experience_years) : undefined,
+      skills: formData.skills.join(', '),
     });
   };
 
@@ -79,7 +72,7 @@ export default function Profile() {
   const currentPlan = user?.subscription_tier || 'free';
   const isPro = currentPlan === 'pro';
 
-  if (isLoading) {
+  if (!user) {
     return <div className="p-8">Loading...</div>;
   }
 

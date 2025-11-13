@@ -1,131 +1,125 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { userApi } from '@/api/jobmate';
 
 const AuthContext = createContext();
+
+const TOKEN_KEY = 'jobmate_auth_token';
+const USER_KEY = 'jobmate_user';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
-    checkAppState();
+    checkAuth();
   }, []);
 
-  const checkAppState = async () => {
+  const checkAuth = async () => {
     try {
-      setIsLoadingPublicSettings(true);
+      setIsLoadingAuth(true);
       setAuthError(null);
       
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `${appParams.serverUrl}/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
+      // Check for stored token and user
+      const token = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(USER_KEY);
       
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
+      if (token && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('Failed to parse stored user:', error);
+          logout(false);
         }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
       }
+      
+      setIsLoadingAuth(false);
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('Auth check failed:', error);
       setAuthError({
         type: 'unknown',
         message: error.message || 'An unexpected error occurred'
       });
-      setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
   };
 
-  const checkUserAuth = async () => {
+  const login = async (email, password) => {
     try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
+      setAuthError(null);
       
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+      // Call backend login endpoint
+      const response = await userApi.login(email, password);
+      
+      // Store token
+      localStorage.setItem(TOKEN_KEY, response.access_token);
+      
+      // Get user data (extract from token or fetch from API)
+      // For now, we'll fetch the user by email
+      // In production, decode JWT to get user_id
+      const userId = extractUserIdFromToken(response.access_token);
+      
+      if (userId) {
+        const userData = await userApi.getById(userId);
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        setUser(userData);
+        setIsAuthenticated(true);
+        return { success: true, user: userData };
+      } else {
+        throw new Error('Failed to get user data');
       }
+    } catch (error) {
+      console.error('Login failed:', error);
+      setAuthError({
+        type: 'login_failed',
+        message: error.message || 'Login failed'
+      });
+      return { success: false, error: error.message };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setAuthError(null);
+      
+      // Create user
+      const newUser = await userApi.create(userData);
+      
+      // Auto-login after registration
+      const loginResult = await login(userData.email, userData.password);
+      
+      return loginResult;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setAuthError({
+        type: 'registration_failed',
+        message: error.message || 'Registration failed'
+      });
+      return { success: false, error: error.message };
     }
   };
 
   const logout = (shouldRedirect = true) => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setUser(null);
     setIsAuthenticated(false);
     
     if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
+      window.location.href = '/login';
     }
   };
 
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  };
+
+  const getToken = () => {
+    return localStorage.getItem(TOKEN_KEY);
   };
 
   return (
@@ -133,12 +127,14 @@ export const AuthProvider = ({ children }) => {
       user, 
       isAuthenticated, 
       isLoadingAuth,
-      isLoadingPublicSettings,
+      isLoadingPublicSettings: false, // Not needed anymore
       authError,
-      appPublicSettings,
+      login,
+      register,
       logout,
-      navigateToLogin,
-      checkAppState
+      updateUser,
+      getToken,
+      checkAppState: checkAuth
     }}>
       {children}
     </AuthContext.Provider>
@@ -152,3 +148,16 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Helper function to extract user_id from JWT
+// This is a simplified version - in production, use a proper JWT library
+function extractUserIdFromToken(token) {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.user_id;
+  } catch (error) {
+    console.error('Failed to decode token:', error);
+    return null;
+  }
+}
