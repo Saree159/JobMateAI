@@ -13,6 +13,8 @@ import {
   Save,
   HelpCircle,
   Lightbulb,
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,30 @@ export default function JobDetails() {
   const [isEditingNotes, setIsEditingNotes] = React.useState(false);
   const [interviewQuestions, setInterviewQuestions] = React.useState(null);
   const [showInterviewQuestions, setShowInterviewQuestions] = React.useState(false);
+  const [salaryEstimate, setSalaryEstimate] = React.useState(null);
+  const [showSalaryEstimate, setShowSalaryEstimate] = React.useState(false);
+
+  const generateSalaryMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/salary-estimate`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to estimate salary');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSalaryEstimate(data.salary_estimate);
+      setShowSalaryEstimate(true);
+      toast.success('Salary estimate generated!');
+    },
+    onError: () => {
+      toast.error('Failed to estimate salary');
+    }
+  });
 
   const generateQuestionsMutation = useMutation({
     mutationFn: async () => {
@@ -354,6 +380,117 @@ export default function JobDetails() {
               ) : (
                 <p className="text-sm text-gray-600 text-center py-4">
                   Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Salary Insights */}
+          <Card className="border border-green-100 bg-green-50/30">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-semibold flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  Salary Insights
+                </CardTitle>
+                {!showSalaryEstimate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateSalaryMutation.mutate()}
+                    disabled={generateSalaryMutation.isPending}
+                    className="text-green-600 border-green-300 hover:bg-green-100"
+                  >
+                    {generateSalaryMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Estimating...
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        Estimate Salary
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showSalaryEstimate && salaryEstimate ? (
+                <div className="space-y-6">
+                  {/* Salary Range */}
+                  <div className="bg-white p-4 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      💰 Estimated Range
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-sm text-gray-600">Minimum</p>
+                        <p className="text-xl font-bold text-green-700">
+                          ${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Median</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          ${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Maximum</p>
+                        <p className="text-xl font-bold text-green-700">
+                          ${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Insights */}
+                  {salaryEstimate.insights && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        💡 Key Insights
+                      </h4>
+                      <ul className="space-y-2">
+                        {salaryEstimate.insights.map((insight, idx) => (
+                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-green-300 py-1">
+                            {insight}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Factors */}
+                  {salaryEstimate.factors && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3">📊 Salary Factors</h4>
+                      <div className="space-y-2">
+                        {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
+                          <div key={idx} className="text-sm">
+                            <span className="font-medium text-gray-900 capitalize">
+                              {key.replace('_', ' ')}:
+                            </span>
+                            <span className="text-gray-700 ml-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateSalaryMutation.mutate()}
+                    className="w-full"
+                  >
+                    🔄 Recalculate Estimate
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 text-center py-4">
+                  Click "Estimate Salary" to get AI-powered salary insights for this position.
                 </p>
               )}
             </CardContent>

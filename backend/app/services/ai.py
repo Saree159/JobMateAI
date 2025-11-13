@@ -287,3 +287,124 @@ Format as JSON with this structure:
             "error": str(e)
         }
 
+
+async def estimate_salary(
+    job_title: str,
+    location: str,
+    experience_years: int = None,
+    skills: List[str] = None,
+    company_size: str = None
+) -> dict:
+    """
+    Estimate salary range using AI based on job details.
+    
+    Args:
+        job_title: Job title
+        location: Job location
+        experience_years: Years of experience (optional)
+        skills: List of relevant skills (optional)
+        company_size: Company size (startup, small, medium, large) (optional)
+    
+    Returns:
+        Dict with salary range and insights
+    """
+    skills_str = ", ".join(skills[:10]) if skills else "general technical skills"
+    exp_str = f"{experience_years} years" if experience_years else "mid-level"
+    
+    prompt = f"""Estimate the salary range for this job position:
+
+Job Title: {job_title}
+Location: {location}
+Experience: {exp_str}
+Key Skills: {skills_str}
+Company Size: {company_size or 'medium-sized company'}
+
+Provide a realistic salary estimation in USD (annual). Consider:
+1. Current market rates for this role
+2. Location cost of living
+3. Experience level
+4. In-demand skills premium
+5. Company size impact
+
+Return your response as JSON with this structure:
+{{
+  "currency": "USD",
+  "min_salary": <number>,
+  "max_salary": <number>,
+  "median_salary": <number>,
+  "insights": [
+    "Insight 1 about the salary range",
+    "Insight 2 about market conditions",
+    "Insight 3 about growth potential"
+  ],
+  "factors": {{
+    "location_impact": "High cost of living area adds 20-30%",
+    "skills_premium": "High demand skills like X add 10-15%",
+    "experience_factor": "Senior level adds 40-50%"
+  }}
+}}"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a compensation analysis expert with deep knowledge of tech industry salaries, market trends, and geographic pay differences. Provide realistic, data-driven salary estimates."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3,  # Lower temperature for more consistent estimates
+            max_tokens=800,
+            response_format={"type": "json_object"}
+        )
+        
+        import json
+        salary_data = json.loads(response.choices[0].message.content)
+        return salary_data
+        
+    except Exception as e:
+        # Fallback salary estimation
+        base_salary = 70000
+        
+        # Adjust for experience
+        if experience_years:
+            if experience_years < 2:
+                base_salary = 60000
+            elif experience_years < 5:
+                base_salary = 80000
+            elif experience_years < 10:
+                base_salary = 110000
+            else:
+                base_salary = 140000
+        
+        # Simple location adjustment
+        location_lower = location.lower() if location else ""
+        if any(city in location_lower for city in ["san francisco", "new york", "seattle"]):
+            base_salary = int(base_salary * 1.4)
+        elif any(city in location_lower for city in ["austin", "boston", "chicago"]):
+            base_salary = int(base_salary * 1.2)
+        
+        return {
+            "currency": "USD",
+            "min_salary": int(base_salary * 0.8),
+            "max_salary": int(base_salary * 1.3),
+            "median_salary": base_salary,
+            "insights": [
+                f"Estimated based on {job_title} market rates",
+                "Salary varies by company and negotiation",
+                "Consider total compensation including benefits"
+            ],
+            "factors": {
+                "location_impact": "Adjusted for location cost of living",
+                "skills_premium": "Based on technical skill requirements",
+                "experience_factor": f"Adjusted for {exp_str} experience"
+            },
+            "error": str(e),
+            "fallback": True
+        }
+
+

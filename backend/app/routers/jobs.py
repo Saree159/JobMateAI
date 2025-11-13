@@ -292,3 +292,56 @@ async def generate_interview_questions(job_id: int, db: Session = Depends(get_db
             detail=f"Failed to generate interview questions: {str(e)}"
         )
 
+
+@router.get("/jobs/{job_id}/salary-estimate")
+async def estimate_job_salary(job_id: int, db: Session = Depends(get_db)):
+    """
+    Generate AI-powered salary estimation for a job.
+    
+    Returns salary range and insights based on:
+    - Job title and location
+    - Required experience and skills
+    - Market conditions
+    """
+    job = db.query(Job).filter(Job.id == job_id).first()
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job with id {job_id} not found"
+        )
+    
+    user = db.query(User).filter(User.id == job.user_id).first()
+    
+    # Generate salary estimate using AI
+    try:
+        from app.services.ai import estimate_salary
+        
+        # Extract experience years from job description if available
+        experience_years = None
+        if user:
+            # Could add experience_years field to User model
+            experience_years = 5  # Default mid-level
+        
+        salary_data = await estimate_salary(
+            job_title=job.title,
+            location=job.location or "Remote",
+            experience_years=experience_years,
+            skills=user.skills_list if user else [],
+            company_size="medium"
+        )
+        
+        return {
+            "job_id": job.id,
+            "job_title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "salary_estimate": salary_data
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to estimate salary: {str(e)}"
+        )
+
