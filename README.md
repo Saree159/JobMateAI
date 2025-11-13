@@ -4,60 +4,40 @@
 
 Track applications, get AI match scores, generate personalized cover letters, receive interview preparation, and get salary insights - all while maintaining complete control of your data.
 
+---
+
 ## 🚀 Core Features
 
 ### Application Management
-- **Profile Management**: Comprehensive profile with skills, experience, target role, and preferences
-- **Job Tracking**: Manage job postings through a complete pipeline (Saved → Applied → Interview → Offer → Rejected)
-- **Smart Filtering**: Search jobs by title, company, or status with real-time filtering
-- **Application Notes**: Add timestamped notes to track follow-ups and communications
-- **Status Updates**: Visual pipeline with drag-and-drop status management
+- **Smart Job Tracking**: Manage jobs through a complete pipeline (Saved → Applied → Interview → Offer → Rejected)
+- **Profile Management**: Comprehensive profile with skills, experience level, and preferences
+- **Advanced Filtering**: Search jobs by title, company, or status with real-time updates
+- **Timestamped Notes**: Add notes to track follow-ups, conversations, and important details
+- **Application Stats**: Visual dashboard with success rates and pipeline metrics
 
 ### AI-Powered Intelligence
-- **Match Scoring**: Get 0-100 compatibility scores based on skills vs requirements (hybrid algorithm)
-- **Cover Letter Generation**: Personalized, professional cover letters using GPT-4o-mini
-- **Interview Preparation**: AI-generated behavioral, technical, and company-specific questions
+- **Match Scoring (0-100)**: Hybrid algorithm combining keyword matching + semantic similarity
+- **Cover Letter Generation**: Personalized, ATS-optimized cover letters using GPT-4o-mini
+- **Interview Preparation**: Behavioral, technical, and company-specific questions
 - **Salary Insights**: Real-time salary estimates with market analysis and range predictions
 
 ### Power Features
-- **Resume Parsing**: Upload PDF or DOCX resumes for automatic skill extraction
-- **Export Functionality**: Export applications to CSV or professionally formatted PDF reports
+- **Resume Parsing**: Upload PDF or DOCX resumes for automatic skill extraction (50+ tech skills)
+- **Export to CSV/PDF**: Professional reports with statistics and detailed application tables
 - **Email Notifications**: Interview reminders, follow-up alerts, and deadline notifications
 - **Visual Analytics**: Application statistics with match score trends and status breakdown
 
 ### Production Ready
-- **Docker Support**: Complete containerization with PostgreSQL, multi-stage builds
-- **Security**: JWT authentication, bcrypt password hashing, CORS protection
-- **Validation**: Client and server-side validation with toast notifications
+- **Docker Support**: Complete containerization with PostgreSQL and multi-stage builds
+- **Security**: JWT authentication, bcrypt password hashing, CORS protection, input validation
 - **Performance**: Skeleton loading states, optimized queries, responsive UI
 - **Self-Hosted**: Own your data, no external dependencies (except OpenAI for AI features)
 
-## 🏗️ Architecture
-
-**Fully standalone application:**
-- FastAPI backend with SQLite/PostgreSQL
-- React frontend with modern UI
-- JWT authentication
-- No BaaS or external services required
-
-### Tech Stack
-
-**Frontend:**
-- React 18 + Vite
-- React Router v6
-- TanStack Query (React Query)
-- Tailwind CSS + Radix UI (shadcn/ui)
-
-**Backend:**
-- FastAPI (Python)
-- SQLAlchemy ORM
-- SQLite (dev) / PostgreSQL (production)
-- OpenAI GPT-4 for cover letters
-- Scikit-learn for match scoring
+---
 
 ## 🛠️ Quick Start
 
-### Option 1: Docker (Recommended for Production)
+### Option 1: Docker (Recommended)
 
 **Prerequisites:**
 - Docker 20.10+
@@ -71,18 +51,16 @@ cd JobMateAI
 
 # Configure environment
 cp .env.docker.example .env
-# Edit .env and add your OPENAI_API_KEY, SECRET_KEY, DB_PASSWORD
+# Edit .env: Add OPENAI_API_KEY, set SECRET_KEY, DB_PASSWORD
 
-# Build and start services
+# Build and start
 docker-compose up -d
 
 # Access application
 # Frontend: http://localhost
-# Backend: http://localhost:8000
+# Backend API: http://localhost:8000
 # API Docs: http://localhost:8000/docs
 ```
-
-See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
 
 ### Option 2: Local Development
 
@@ -91,45 +69,68 @@ See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
 - Python 3.9+
 - OpenAI API key
 
-**Backend Setup:**
+**Backend:**
 ```bash
 cd backend
 
 # Create virtual environment
 python -m venv venv
 
-# Activate (Windows)
-venv\Scripts\activate
-# Activate (Mac/Linux)
-source venv/bin/activate
+# Activate
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Configure
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env: Add your OPENAI_API_KEY
 
 # Start server
 uvicorn app.main:app --reload
 ```
 
-Backend available at: http://localhost:8000
+Backend: http://localhost:8000
 
-**Frontend Setup:**
+**Frontend:**
 ```bash
-# In new terminal, from project root
+# From project root
 npm install
 npm run dev
 ```
 
-Frontend available at: http://localhost:5173
+Frontend: http://localhost:5173
 
-**Create Account:**
+**Get Started:**
 1. Visit http://localhost:5173
-2. Click "Sign up"
-3. Complete onboarding
-4. Start tracking jobs!
+2. Sign up and complete onboarding
+3. Start tracking jobs!
+
+---
+
+## 📦 Tech Stack
+
+**Frontend:**
+- React 18 + Vite
+- React Router v6
+- TanStack Query (React Query)
+- Tailwind CSS + Radix UI (shadcn/ui)
+- Sonner (toast notifications)
+- jsPDF, Papaparse (export functionality)
+
+**Backend:**
+- FastAPI (Python)
+- SQLAlchemy ORM
+- PostgreSQL (production) / SQLite (dev)
+- OpenAI GPT-4o-mini
+- Scikit-learn (match scoring)
+- PyPDF2, python-docx (resume parsing)
+
+**Infrastructure:**
+- Docker + Docker Compose
+- Nginx (production web server)
+- Gunicorn (ASGI server)
 
 ---
 
@@ -141,33 +142,43 @@ JobMateAI/
 │   ├── api/
 │   │   └── jobmate.js            # Backend API client
 │   ├── components/               # UI components
+│   │   ├── applications/         # Application cards & stats
+│   │   ├── dashboard/            # Dashboard widgets
+│   │   ├── jobs/                 # Job listings & filters
+│   │   └── ui/                   # shadcn/ui components
 │   ├── pages/                    # Page components
-│   │   ├── Login.jsx             # Login page
-│   │   ├── Register.jsx          # Registration
 │   │   ├── Dashboard.jsx         # Main dashboard
 │   │   ├── Jobs.jsx              # Job listings
+│   │   ├── JobDetails.jsx        # Job details + AI features
 │   │   ├── Applications.jsx      # Application tracking
-│   │   └── Profile.jsx           # User profile
-│   └── lib/
-│       └── AuthContext.jsx       # JWT auth management
+│   │   └── Profile.jsx           # User profile + resume upload
+│   ├── lib/
+│   │   └── AuthContext.jsx       # JWT authentication
+│   └── utils/
+│       └── exportUtils.js        # CSV/PDF export
 │
 ├── backend/                      # FastAPI backend
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point
-│   │   ├── config.py            # Configuration
 │   │   ├── database.py          # Database setup
 │   │   ├── models.py            # SQLAlchemy models
 │   │   ├── schemas.py           # Pydantic schemas
 │   │   ├── routers/             # API endpoints
 │   │   │   ├── users.py         # User management + auth
-│   │   │   └── jobs.py          # Job management + AI
+│   │   │   ├── jobs.py          # Job management
+│   │   │   ├── resume.py        # Resume upload & parsing
+│   │   │   └── notifications.py  # Email notifications
 │   │   └── services/
-│   │       └── ai.py            # AI matching & cover letters
-│   ├── requirements.txt
-│   ├── .env                     # Configuration
-│   └── README.md
+│   │       ├── ai.py            # AI features (match, cover letter, interview, salary)
+│   │       └── notifications.py  # Email service
+│   ├── migrate_to_postgres.py   # Database migration script
+│   └── requirements.txt
 │
-├── package.json
+├── docker-compose.yml            # Multi-container setup
+├── Dockerfile                    # Frontend Docker image
+├── backend/Dockerfile            # Backend Docker image
+├── nginx.conf                    # Production web server config
+├── DEPLOYMENT.md                 # Comprehensive deployment guide
 └── README.md
 ```
 
@@ -185,7 +196,7 @@ JobMateAI/
 
 ### Job Management
 - `POST /api/users/{id}/jobs` - Create job posting
-- `GET /api/users/{id}/jobs` - List all jobs for user
+- `GET /api/users/{id}/jobs` - List all jobs
 - `GET /api/jobs/{id}` - Get job details
 - `PUT /api/jobs/{id}` - Update job
 - `DELETE /api/jobs/{id}` - Delete job
@@ -193,15 +204,76 @@ JobMateAI/
 ### AI Features
 - `POST /api/jobs/{id}/match` - Calculate AI match score (0-100)
 - `POST /api/jobs/{id}/cover-letter` - Generate personalized cover letter
-- `GET /api/jobs/{id}/interview-questions` - Get interview prep questions (behavioral/technical/company)
-- `GET /api/jobs/{id}/salary-estimate` - Get salary range estimate with market insights
+- `GET /api/jobs/{id}/interview-questions` - Get interview prep (behavioral/technical/company)
+- `GET /api/jobs/{id}/salary-estimate` - Get salary range + market insights
 
 ### Resume & Notifications
-- `POST /api/resume/upload` - Upload and parse resume (PDF/DOCX)
+- `POST /api/resume/upload` - Upload and parse resume (PDF/DOCX, max 5MB)
 - `POST /api/notifications/send-test` - Send test email notification
 - `POST /api/notifications/jobs/{id}/send-reminder` - Send interview/follow-up reminder
 
-**Interactive API Documentation:** http://localhost:8000/docs
+**Interactive API Docs:** http://localhost:8000/docs
+
+---
+
+## 🎯 Key Features Explained
+
+### AI Match Scoring
+- **Hybrid algorithm**: 50% keyword matching + 50% semantic similarity using TF-IDF and cosine similarity
+- Returns 0-100 score with detailed breakdown of matched and missing skills
+- Helps prioritize which jobs to apply for based on compatibility
+- Updates stored in database for trend analysis
+
+### AI Cover Letter Generation
+- Powered by OpenAI GPT-4o-mini (cost-efficient, high-quality)
+- Tailored to job description, company, and your profile
+- Professional business letter format optimized for ATS systems
+- 250-350 words with proper structure
+- Saved to database for future editing and reuse
+
+### Interview Preparation
+- **Behavioral Questions** (5): STAR method-focused questions based on job requirements
+- **Technical Questions** (5): Role-specific technical assessments and problem-solving
+- **Company-Specific Questions** (3): Questions about company culture, values, and expectations
+- AI-generated based on job description and your background
+- Helps prepare for different interview scenarios and types
+
+### Salary Insights
+- Real-time salary estimates powered by AI market analysis
+- Returns min/median/max salary range (e.g., $80K/$95K/$110K)
+- 3-5 market insights explaining the estimate
+- Factors analyzed: job title, location, experience years, skills, company size
+- Helps with salary negotiation and managing expectations
+
+### Resume Parsing
+- Supports both PDF and DOCX formats (max 5MB file size)
+- Automatic extraction of: name, job title, skills, location
+- Recognizes 50+ technology skills (Python, JavaScript, AWS, React, Docker, etc.)
+- Extracts text from DOCX tables (common in modern resumes)
+- Updates profile automatically with parsed information
+
+### Export & Reporting
+- **CSV Export**: Spreadsheet-compatible format for Excel, Google Sheets, data analysis
+- **PDF Export**: Professional report including:
+  - Summary statistics (total applications, success rate, avg match score)
+  - Detailed table with all applications and status
+  - Formatted with jsPDF and autotable for clean layout
+- One-click export button from Applications page
+
+### Email Notifications (Optional)
+- **Interview Reminders**: Automated reminders before scheduled interviews
+- **Follow-up Alerts**: Track when to follow up with companies after applying
+- **Deadline Notifications**: Application deadline reminders to never miss an opportunity
+- Professional HTML email templates
+- SMTP configuration via environment variables (Gmail, SendGrid, etc.)
+
+### Job Application Pipeline
+Visual tracking through 5 stages:
+- **Saved** 📌 → Job bookmarked for future application
+- **Applied** ✉️ → Application submitted with date tracking
+- **Interview** 🎤 → Interview scheduled (use prep tools!)
+- **Offer** 🎉 → Offer received (congrats!)
+- **Rejected** ❌ → Not selected (learn and move forward)
 
 ---
 
@@ -212,7 +284,8 @@ JobMateAI/
 **Terminal 1 - Backend:**
 ```bash
 cd backend
-venv\Scripts\activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Mac/Linux
 uvicorn app.main:app --reload
 ```
 
@@ -223,143 +296,162 @@ npm run dev
 
 ### Environment Variables
 
-**Frontend** (`.env` in root):
+**Frontend (.env in root):**
 ```bash
 VITE_API_URL=http://localhost:8000
 ```
 
-**Backend** (`backend/.env`):
+**Backend (backend/.env):**
 ```bash
-DATABASE_URL=sqlite:///./jobmate.db
+# Database
+DATABASE_URL=sqlite:///./jobmate.db  # Dev
+# DATABASE_URL=postgresql://user:pass@localhost/jobmate  # Production
+
+# Security
+SECRET_KEY=your-secret-key-here  # Generate: python -c 'import secrets; print(secrets.token_urlsafe(32))'
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=43200  # 30 days
+
+# OpenAI
 OPENAI_API_KEY=sk-your-key-here
-CORS_ORIGINS=http://localhost:5173
-SECRET_KEY=your-secret-key
+
+# CORS
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Email (Optional)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=noreply@yourdomain.com
 ```
 
-### Database
+### Database Management
 
-**SQLite (Development):**
-Database file: `backend/jobmate.db`
-
-**PostgreSQL (Production):**
-Update `DATABASE_URL` in `.env`:
+**View SQLite database:**
 ```bash
-DATABASE_URL=postgresql://user:password@localhost/jobmate
+cd backend
+sqlite3 jobmate.db
+.tables
+.schema users
+SELECT * FROM users;
+.quit
+```
+
+**Migrate to PostgreSQL:**
+```bash
+cd backend
+python migrate_to_postgres.py --source sqlite:///./jobmate.db --target postgresql://user:pass@localhost/jobmate --dry-run
+# Remove --dry-run to actually migrate
 ```
 
 ---
 
 ## 🧪 Testing
 
-**Backend Tests:**
+**Backend API Tests:**
 ```bash
 cd backend
 pytest test_api.py -v
 ```
 
 **Manual Testing:**
-1. Use Swagger UI: http://localhost:8000/docs
-2. Try each endpoint interactively
-3. Check database: `sqlite3 backend/jobmate.db`
+- Swagger UI: http://localhost:8000/docs
+- Test each endpoint interactively
+- View database: `sqlite3 backend/jobmate.db`
 
 ---
 
 ## 🚢 Deployment
 
-### Backend (Production)
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment guide including:**
+- Docker deployment (recommended)
+- Railway (easiest cloud deployment)
+- Render (web services)
+- Vercel (frontend) + Railway (backend)
+- Manual VPS deployment with Nginx
+- SSL/HTTPS setup with Let's Encrypt
+- Database migration from SQLite to PostgreSQL
+- Monitoring and backup strategies
 
-1. **Use PostgreSQL** instead of SQLite
-2. **Set strong SECRET_KEY** in environment
-3. **Use production ASGI server:**
-   ```bash
-   gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
-   ```
-4. **Enable HTTPS**
-5. **Set production CORS_ORIGINS**
+### Quick Production Checklist
 
-### Frontend (Production)
-
-1. **Build static assets:**
-   ```bash
-   npm run build
-   ```
-2. **Serve with Nginx, Vercel, or Netlify**
-3. **Set `VITE_API_URL`** to production backend URL
-
-### Docker (Optional)
-
-```dockerfile
-# Backend Dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY backend/ .
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0"]
-```
-
----
-
-## � Key Features Explained
-
-### AI Match Scoring
-- **Hybrid algorithm**: 50% keyword matching + 50% semantic similarity
-- Uses TF-IDF and cosine similarity
-- Returns 0-100 score with matched/missing skills
-- Helps prioritize which jobs to apply for
-
-### AI Cover Letter Generation
-- Powered by OpenAI GPT-4 Turbo
-- Tailored to job description and your profile  
-- Professional tone, 250-300 words
-- Saved to database for reuse/editing
-
-### Job Pipeline
-Track each job through stages:
-- **Saved** → Job saved for later
-- **Applied** → Application submitted
-- **Interview** → Interview scheduled
-- **Offer** → Offer received
-- **Rejected** → Not selected
+✅ Use PostgreSQL (not SQLite)  
+✅ Set strong SECRET_KEY (32+ characters)  
+✅ Enable HTTPS/SSL with Let's Encrypt  
+✅ Configure CORS_ORIGINS to your domains  
+✅ Set up regular database backups  
+✅ Configure email SMTP (optional)  
+✅ Monitor application health and errors  
+✅ Keep dependencies updated  
 
 ---
 
 ## 🤝 Contributing
 
-This is an open-source project. Contributions welcome!
+Open-source project - contributions welcome!
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
 ---
 
-## �📝 License
+## 📄 License
 
-MIT License - feel free to use for personal or commercial projects.
+MIT License - free to use for personal or commercial projects.
 
 ---
 
-## 🆘 Support & Documentation
+## 📚 Documentation
 
-- **API Reference:** http://localhost:8000/docs
-- **Architecture:** See `ARCHITECTURE.md`
-- **Backend Setup:** See `backend/README.md`
-- **Integration Guide:** See `INTEGRATION_GUIDE.md`
-- **Quick Reference:** See `QUICK_REFERENCE.md`
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide for all platforms
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
+- **API Docs** - http://localhost:8000/docs (interactive Swagger UI)
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick command reference
 
 ---
 
 ## ✨ What Makes This Different
 
-✅ **Fully Self-Hosted** - No external dependencies (except OpenAI)
-✅ **Open Source** - Own your code and data  
-✅ **Modern Stack** - FastAPI + React best practices
-✅ **AI-Powered** - Smart matching and cover letters
-✅ **Production Ready** - Includes auth, validation, docs
-✅ **Easy Setup** - Running in minutes
+✅ **Fully Self-Hosted** - Complete control of your data and infrastructure  
+✅ **Open Source** - Transparent code, customizable to your needs  
+✅ **Modern Stack** - FastAPI + React with best practices  
+✅ **AI-Powered** - Smart matching, cover letters, interview prep, salary insights  
+✅ **Production Ready** - Docker, authentication, validation, monitoring  
+✅ **Feature Rich** - Resume parsing, email notifications, CSV/PDF export  
+✅ **Easy Setup** - Running in minutes with Docker or local development  
+✅ **No Vendor Lock-in** - Standard technologies, portable deployment  
 
 ---
 
-**Start your smarter job search today!**
+## 🆘 Support
+
+Need help?
+- **GitHub Issues**: [Report bugs or request features](https://github.com/Saree159/JobMateAI/issues)
+- **Documentation**: Check DEPLOYMENT.md and ARCHITECTURE.md
+- **API Reference**: http://localhost:8000/docs
+
+---
+
+## 🗺️ Roadmap
+
+**Completed:**
+- ✅ Phase 1: UX Polish (notifications, validation, search, loading states)
+- ✅ Phase 2: Power Features (export, resume parsing, email, interview prep, salary insights)
+- ✅ Phase 3: Production Deployment (Docker, deployment guides, migration scripts)
+
+**Coming Soon:**
+- 📊 Analytics Dashboard (success rates, time-to-response metrics, trends)
+- 🔔 Job Alerts System (email when matching jobs are added)
+- 🔗 LinkedIn Integration (auto-import job postings)
+- 📱 Mobile App (React Native)
+- 🤖 Advanced AI (resume improvements, application tracking predictions)
+
+---
+
+**Start your smarter job search today!** 🚀
+
+Built with ❤️ using FastAPI and React
