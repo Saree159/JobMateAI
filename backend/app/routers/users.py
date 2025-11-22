@@ -3,6 +3,7 @@ User API router.
 Handles user registration, profile management, and authentication.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 import bcrypt
@@ -16,6 +17,7 @@ from app.config import settings
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
@@ -46,6 +48,36 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Get the current authenticated user from JWT token.
+    Used as a dependency in protected routes.
+    """
+    token = credentials.credentials
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    
+    return user
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

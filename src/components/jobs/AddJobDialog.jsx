@@ -14,12 +14,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Sparkles, Link2, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AddJobDialog({ open, onClose }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('manual');
+  const [jobUrl, setJobUrl] = useState('');
+  const [isExtracting, setIsExtracting] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -47,6 +52,62 @@ export default function AddJobDialog({ open, onClose }) {
       status: 'saved',
     });
     setError('');
+    setJobUrl('');
+    setActiveTab('manual');
+  };
+
+  const handleExtractFromUrl = async () => {
+    if (!jobUrl) {
+      setError('Please enter a job URL');
+      return;
+    }
+
+    setIsExtracting(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/jobs/scrape-url?url=${encodeURIComponent(jobUrl)}&user_id=${user.id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to extract job details');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Populate form with extracted data
+        setFormData({
+          title: result.data.title || '',
+          company: result.data.company || '',
+          location: result.data.location || '',
+          description: result.data.description || '',
+          job_type: result.data.job_type || 'Full-time',
+          work_mode: result.data.work_mode || 'Onsite',
+          skills: result.data.skills || '',
+          salary_min: result.data.salary_min || null,
+          salary_max: result.data.salary_max || null,
+          apply_url: result.data.apply_url || jobUrl,
+          status: 'saved',
+        });
+        
+        toast.success('Job details extracted successfully! Review and save.');
+        setActiveTab('manual'); // Switch to manual tab to review
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to extract job details from URL');
+      toast.error('Failed to extract job details');
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleSubmit = () => {
@@ -67,7 +128,7 @@ export default function AddJobDialog({ open, onClose }) {
             Add New Job
           </DialogTitle>
           <DialogDescription>
-            Manually add a job you're interested in applying to
+            Add a job manually or extract details from a URL
           </DialogDescription>
         </DialogHeader>
 
@@ -77,10 +138,64 @@ export default function AddJobDialog({ open, onClose }) {
           </Alert>
         )}
 
-        <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Job Title *</Label>
-            <Input
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Manual Entry
+            </TabsTrigger>
+            <TabsTrigger value="url" className="flex items-center gap-2">
+              <Link2 className="w-4 h-4" />
+              Extract from URL
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="url" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="jobUrl">Job URL *</Label>
+              <Input
+                id="jobUrl"
+                placeholder="https://www.linkedin.com/jobs/view/..."
+                value={jobUrl}
+                onChange={(e) => setJobUrl(e.target.value)}
+                disabled={isExtracting}
+              />
+              <p className="text-sm text-gray-500">
+                Supports: LinkedIn, Indeed, Glassdoor, Drushim, AllJobs
+              </p>
+            </div>
+
+            <Button
+              onClick={handleExtractFromUrl}
+              disabled={isExtracting}
+              className="w-full"
+            >
+              {isExtracting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Extracting Job Details...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Extract Job Details
+                </>
+              )}
+            </Button>
+
+            {formData.title && (
+              <Alert>
+                <AlertDescription>
+                  ✅ Job extracted! Switch to Manual Entry tab to review and save.
+                </AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
+
+          <TabsContent value="manual" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Job Title *</Label>
+              <Input
               id="title"
               placeholder="e.g. Senior Software Engineer"
               value={formData.title}
@@ -147,7 +262,8 @@ export default function AddJobDialog({ open, onClose }) {
               )}
             </Button>
           </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

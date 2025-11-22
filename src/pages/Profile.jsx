@@ -20,6 +20,14 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
+  // Helper function to normalize skills to array format
+  const normalizeSkills = (skills) => {
+    if (!skills) return [];
+    if (Array.isArray(skills)) return skills;
+    if (typeof skills === 'string') return skills.split(',').map(s => s.trim()).filter(Boolean);
+    return [];
+  };
+  
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [skillInput, setSkillInput] = useState('');
@@ -97,7 +105,7 @@ export default function Profile() {
   const startEditing = () => {
     setFormData({
       target_role: user?.target_role || '',
-      skills: user?.skills ? user.skills.split(',').map(s => s.trim()) : [],
+      skills: normalizeSkills(user?.skills),
       location_preference: user?.location_preference || '',
       work_mode_preference: user?.work_mode_preference || '',
       bio: user?.bio || '',
@@ -324,7 +332,7 @@ export default function Profile() {
             )}
             
             <div className="flex flex-wrap gap-2">
-              {(isEditing ? formData.skills : user.skills || []).map((skill, idx) => (
+              {(isEditing ? formData.skills : normalizeSkills(user?.skills)).map((skill, idx) => (
                 <Badge key={idx} variant="secondary" className="text-sm py-1.5 px-3">
                   {skill}
                   {isEditing && (
@@ -337,7 +345,7 @@ export default function Profile() {
                   )}
                 </Badge>
               ))}
-              {(!user.skills || user.skills.length === 0) && !isEditing && (
+              {normalizeSkills(user?.skills).length === 0 && !isEditing && (
                 <p className="text-gray-500">No skills added yet</p>
               )}
             </div>

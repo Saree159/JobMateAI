@@ -345,3 +345,75 @@ async def estimate_job_salary(job_id: int, db: Session = Depends(get_db)):
             detail=f"Failed to estimate salary: {str(e)}"
         )
 
+
+@router.post("/jobs/scrape-url")
+async def scrape_job_from_url(
+    url: str = Query(..., description="URL of the job posting to scrape"),
+    user_id: int = Query(..., description="User ID to associate with the scraped job"),
+    db: Session = Depends(get_db)
+):
+    """
+    Scrape job details from a URL and optionally save it.
+    
+    Supports:
+    - LinkedIn
+    - Indeed
+    - Glassdoor
+    - Drushim.co.il
+    - AllJobs.co.il
+    
+    Returns the extracted job data which can be reviewed before saving.
+    """
+    # Verify user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with id {user_id} not found"
+        )
+    
+    try:
+        from app.services.scrapers import ScraperFactory
+        
+        # Scrape the job data
+        scraped_data = ScraperFactory.scrape_job(url)
+        
+        if not scraped_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to scrape job data from URL. The site may be blocking automated access or the URL format is not supported."
+            )
+        
+        if not scraped_data.get('title'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not extract job title from URL. Please check the URL and try again."
+            )
+        
+        # Return the scraped data for frontend to review
+        return {
+            "success": True,
+            "url": url,
+            "data": {
+                "title": scraped_data.get('title'),
+                "company": scraped_data.get('company'),
+                "location": scraped_data.get('location'),
+                "description": scraped_data.get('description'),
+                "job_type": scraped_data.get('job_type', 'Full-time'),
+                "work_mode": scraped_data.get('work_mode', 'Onsite'),
+                "skills": ', '.join(scraped_data.get('skills', [])) if scraped_data.get('skills') else None,
+                "salary_min": scraped_data.get('salary_min'),
+                "salary_max": scraped_data.get('salary_max'),
+                "apply_url": url
+            },
+            "message": "Job details extracted successfully. Review and save if correct."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error scraping URL: {str(e)}"
+        )
+

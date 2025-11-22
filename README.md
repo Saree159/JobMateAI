@@ -22,6 +22,7 @@ Track applications, get AI match scores, generate personalized cover letters, re
 - **Salary Insights**: Real-time salary estimates with market analysis and range predictions
 
 ### Power Features
+- **Job URL Scraping**: Auto-extract job details from LinkedIn, Indeed, Glassdoor, Drushim, AllJobs
 - **Resume Parsing**: Upload PDF or DOCX resumes for automatic skill extraction (50+ tech skills)
 - **Export to CSV/PDF**: Professional reports with statistics and detailed application tables
 - **Email Notifications**: Interview reminders, follow-up alerts, and deadline notifications
