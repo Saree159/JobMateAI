@@ -306,7 +306,7 @@ export default function Pricing() {
         <div className="mt-12 text-center">
           <h2 className="text-2xl font-bold mb-4">Questions?</h2>
           <p className="text-gray-600 mb-6">
-            Contact us at support@jobmate.ai or check out our FAQ section
+            Contact us at support@hirematex.ai or check out our FAQ section
           </p>
           <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
             Back to Dashboard

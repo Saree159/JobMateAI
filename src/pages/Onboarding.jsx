@@ -87,14 +87,14 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-white">
-      <Card className="w-full max-w-2xl border border-gray-100">
+      <Card className="w-full max-w-2xl border border-gray-100 shadow-xl">
         <CardHeader className="text-center pb-8 pt-10">
-          <div className="w-16 h-16 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold">Welcome to JobMate AI</CardTitle>
+          <CardTitle className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Welcome to HireMatex</CardTitle>
           <CardDescription className="text-lg mt-2">
-            Let's set up your profile to find the perfect jobs
+            Let's set up your AI-powered job search profile
           </CardDescription>
           <div className="flex justify-center gap-2 mt-6">
             {[1, 2, 3].map((s) => (

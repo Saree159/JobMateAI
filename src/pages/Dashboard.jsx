@@ -51,13 +51,13 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header with modern gradient */}
       <div className="mb-10">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
           Welcome back, {user?.full_name?.split(' ')[0] || 'there'}
         </h1>
-        <p className="text-gray-500">
-          {user?.target_role ? `Finding the best ${user.target_role} positions for you` : 'Your job search command center'}
+        <p className="text-gray-600 text-lg">
+          {user?.target_role ? `Finding the best ${user.target_role} positions for you` : 'Your AI-powered job search command center'}
         </p>
       </div>
 

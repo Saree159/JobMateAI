@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///./jobmate.db"
     
+    # Redis Cache
+    redis_url: str = "redis://localhost:6379/0"
+    
     # OpenAI
     openai_api_key: str
     

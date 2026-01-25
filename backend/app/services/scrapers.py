@@ -1,6 +1,7 @@
 """
 Web scraping service for extracting job details from various job boards.
 Supports LinkedIn, Indeed, Glassdoor, and Israeli job sites.
+Uses Crawl4AI for JavaScript-rendered content.
 """
 import re
 import requests
@@ -9,6 +10,13 @@ from typing import Dict, Optional, List
 import logging
 from urllib.parse import urlparse, parse_qs
 import time
+import asyncio
+
+try:
+    from crawl4ai import AsyncWebCrawler, CacheMode
+    CRAWL4AI_AVAILABLE = True
+except ImportError:
+    CRAWL4AI_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +75,31 @@ class JobScraper:
             salary_info["max"] = value
         
         return salary_info
+    
+    def extract_skills(self, text: str) -> List[str]:
+        """Extract technical skills from job description."""
+        skills_patterns = [
+            # Programming languages
+            r'\b(Python|JavaScript|Java|C\+\+|C#|Ruby|PHP|Swift|Kotlin|Go|Rust|TypeScript|Scala|R)\b',
+            # Frameworks/Libraries
+            r'\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|\.NET|Laravel|Rails|Express|FastAPI|Next\.js)\b',
+            # Databases
+            r'\b(SQL|MySQL|PostgreSQL|MongoDB|Redis|Oracle|SQLite|Cassandra|DynamoDB|Elasticsearch)\b',
+            # Cloud/DevOps
+            r'\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|Git|CI/CD|Terraform|Ansible)\b',
+            # Other tech
+            r'\b(HTML|CSS|REST|GraphQL|API|Agile|Scrum|Machine Learning|AI|Data Analysis|Linux|JIRA)\b',
+        ]
+        
+        skills_set = set()
+        for pattern in skills_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                skill = match.strip()
+                if skill:
+                    skills_set.add(skill)
+        
+        return list(skills_set)[:10]  # Limit to 10 skills
     
     def fetch_page(self, url: str, retries: int = 3, delay: float = 1.0) -> Optional[BeautifulSoup]:
         """Fetch and parse a web page with retry logic."""
@@ -336,11 +369,160 @@ class GlassdoorScraper(JobScraper):
 
 
 class DrushimScraper(JobScraper):
-    """Scraper for Drushim.co.il (Israeli job board)."""
+    """Scraper for Drushim.co.il (Israeli job board) using Crawl4AI for JS rendering."""
+    
+    async def scrape_async(self, url: str) -> Optional[Dict]:
+        """Extract job details from Drushim listing page using Crawl4AI.
+        
+        Note: Drushim shows all jobs on listing pages, not individual job pages.
+        This method extracts the first job from the listing for compatibility,
+        but see scrape_listing_async for extracting all jobs.
+        """
+        jobs = await self.scrape_listing_async(url)
+        return jobs[0] if jobs else None
+    
+    async def scrape_listing_async(self, url: str) -> List[Dict]:
+        """Extract all jobs from a Drushim listing page."""
+        if not CRAWL4AI_AVAILABLE:
+            logger.warning("Crawl4AI not available, using fallback scraper")
+            return []
+        
+        try:
+            async with AsyncWebCrawler(verbose=False) as crawler:
+                result = await crawler.arun(
+                    url=url,
+                    css_selector="div.job-item-main",
+                    cache_mode=CacheMode.BYPASS,
+                    screenshot=False,
+                    verbose=False
+                )
+                
+                if not result.success:
+                    logger.error(f"Crawl4AI failed for {url}")
+                    return []
+                
+                soup = BeautifulSoup(result.html, 'html.parser')
+                
+                # Find all job cards
+                job_cards = soup.select('div.job-item-main')
+                logger.info(f"Found {len(job_cards)} jobs on {url}")
+                
+                jobs = []
+                for card in job_cards:
+                    try:
+                        job_data = self._extract_job_from_card(card, url)
+                        if job_data and job_data.get("title"):
+                            jobs.append(job_data)
+                    except Exception as e:
+                        logger.error(f"Error extracting job card: {str(e)}")
+                        continue
+                
+                return jobs
+                
+        except Exception as e:
+            logger.error(f"Error scraping Drushim URL {url}: {str(e)}")
+            return []
+    
+    def _extract_job_from_card(self, card, base_url: str) -> Optional[Dict]:
+        """Extract job data from a single job card element."""
+        job_data = {
+            "title": None,
+            "company": None,
+            "location": None,
+            "description": None,
+            "job_type": "Full-time",
+            "work_mode": "Onsite",
+            "experience_level": None,
+            "salary_min": None,
+            "salary_max": None,
+            "skills": [],
+            "url": base_url
+        }
+        
+        # Extract job ID from listingid attribute
+        listing_id = card.get('listingid')
+        if listing_id:
+            job_data["url"] = f"https://www.drushim.co.il/job/{listing_id}/"
+        
+        # Extract title - Drushim uses h3.display-28 with span.job-url
+        title_elem = card.select_one('h3.display-28 span.job-url')
+        if not title_elem:
+            # Fallback to just h3.display-28
+            title_elem = card.select_one('h3.display-28')
+        
+        if title_elem:
+            job_data["title"] = self.clean_text(title_elem.get_text())
+        
+        # Extract company - Drushim uses span.bidi inside company link
+        company_elem = card.select_one('a[href*="דרושים"] span.font-weight-medium.bidi')
+        if not company_elem:
+            # Try alternative selector
+            company_elem = card.select_one('p.display-22 a span.bidi')
+        if not company_elem:
+            # Final fallback
+            company_elem = card.select_one('span.font-weight-medium.bidi')
+        
+        if company_elem:
+            job_data["company"] = self.clean_text(company_elem.get_text())
+        
+        # Extract location from job-details-sub (format: "Location | X-Y שנים | Job Type | Time posted")
+        details_sub = card.select_one('div.job-details-sub')
+        if details_sub:
+            # Get all text and split by pipe separator
+            details_text = self.clean_text(details_sub.get_text())
+            parts = [p.strip() for p in details_text.split('|')]
+            
+            if parts:
+                # First part is usually location
+                job_data["location"] = parts[0]
+                
+                # Look for experience years (X-Y שנים format)
+                for part in parts:
+                    if 'שנים' in part or 'שנה' in part:
+                        # Extract experience level from Hebrew text
+                        if any(word in part for word in ['מנוסה', '5-10', '10+']):
+                            job_data["experience_level"] = "Senior"
+                        elif any(word in part for word in ['1-2', '2-5', 'ללא ניסיון']):
+                            job_data["experience_level"] = "Entry Level"
+                        else:
+                            job_data["experience_level"] = "Mid Level"
+                        break
+        
+        # Extract description - Try job-intro first, then full job-details
+        desc_elem = card.select_one('div.job-intro p.display-18')
+        if not desc_elem:
+            desc_elem = card.select_one('div.job-details p.display-18')
+        if not desc_elem:
+            # Fallback to job-details wrapper
+            desc_elem = card.select_one('div.job-details-wrap div.job-details')
+        
+        if desc_elem:
+            job_data["description"] = self.clean_text(desc_elem.get_text())
+        
+        # Extract salary
+        salary_elem = card.find(['span', 'div'], class_=re.compile('salary'))
+        if salary_elem:
+            salary_info = self.extract_salary(salary_elem.get_text())
+            job_data["salary_min"] = salary_info["min"]
+            job_data["salary_max"] = salary_info["max"]
+        
+        # Extract skills
+        if job_data["description"]:
+            job_data["skills"] = self.extract_skills(job_data["description"])
+        
+        return job_data
     
     def scrape(self, url: str) -> Optional[Dict]:
-        """Extract job details from Drushim URL."""
+        """Synchronous wrapper for async scrape method."""
         try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(self.scrape_async(url))
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Error in sync scrape wrapper: {str(e)}")
+            # Fallback to basic scraping
             soup = self.fetch_page(url)
             if not soup:
                 return None
@@ -357,45 +539,26 @@ class DrushimScraper(JobScraper):
                 "salary_max": None
             }
             
-            # Extract job title (Hebrew support)
-            title_elem = soup.find('h1', class_=re.compile('job.*title'))
-            if not title_elem:
-                title_elem = soup.find('h1')
+            title_elem = soup.find('h1')
             if title_elem:
                 job_data["title"] = self.clean_text(title_elem.get_text())
             
-            # Extract company
             company_elem = soup.find('span', class_=re.compile('company'))
             if company_elem:
                 job_data["company"] = self.clean_text(company_elem.get_text())
             
-            # Extract location
             location_elem = soup.find('span', class_=re.compile('location|area'))
             if location_elem:
                 job_data["location"] = self.clean_text(location_elem.get_text())
             
-            # Extract description
             desc_elem = soup.find('div', class_=re.compile('content|description'))
             if desc_elem:
                 job_data["description"] = self.clean_text(desc_elem.get_text())
             
-            # Extract salary (Israeli Shekels)
-            salary_elem = soup.find('span', class_=re.compile('salary'))
-            if salary_elem:
-                salary_info = self.extract_salary(salary_elem.get_text())
-                job_data["salary_min"] = salary_info["min"]
-                job_data["salary_max"] = salary_info["max"]
-            
-            # Extract skills
             if job_data["description"]:
-                skills_scraper = LinkedInScraper()
-                job_data["skills"] = skills_scraper.extract_skills(job_data["description"])
+                job_data["skills"] = self.extract_skills(job_data["description"])
             
             return job_data
-            
-        except Exception as e:
-            logger.error(f"Error scraping Drushim URL {url}: {str(e)}")
-            return None
 
 
 class AllJobsScraper(JobScraper):

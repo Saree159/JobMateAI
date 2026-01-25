@@ -67,15 +67,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Briefcase className="w-6 h-6 text-white" />
+          <div className="mx-auto w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <Briefcase className="w-7 h-7 text-white" />
           </div>
-          <CardTitle className="text-2xl">Welcome to JobMate AI</CardTitle>
-          <CardDescription>
-            Sign in to manage your job search
+          <CardTitle className="text-3xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Welcome to HireMatex</CardTitle>
+          <CardDescription className="text-base">
+            Your AI-powered job application assistant
           </CardDescription>
         </CardHeader>
         <CardContent>

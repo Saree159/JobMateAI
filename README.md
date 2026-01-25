@@ -1,12 +1,12 @@
-# JobMate AI
+# HireMatex 🚀
 
-**The ultimate AI-powered job search management platform - fully self-hosted and feature-rich.**
+**Your AI-Powered Job Application Assistant - Automate, Optimize, and Land Your Dream Job**
 
-Track applications, get AI match scores, generate personalized cover letters, receive interview preparation, and get salary insights - all while maintaining complete control of your data.
+HireMatex is an intelligent job search platform that helps juniors and new graduates find their perfect role. With AI-powered CV customization, automated application management, and smart job matching, HireMatex takes the stress out of job hunting - so you can focus on preparing for your next opportunity.
 
 ---
 
-## 🚀 Core Features
+## 🎯 Core Features
 
 ### Application Management
 - **Smart Job Tracking**: Manage jobs through a complete pipeline (Saved → Applied → Interview → Offer → Rejected)

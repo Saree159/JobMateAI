@@ -6,6 +6,7 @@ import Profile from './pages/Profile';
 import JobDetails from './pages/JobDetails';
 import Pricing from './pages/Pricing';
 import Analytics from './pages/Analytics';
+import IsraeliJobs from './pages/IsraeliJobs';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Layout from './Layout.jsx';
@@ -15,6 +16,7 @@ export const PAGES = {
     "dashboard": Dashboard,
     "onboarding": Onboarding,
     "jobs": Jobs,
+    "israeliJobs": IsraeliJobs,
     "applications": Applications,
     "analytics": Analytics,
     "profile": Profile,

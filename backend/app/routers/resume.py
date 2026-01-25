@@ -165,7 +165,7 @@ async def upload_resume(
         updated_fields.append("target_role")
     
     if parsed_data["skills"] and not user.skills:
-        user.skills = parsed_data["skills"]
+        user.skills_list = parsed_data["skills"]
         updated_fields.append("skills")
     
     if parsed_data["location_preference"] and not user.location_preference:
@@ -183,7 +183,7 @@ async def upload_resume(
         "user": {
             "full_name": user.full_name,
             "target_role": user.target_role,
-            "skills": user.skills,
+            "skills": user.skills_list,
             "location_preference": user.location_preference,
         }
     }

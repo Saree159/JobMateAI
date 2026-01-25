@@ -1,8 +1,8 @@
 /**
- * JobMate AI Backend API Client
+ * HireMatex Backend API Client
  * 
  * Provides a clean interface for the frontend to interact with the FastAPI backend.
- * Handles API calls for users, jobs, match scoring, and cover letter generation.
+ * Handles API calls for users, jobs, match scoring, and AI-powered features.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';

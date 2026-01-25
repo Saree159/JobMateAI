@@ -2,6 +2,7 @@
 Job API router.
 Handles job CRUD operations, match scoring, and cover letter generation.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -10,6 +11,8 @@ from app.database import get_db
 from app.models import User, Job, JobStatus
 from app.schemas import JobCreate, JobUpdate, JobResponse, MatchScoreResponse, CoverLetterResponse
 from app.services.ai import calculate_match_score, generate_cover_letter
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api", tags=["jobs"])
@@ -417,3 +420,99 @@ async def scrape_job_from_url(
             detail=f"Error scraping URL: {str(e)}"
         )
 
+
+@router.get("/jobs/scrape/drushim")
+async def scrape_drushim_jobs(
+    url: str = Query(..., description="Drushim listing page URL"),
+    user_id: Optional[int] = Query(None, description="User ID to calculate match scores"),
+    force_refresh: bool = Query(False, description="Force refresh cache")
+):
+    """
+    Scrape jobs from a Drushim.co.il listing page.
+    Returns an array of job objects that can be displayed in the UI.
+    Uses Redis caching (30 min TTL) for performance.
+    """
+    try:
+        from app.services.scrapers import DrushimScraper
+        from app.services.cache import get_cache, make_jobs_cache_key
+        from urllib.parse import urlparse, parse_qs
+        
+        # Extract category from URL for cache key
+        parsed_url = urlparse(url)
+        path_parts = parsed_url.path.split('/')
+        category = path_parts[-1] if path_parts else 'unknown'
+        
+        cache_key = make_jobs_cache_key('drushim', category)
+        cache = get_cache()
+        
+        # Try to get from cache
+        if not force_refresh:
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                logger.info(f"Cache HIT for {cache_key}")
+                return {
+                    "success": True,
+                    "count": len(cached_data),
+                    "jobs": cached_data,
+                    "source": "drushim.co.il",
+                    "cached": True
+                }
+        
+        # Cache miss or force refresh - scrape
+        logger.info(f"Cache MISS for {cache_key} - scraping...")
+        scraper = DrushimScraper()
+        jobs = await scraper.scrape_listing_async(url)
+        
+        if not jobs:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No jobs found on this page"
+            )
+        
+        # Store in cache (30 minutes TTL)
+        cache.set(cache_key, jobs, ttl=1800)
+        logger.info(f"Cached {len(jobs)} jobs for {cache_key}")
+        
+        return {
+            "success": True,
+            "count": len(jobs),
+            "jobs": jobs,
+            "source": "drushim.co.il",
+            "cached": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error scraping Drushim: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error scraping Drushim: {str(e)}"
+        )
+
+
+@router.get("/jobs/cache/stats")
+def get_cache_stats():
+    """Get cache statistics for monitoring."""
+    try:
+        from app.services.cache import get_cache
+        cache = get_cache()
+        return cache.get_stats()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting cache stats: {str(e)}"
+        )
+
+
+@router.delete("/jobs/cache/clear")
+def clear_cache():
+    """Clear all cached jobs (admin endpoint)."""
+    try:
+        from app.services.cache import get_cache
+        cache = get_cache()
+        cache.clear()
+        return {"success": True, "message": "Cache cleared"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error clearing cache: {str(e)}"
+        )

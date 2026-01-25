@@ -9,7 +9,8 @@ import {
   LogOut,
   Sparkles,
   CreditCard,
-  BarChart3
+  BarChart3,
+  Globe
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,11 @@ const navigationItems = [
     title: "Jobs",
     url: createPageUrl("Jobs"),
     icon: Briefcase,
+  },
+  {
+    title: "Israeli Jobs",
+    url: createPageUrl("IsraeliJobs"),
+    icon: Globe,
   },
   {
     title: "Applications",
@@ -73,16 +79,16 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-white">
-        <Sidebar className="border-r border-gray-100 bg-white">
-          <SidebarHeader className="border-b border-gray-100 p-6">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100">
+        <Sidebar className="border-r border-gray-200 bg-white/80 backdrop-blur-xl">
+          <SidebarHeader className="border-b border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-lg">JobMate AI</h2>
-                <p className="text-xs text-gray-500">Smart Job Matching</p>
+                <h2 className="font-bold text-gray-900 text-lg tracking-tight">HireMatex</h2>
+                <p className="text-xs text-gray-500">AI Job Assistant</p>
               </div>
             </div>
           </SidebarHeader>
@@ -95,8 +101,10 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
                         asChild 
-                        className={`hover:bg-gray-50 transition-colors rounded-lg mb-1 ${
-                          location.pathname === item.url ? 'bg-gray-50 text-indigo-600 font-medium' : 'text-gray-700'
+                        className={`hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 rounded-xl mb-1 ${
+                          location.pathname === item.url 
+                            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 font-semibold shadow-sm' 
+                            : 'text-gray-700'
                         }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
@@ -111,11 +119,11 @@ export default function Layout({ children, currentPageName }) {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-gray-100 p-4">
+          <SidebarFooter className="border-t border-gray-200 p-4 bg-white/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
-                  <span className="text-gray-700 font-semibold text-sm">
+                <div className="w-9 h-9 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-indigo-700 font-semibold text-sm">
                     {user?.full_name?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
@@ -128,22 +136,24 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
                 title="Logout"
               >
-                <LogOut className="w-4 h-4 text-gray-500" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </SidebarFooter>
         </Sidebar>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-white border-b border-gray-200 px-6 py-4 md:hidden sticky top-0 z-10">
+          <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 px-6 py-4 md:hidden sticky top-0 z-10">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors" />
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                <h1 className="text-lg font-bold">JobMate AI</h1>
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">HireMatex</h1>
               </div>
             </div>
           </header>

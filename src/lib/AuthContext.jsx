@@ -4,8 +4,8 @@ import { toast } from 'sonner';
 
 const AuthContext = createContext();
 
-const TOKEN_KEY = 'jobmate_auth_token';
-const USER_KEY = 'jobmate_user';
+const TOKEN_KEY = 'hirematex_auth_token';
+const USER_KEY = 'hirematex_user';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

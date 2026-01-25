@@ -39,10 +39,12 @@ export default function Profile() {
       const formData = new FormData();
       formData.append('file', file);
       
+      const token = localStorage.getItem('hirematex_auth_token');
+      
       const response = await fetch('http://localhost:8000/api/resume/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
