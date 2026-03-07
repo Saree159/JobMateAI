@@ -9,17 +9,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText, Languages } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from 'sonner';
+import { useTranslation } from "react-i18next";
 
 export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, getToken } = useAuth();
-  
+  const { user, getToken, updateUser } = useAuth();
+  const { t, i18n } = useTranslation();
+
   // Helper function to normalize skills to array format
   const normalizeSkills = (skills) => {
     if (!skills) return [];
@@ -27,7 +29,7 @@ export default function Profile() {
     if (typeof skills === 'string') return skills.split(',').map(s => s.trim()).filter(Boolean);
     return [];
   };
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [skillInput, setSkillInput] = useState('');
@@ -38,6 +40,15 @@ export default function Profile() {
   const [rewriteFile, setRewriteFile] = useState(null);
   const [rewriteJD, setRewriteJD] = useState('');
   const [isRewriting, setIsRewriting] = useState(false);
+
+  const changeLang = (lang) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem('hirematex_lang', lang);
+    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+  };
+
+  const currentLang = i18n.language;
 
   const uploadResumeMutation = useMutation({
     mutationFn: async (file) => {
@@ -54,19 +65,22 @@ export default function Profile() {
         },
         body: formData
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to upload resume');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['currentUser']);
-      toast.success(`Resume parsed! Updated: ${data.updated_fields.join(', ')}`);
-      // Update local user state
-      queryClient.setQueryData(['currentUser'], data.user);
+      const updatedUser = { ...user, ...data.user };
+      updateUser(updatedUser);
+      queryClient.setQueryData(['currentUser'], updatedUser);
+      const msg = data.updated_fields.length > 0
+        ? `Resume parsed! Updated: ${data.updated_fields.join(', ')}`
+        : 'Resume parsed! (no new fields to update)';
+      toast.success(msg);
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to upload resume');
@@ -79,19 +93,17 @@ export default function Profile() {
   const handleResumeUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Validate file type
+
     if (!file.name.endsWith('.pdf') && !file.name.endsWith('.docx')) {
       toast.error('Please upload a PDF or DOCX file');
       return;
     }
-    
-    // Validate file size (5MB)
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File size must be less than 5MB');
       return;
     }
-    
+
     setIsUploading(true);
     uploadResumeMutation.mutate(file);
   };
@@ -122,10 +134,11 @@ export default function Profile() {
   const updateUserMutation = useMutation({
     mutationFn: (data) => userApi.update(user.id, data),
     onSuccess: (updatedUser) => {
+      updateUser(updatedUser);
       queryClient.setQueryData(['currentUser'], updatedUser);
       setIsEditing(false);
       setSuccess(true);
-      toast.success('Profile updated successfully!');
+      toast.success(t('profile.profileUpdated'));
       setTimeout(() => setSuccess(false), 3000);
     },
     onError: (error) => {
@@ -146,8 +159,10 @@ export default function Profile() {
 
   const handleSave = () => {
     updateUserMutation.mutate({
-      ...formData,
-      skills: formData.skills.join(', '),
+      target_role: formData.target_role || undefined,
+      skills: formData.skills,
+      location_preference: formData.location_preference || undefined,
+      work_mode_preference: formData.work_mode_preference || undefined,
     });
   };
 
@@ -172,7 +187,7 @@ export default function Profile() {
   const isPro = currentPlan === 'pro';
 
   if (!user) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8">{t('common.loading')}</div>;
   }
 
   return (
@@ -181,13 +196,13 @@ export default function Profile() {
       <div className="flex justify-between items-start mb-10">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            My Profile
+            {t('profile.title')}
           </h1>
-          <p className="text-gray-500">Manage your job search preferences</p>
+          <p className="text-gray-500">{t('profile.subtitle')}</p>
         </div>
         {!isEditing && (
           <Button onClick={startEditing} className="bg-indigo-600 hover:bg-indigo-700">
-            Edit Profile
+            {t('profile.editProfile')}
           </Button>
         )}
       </div>
@@ -196,19 +211,54 @@ export default function Profile() {
         <Alert className="mb-6 border-green-500 bg-green-50">
           <CheckCircle2 className="w-4 h-4 text-green-600" />
           <AlertDescription className="text-green-700">
-            Profile updated successfully!
+            {t('profile.profileUpdated')}
           </AlertDescription>
         </Alert>
       )}
 
       <div className="space-y-6">
+        {/* Language Toggle Card */}
+        <Card className="border border-gray-100">
+          <CardHeader>
+            <CardTitle className="font-semibold flex items-center gap-2">
+              <Languages className="w-5 h-5 text-indigo-600" />
+              {t('profile.language')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">{t('profile.languageSubtitle')}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => changeLang('en')}
+                className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                  currentLang === 'en'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                English
+              </button>
+              <button
+                onClick={() => changeLang('he')}
+                className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                  currentLang === 'he'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                עברית
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Subscription Card */}
         <Card className={`border ${isPro ? 'border-indigo-200 bg-indigo-50' : 'border-gray-100'}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 {isPro ? <Crown className="w-5 h-5 text-indigo-600" /> : <User className="w-5 h-5 text-gray-600" />}
-                Subscription
+                {t('profile.subscription')}
               </span>
               <SubscriptionBadge tier={currentPlan} />
             </CardTitle>
@@ -216,7 +266,7 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-medium text-gray-900">{isPro ? 'Pro Plan' : 'Free Plan'}</p>
+                <p className="font-medium text-gray-900">{isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}</p>
                 <p className="text-sm text-gray-600">
                   {isPro ? 'Unlimited access to all features' : 'Limited to 5 job views per day'}
                 </p>
@@ -226,7 +276,7 @@ export default function Profile() {
                 onClick={() => navigate(createPageUrl("Pricing"))}
                 className={!isPro ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" : ""}
               >
-                {isPro ? 'Manage Subscription' : 'Upgrade to Pro'}
+                {isPro ? 'Manage Subscription' : t('pricing.upgradeToPro')}
               </Button>
             </div>
             {isPro && user.subscription_end_date && (
@@ -241,25 +291,25 @@ export default function Profile() {
         <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold">
-              Career Information
+              {t('profile.careerInfo')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Target Job Role</Label>
+              <Label>{t('profile.targetRole')}</Label>
               {isEditing ? (
                 <Input
                   value={formData.target_role}
                   onChange={(e) => setFormData({ ...formData, target_role: e.target.value })}
-                  placeholder="e.g., Senior Backend Developer"
+                  placeholder={t('profile.targetRolePlaceholder')}
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.target_role || 'Not set'}</p>
+                <p className="text-gray-900 font-medium">{user.target_role || t('common.notSet')}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>Years of Experience</Label>
+              <Label>{t('profile.yearsOfExperience')}</Label>
               {isEditing ? (
                 <Input
                   type="number"
@@ -268,21 +318,21 @@ export default function Profile() {
                   placeholder="5"
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.experience_years || 'Not set'} years</p>
+                <p className="text-gray-900 font-medium">{user.experience_years || t('common.notSet')}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>Professional Summary</Label>
+              <Label>{t('profile.professionalSummary')}</Label>
               {isEditing ? (
                 <Textarea
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Brief summary of your background..."
+                  placeholder={t('profile.summaryPlaceholder')}
                   rows={4}
                 />
               ) : (
-                <p className="text-gray-700">{user.bio || 'Not set'}</p>
+                <p className="text-gray-700">{user.bio || t('common.notSet')}</p>
               )}
             </div>
           </CardContent>
@@ -294,15 +344,13 @@ export default function Profile() {
             <CardTitle className="font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <FileUp className="w-5 h-5 text-indigo-600" />
-                Upload Resume
+                {t('profile.uploadResume')}
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Upload your resume (PDF or DOCX) to automatically extract and populate your profile information
-            </p>
-            
+            <p className="text-sm text-gray-600">{t('profile.uploadSubtitle')}</p>
+
             <div className="flex items-center gap-4">
               <input
                 type="file"
@@ -322,23 +370,23 @@ export default function Profile() {
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Parsing Resume...
+                      <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                      {t('profile.parsingResume')}
                     </>
                   ) : (
                     <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Choose PDF or DOCX
+                      <Upload className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                      {t('profile.chooseFile')}
                     </>
                   )}
                 </Button>
               </label>
-              <span className="text-sm text-gray-500">Max 5MB</span>
+              <span className="text-sm text-gray-500">{t('profile.maxFileSize')}</span>
             </div>
-            
+
             <Alert className="bg-blue-50 border-blue-200">
               <AlertDescription className="text-sm text-blue-700">
-                💡 We'll extract your skills, job title, and location from your resume
+                💡 {t('profile.resumeTip')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -349,15 +397,12 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-indigo-600" />
-              Rewrite Resume for a Job
+              {t('profile.rewriteResume')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Upload your resume and paste a job description — AI will tailor it to the role without inventing anything new.
-            </p>
+            <p className="text-sm text-gray-600">{t('profile.rewriteSubtitle')}</p>
 
-            {/* File pick */}
             <div className="flex items-center gap-4">
               <input
                 type="file"
@@ -381,8 +426,8 @@ export default function Profile() {
                 variant="outline"
                 onClick={() => document.getElementById('rewrite-resume-input').click()}
               >
-                <FileText className="w-4 h-4 mr-2" />
-                {rewriteFile ? rewriteFile.name : 'Choose Resume (PDF / DOCX)'}
+                <FileText className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                {rewriteFile ? rewriteFile.name : t('profile.chooseResume')}
               </Button>
               {rewriteFile && (
                 <button
@@ -394,11 +439,10 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Job description */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Job Description</label>
+              <label className="text-sm font-medium text-gray-700">{t('profile.jobDescription')}</label>
               <Textarea
-                placeholder="Paste the full job description here..."
+                placeholder={t('profile.jobDescPlaceholder')}
                 rows={6}
                 value={rewriteJD}
                 onChange={(e) => setRewriteJD(e.target.value)}
@@ -412,15 +456,15 @@ export default function Profile() {
               className="w-full bg-indigo-600 hover:bg-indigo-700"
             >
               {isRewriting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rewriting Resume...</>
+                <><Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />{t('profile.rewriting')}</>
               ) : (
-                <><Download className="w-4 h-4 mr-2" />Rewrite & Download .docx</>
+                <><Download className="w-4 h-4 ltr:mr-2 rtl:ml-2" />{t('profile.rewriteDownload')}</>
               )}
             </Button>
 
             <Alert className="bg-amber-50 border-amber-200">
               <AlertDescription className="text-xs text-amber-700">
-                AI will only use skills and experience already in your resume — nothing is fabricated.
+                {t('profile.rewriteTip')}
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -429,21 +473,21 @@ export default function Profile() {
         {/* Skills */}
         <Card className="border border-gray-100">
           <CardHeader>
-            <CardTitle className="font-semibold">Skills</CardTitle>
+            <CardTitle className="font-semibold">{t('profile.skills')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {isEditing && (
               <div className="flex gap-2">
                 <Input
-                  placeholder="Add a skill..."
+                  placeholder={t('profile.addSkillPlaceholder')}
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
                 />
-                <Button onClick={handleAddSkill} variant="outline">Add</Button>
+                <Button onClick={handleAddSkill} variant="outline">{t('profile.addSkill')}</Button>
               </div>
             )}
-            
+
             <div className="flex flex-wrap gap-2">
               {(isEditing ? formData.skills : normalizeSkills(user?.skills)).map((skill, idx) => (
                 <Badge key={idx} variant="secondary" className="text-sm py-1.5 px-3">
@@ -451,7 +495,7 @@ export default function Profile() {
                   {isEditing && (
                     <button
                       onClick={() => handleRemoveSkill(skill)}
-                      className="ml-2 hover:text-red-600"
+                      className="ltr:ml-2 rtl:mr-2 hover:text-red-600"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -459,7 +503,7 @@ export default function Profile() {
                 </Badge>
               ))}
               {normalizeSkills(user?.skills).length === 0 && !isEditing && (
-                <p className="text-gray-500">No skills added yet</p>
+                <p className="text-gray-500">{t('profile.noSkills')}</p>
               )}
             </div>
           </CardContent>
@@ -469,26 +513,26 @@ export default function Profile() {
         <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold">
-              Job Preferences
+              {t('profile.preferences')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Location Preference</Label>
+              <Label>{t('profile.locationPref')}</Label>
               {isEditing ? (
                 <Input
                   value={formData.location_preference}
                   onChange={(e) => setFormData({ ...formData, location_preference: e.target.value })}
-                  placeholder="e.g., Tel Aviv, Remote, Hybrid"
+                  placeholder={t('profile.locationPlaceholder')}
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.location_preference || 'Not set'}</p>
+                <p className="text-gray-900 font-medium">{user.location_preference || t('common.notSet')}</p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Min Salary (₪)</Label>
+                <Label>{t('profile.minSalary')}</Label>
                 {isEditing ? (
                   <Input
                     type="number"
@@ -498,12 +542,12 @@ export default function Profile() {
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {user.salary_min ? `₪${user.salary_min.toLocaleString()}` : 'Not set'}
+                    {user.salary_min ? `₪${user.salary_min.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Max Salary (₪)</Label>
+                <Label>{t('profile.maxSalary')}</Label>
                 {isEditing ? (
                   <Input
                     type="number"
@@ -513,7 +557,7 @@ export default function Profile() {
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {user.salary_max ? `₪${user.salary_max.toLocaleString()}` : 'Not set'}
+                    {user.salary_max ? `₪${user.salary_max.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
               </div>
@@ -526,46 +570,44 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Bell className="w-5 h-5 text-indigo-600" />
-              Email Notifications
+              {t('profile.notifications')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Get email reminders for important events (coming soon)
-            </p>
-            
+            <p className="text-sm text-gray-600 mb-4">{t('profile.notificationsSubtitle')}</p>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">Interview Reminders</p>
-                  <p className="text-sm text-gray-500">Get notified 24 hours before interviews</p>
+                  <p className="font-medium text-gray-900">{t('profile.interviewReminders')}</p>
+                  <p className="text-sm text-gray-500">{t('profile.interviewRemindersDesc')}</p>
                 </div>
                 <div className="text-indigo-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">Follow-Up Reminders</p>
-                  <p className="text-sm text-gray-500">Remind me to follow up after 7 days</p>
+                  <p className="font-medium text-gray-900">{t('profile.followUpReminders')}</p>
+                  <p className="text-sm text-gray-500">{t('profile.followUpRemindersDesc')}</p>
                 </div>
                 <div className="text-indigo-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">Deadline Alerts</p>
-                  <p className="text-sm text-gray-500">Alert me about upcoming application deadlines</p>
+                  <p className="font-medium text-gray-900">{t('profile.deadlineAlerts')}</p>
+                  <p className="text-sm text-gray-500">{t('profile.deadlineAlertsDesc')}</p>
                 </div>
                 <div className="text-indigo-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
             </div>
-            
+
             <Alert className="bg-blue-50 border-blue-200">
               <AlertDescription className="text-sm text-blue-700">
                 💡 Configure SMTP settings in backend to enable email notifications
@@ -581,15 +623,15 @@ export default function Profile() {
               variant="outline"
               onClick={() => setIsEditing(false)}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSave}
               disabled={updateUserMutation.isPending}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              <Save className="w-4 h-4 mr-2" />
-              {updateUserMutation.isPending ? 'Saving...' : 'Save Changes'}
+              <Save className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+              {updateUserMutation.isPending ? t('common.saving') : t('common.saveChanges')}
             </Button>
           </div>
         )}

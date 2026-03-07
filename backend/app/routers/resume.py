@@ -174,8 +174,10 @@ async def upload_resume(
         user.target_role = parsed_data["target_role"]
         updated_fields.append("target_role")
     
-    if parsed_data["skills"] and not user.skills:
-        user.skills_list = parsed_data["skills"]
+    if parsed_data["skills"]:
+        existing = set(user.skills_list)
+        merged = list(existing | set(parsed_data["skills"]))
+        user.skills_list = merged
         updated_fields.append("skills")
     
     if parsed_data["location_preference"] and not user.location_preference:

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import TopMatchesList from "../components/dashboard/TopMatchesList";
 import RecentActivity from "../components/dashboard/RecentActivity";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -56,38 +58,38 @@ export default function Dashboard() {
       {/* Header with modern gradient */}
       <div className="mb-10">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-          Welcome back, {user?.full_name?.split(' ')[0] || 'there'}
+          {t('dashboard.welcomeBack', { name: user?.full_name?.split(' ')[0] || 'there' })}
         </h1>
         <p className="text-gray-600 text-lg">
-          {user?.target_role ? `Finding the best ${user.target_role} positions for you` : 'Your AI-powered job search command center'}
+          {user?.target_role ? t('dashboard.findingJobs', { role: user.target_role }) : t('dashboard.commandCenter')}
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <StatsCard
-          title="Available Jobs"
+          title={t('dashboard.availableJobs')}
           value={stats.totalJobs}
           icon={Briefcase}
           gradient="from-blue-500 to-cyan-500"
           isLoading={isLoading}
         />
         <StatsCard
-          title="Saved"
+          title={t('dashboard.saved')}
           value={stats.saved}
           icon={Clock}
           gradient="from-purple-500 to-pink-500"
           isLoading={isLoading}
         />
         <StatsCard
-          title="Applied"
+          title={t('dashboard.applied')}
           value={stats.applied}
           icon={TrendingUp}
           gradient="from-orange-500 to-red-500"
           isLoading={isLoading}
         />
         <StatsCard
-          title="Interviews"
+          title={t('dashboard.interviews')}
           value={stats.interviews}
           icon={CheckCircle2}
           gradient="from-green-500 to-emerald-500"
@@ -113,19 +115,19 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Target className="w-5 h-5 text-indigo-600" />
-                  Your Profile
+                  {t('dashboard.yourProfile')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {user.target_role && (
                   <div>
-                    <p className="text-sm text-gray-600">Target Role</p>
+                    <p className="text-sm text-gray-600">{t('dashboard.targetRole')}</p>
                     <p className="font-semibold text-gray-900">{user.target_role}</p>
                   </div>
                 )}
                 {user.skills && user.skills.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Skills</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.skills')}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {user.skills.slice(0, 6).map((skill, idx) => (
                         <Badge key={idx} variant="secondary" className="bg-white text-xs">
@@ -134,7 +136,7 @@ export default function Dashboard() {
                       ))}
                       {user.skills.length > 6 && (
                         <Badge variant="secondary" className="bg-white text-xs">
-                          +{user.skills.length - 6} more
+                          {t('dashboard.moreSkills', { count: user.skills.length - 6 })}
                         </Badge>
                       )}
                     </div>
@@ -145,7 +147,7 @@ export default function Dashboard() {
                   className="w-full mt-2"
                   onClick={() => navigate(createPageUrl("Profile"))}
                 >
-                  Edit Profile
+                  {t('dashboard.editProfile')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>

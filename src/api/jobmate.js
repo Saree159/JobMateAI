@@ -12,10 +12,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
  */
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
+  const token = localStorage.getItem('hirematex_auth_token');
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     },
     ...options,
@@ -354,10 +356,40 @@ export async function getApiInfo() {
   return apiRequest('/');
 }
 
+// ============================================================================
+// BILLING API
+// ============================================================================
+
+export const billingApi = {
+  /**
+   * Create a PayPal subscription and return the approval URL.
+   * @param {'monthly'|'annual'} plan
+   * @returns {Promise<{url: string, subscription_id: string, plan: string}>}
+   */
+  getCheckoutUrl: (plan) =>
+    apiRequest(`/api/billing/checkout-url?plan=${plan}`),
+
+  /**
+   * Verify a PayPal subscription after the user returns from PayPal.
+   * @param {string} subscriptionId
+   * @returns {Promise<{message: string, subscription_tier: string}>}
+   */
+  verifySubscription: (subscriptionId) =>
+    apiRequest(`/api/billing/verify?subscription_id=${encodeURIComponent(subscriptionId)}`, { method: 'POST' }),
+
+  /**
+   * Cancel the current user's Pro subscription.
+   * @returns {Promise<{message: string}>}
+   */
+  cancelSubscription: () =>
+    apiRequest('/api/billing/cancel', { method: 'POST' }),
+};
+
 // Default export with all APIs
 export default {
   user: userApi,
   job: jobApi,
+  billing: billingApi,
   checkHealth: checkApiHealth,
   getInfo: getApiInfo,
 };

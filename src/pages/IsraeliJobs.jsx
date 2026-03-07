@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, Globe, AlertCircle, X, MapPin, Building2, Briefcase, Award } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ const JOB_SITES = {
 
 export default function IsraeliJobs() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [selectedSite, setSelectedSite] = useState("drushim");
   const [selectedCategory, setSelectedCategory] = useState("236");
   const [customUrl, setCustomUrl] = useState("");
@@ -91,11 +93,11 @@ export default function IsraeliJobs() {
           <div className="flex items-center gap-3 mb-2">
             <Globe className="w-8 h-8 text-indigo-600" />
             <h1 className="text-3xl font-bold text-gray-900">
-              משרות בישראל
+              {t('israeliJobs.title')}
             </h1>
           </div>
           <p className="text-gray-600">
-            חפש משרות מהאתרים המובילים בישראל • Drushim.co.il • GotFriends.co.il
+            {t('israeliJobs.subtitle')} • Drushim.co.il • GotFriends.co.il
           </p>
         </div>
 
@@ -174,7 +176,7 @@ export default function IsraeliJobs() {
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-            <span className="ml-3 text-gray-600">טוען משרות...</span>
+            <span className="ltr:ml-3 rtl:mr-3 text-gray-600">{t('israeliJobs.loading')}</span>
           </div>
         )}
 
@@ -192,10 +194,10 @@ export default function IsraeliJobs() {
             <CardContent className="p-12 text-center">
               <Globe className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                לא נמצאו משרות
+                {t('israeliJobs.noJobsFound')}
               </h3>
               <p className="text-gray-600">
-                נסה לבחור קטגוריה אחרת או חפש בכתובת מותאמת אישית
+                {t('israeliJobs.tryDifferent')}
               </p>
             </CardContent>
           </Card>
@@ -204,7 +206,7 @@ export default function IsraeliJobs() {
         {!isLoading && !error && jobs.length > 0 && (
           <>
             <div className="mb-4 text-gray-600">
-              נמצאו {jobs.length} משרות מ-{data.source}
+              {t('israeliJobs.totalJobs', { count: jobs.length })} — {data.source}
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {jobs.map((job, index) => (

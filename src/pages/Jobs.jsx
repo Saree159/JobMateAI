@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import JobFilters from "../components/jobs/JobFilters";
 import UpgradePrompt from "../components/subscription/UpgradePrompt";
 
 export default function Jobs() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -104,10 +106,10 @@ export default function Jobs() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            My Job Applications
+            {t('jobs.title')}
           </h1>
           <p className="text-gray-600 mt-1">
-            {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} saved
+            {t('jobs.jobsSaved', { count: filteredJobs.length })}
           </p>
         </div>
         <Button
@@ -115,7 +117,7 @@ export default function Jobs() {
           className="bg-indigo-600 hover:bg-indigo-700"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Job
+          {t('jobs.addJob')}
         </Button>
       </div>
 
@@ -126,7 +128,7 @@ export default function Jobs() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
-                placeholder="Search by title, company, or keywords..."
+                placeholder={t('jobs.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -168,16 +170,16 @@ export default function Jobs() {
         <Card className="border border-gray-100">
           <CardContent className="text-center py-20">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No jobs yet</h3>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">{t('jobs.noJobsYet')}</h3>
             <p className="text-gray-500 mb-6">
-              {searchQuery || filters.location ? 'Try adjusting your search filters' : 'Start by adding jobs you want to apply to'}
+              {searchQuery || filters.location ? t('jobs.adjustFilters') : t('jobs.startAdding')}
             </p>
             <Button
               onClick={() => setShowAddDialog(true)}
               variant="outline"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Your First Job
+              {t('jobs.addFirstJob')}
             </Button>
           </CardContent>
         </Card>

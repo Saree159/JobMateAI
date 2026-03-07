@@ -226,6 +226,12 @@ export default function JobMatch() {
     return { matched, missing };
   }, [user, job, fullDescription]);
 
+  // Must be declared before any early return (Rules of Hooks)
+  const processedDiff = useMemo(
+    () => diffResult ? processInlineDiff(diffResult.diff) : [],
+    [diffResult]
+  );
+
   if (!job) {
     return (
       <div className="p-10 text-center">
@@ -310,11 +316,6 @@ export default function JobMatch() {
     toast.success("Tailored resume downloaded!");
   };
 
-  // Merge similar removed+added pairs into intra-line "modified" entries
-  const processedDiff = useMemo(
-    () => diffResult ? processInlineDiff(diffResult.diff) : [],
-    [diffResult]
-  );
   const collapsedDiff = diffResult ? collapseContext(processedDiff).map((l, i) => ({ ...l, key: l.key ?? i })) : [];
   const displayDiff = showFullDiff
     ? processedDiff.map((l, i) => ({ ...l, key: i }))

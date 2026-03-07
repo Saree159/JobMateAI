@@ -48,11 +48,19 @@ class UserUpdate(BaseModel):
     skills: Optional[List[str]] = None
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = None
+    subscription_tier: Optional[str] = None
+    subscription_status: Optional[str] = None
+    subscription_end_date: Optional[datetime] = None
+    paypal_payer_id: Optional[str] = None
+    paypal_subscription_id: Optional[str] = None
 
 
 class UserResponse(UserBase):
     """Schema for user responses."""
     id: int
+    subscription_tier: str = "free"
+    subscription_status: Optional[str] = None
+    subscription_end_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -257,12 +265,13 @@ class FeedJobResponse(BaseModel):
     location: Optional[str] = None
     url: Optional[str] = None
     status: FeedJobStatus
-    firstSeenAt: datetime
-    lastSeenAt: datetime
+    firstSeenAt: datetime = Field(alias="first_seen_at")
+    lastSeenAt: datetime = Field(alias="last_seen_at")
     source: Optional[str] = None
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class StatusUpdateRequest(BaseModel):

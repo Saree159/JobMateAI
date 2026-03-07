@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Briefcase } from 'lucide-react';
 
 export default function Register() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { register, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
@@ -121,7 +123,7 @@ export default function Register() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name (Optional)</Label>
+              <Label htmlFor="full_name">{t('auth.fullName')} ({t('common.optional')})</Label>
               <Input
                 id="full_name"
                 name="full_name"
@@ -134,7 +136,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
                 name="email"
@@ -148,7 +150,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 name="password"
@@ -184,17 +186,17 @@ export default function Register() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating account...
+                  {t('auth.registering')}
                 </>
               ) : (
-                'Create Account'
+                t('auth.register')
               )}
             </Button>
 
             <div className="text-center text-sm text-gray-600">
-              Already have an account?{' '}
+              {t('auth.haveAccount')}{' '}
               <Link to="/login" className="text-indigo-600 hover:underline font-medium">
-                Sign in
+                {t('auth.signIn')}
               </Link>
             </div>
           </form>

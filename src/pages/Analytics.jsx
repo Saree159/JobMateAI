@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -5,6 +6,7 @@ import { TrendingUp, TrendingDown, Target, Clock, Award, Briefcase } from "lucid
 import jobMateAPI from "@/api/jobmate";
 
 export default function AnalyticsDashboard() {
+  const { t } = useTranslation();
   const { data: analytics, isLoading } = useQuery({
     queryKey: ["analytics", "dashboard"],
     queryFn: async () => {
@@ -39,9 +41,9 @@ export default function AnalyticsDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
+        <h2 className="text-3xl font-bold tracking-tight">{t('analytics.title')}</h2>
         <p className="text-muted-foreground">
-          Track your job search progress and get actionable insights
+          {t('analytics.subtitle')}
         </p>
       </div>
 
@@ -49,7 +51,7 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.totalApplications')}</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -62,7 +64,7 @@ export default function AnalyticsDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.successRate')}</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -75,7 +77,7 @@ export default function AnalyticsDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Match Score</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.avgMatchScore')}</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -90,7 +92,7 @@ export default function AnalyticsDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Time to Interview</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.avgTimeToInterview')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -177,13 +179,13 @@ export default function AnalyticsDashboard() {
       {/* Monthly Trends */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Trends</CardTitle>
+          <CardTitle>{t('analytics.monthlyTrends')}</CardTitle>
           <CardDescription>Application activity over time</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {monthly_trends.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No data available yet</p>
+              <p className="text-sm text-muted-foreground">{t('analytics.noData')}</p>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {monthly_trends.map((trend) => (
@@ -222,7 +224,7 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Match Score Distribution</CardTitle>
+            <CardTitle>{t('analytics.matchDistribution')}</CardTitle>
             <CardDescription>Quality of job matches</CardDescription>
           </CardHeader>
           <CardContent>
@@ -255,13 +257,13 @@ export default function AnalyticsDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Companies</CardTitle>
+            <CardTitle>{t('analytics.topCompanies')}</CardTitle>
             <CardDescription>Most applications sent to</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {top_companies.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No data available yet</p>
+                <p className="text-sm text-muted-foreground">{t('analytics.noData')}</p>
               ) : (
                 top_companies.map((item, index) => (
                   <div key={item.company} className="flex items-center justify-between">

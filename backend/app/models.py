@@ -54,7 +54,15 @@ class User(Base):
         default=WorkModePreference.REMOTE,
         nullable=True
     )
-    
+
+    # Subscription / billing
+    subscription_tier = Column(String(20), default="free", nullable=False)
+    subscription_status = Column(String(20), nullable=True)          # active | canceled | expired
+    subscription_end_date = Column(DateTime, nullable=True)
+    # Reuse the originally-created twoco_* columns for PayPal (same DB columns, new Python names)
+    paypal_payer_id = Column("twoco_customer_ref", String(255), nullable=True)
+    paypal_subscription_id = Column("twoco_subscription_ref", String(255), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

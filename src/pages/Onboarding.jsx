@@ -15,6 +15,7 @@ import {
   ChevronRight, ChevronLeft, Loader2, Globe, Building2, Laptop2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const ROLE_OPTIONS = [
   { label: "Frontend Dev",       icon: "🖥️",  value: "Frontend Developer" },
@@ -49,6 +50,7 @@ export default function Onboarding() {
   const { user, updateUser, getToken } = useAuth();
   const fileInputRef = useRef(null);
 
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     target_role: "",
@@ -145,10 +147,10 @@ export default function Onboarding() {
             <Sparkles className="w-7 h-7 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            Welcome to HireMateAI
+            {t('onboarding.title')}
           </CardTitle>
           <CardDescription className="text-base mt-1">
-            Let's build your profile in 3 quick steps
+            {t('onboarding.subtitle')}
           </CardDescription>
 
           {/* Step indicator */}

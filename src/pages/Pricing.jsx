@@ -1,29 +1,28 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
-import { userApi } from "@/api/jobmate";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { billingApi, userApi } from "@/api/jobmate";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Check, 
-  Sparkles, 
-  Crown, 
-  Zap,
+import {
+  Check,
+  Sparkles,
+  Crown,
   Star,
-  AlertCircle
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+
+const MONTHLY_PRICE = 69;
+const ANNUAL_PRICE = 588; // ₪49/mo × 12
 
 const plans = {
   free: {
     name: "Free",
-    price: "₪0",
-    period: "forever",
     icon: Sparkles,
-    color: "from-gray-400 to-gray-500",
     features: [
       "Up to 5 job matches per day",
       "Basic job matching algorithm",
@@ -31,18 +30,10 @@ const plans = {
       "Application tracking",
       "Email support",
     ],
-    limitations: [
-      "No AI cover letter generation",
-      "Limited job views per day",
-      "No priority support",
-    ]
   },
   pro: {
     name: "Pro",
-    price: "₪69",
-    period: "per month",
     icon: Crown,
-    color: "from-indigo-500 to-purple-600",
     popular: true,
     features: [
       "Unlimited job matches",
@@ -54,128 +45,136 @@ const plans = {
       "Salary insights",
       "Application analytics",
     ],
-    limitations: []
-  }
+  },
 };
 
 export default function Pricing() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [upgrading, setUpgrading] = useState(false);
-  const [showInfo, setShowInfo] = useState(true);
+  const { user, updateUser } = useAuth();
+  const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [loadingCancel, setLoadingCancel] = useState(false);
 
-  const updateSubscriptionMutation = useMutation({
-    mutationFn: (data) => userApi.update(user.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      setUpgrading(false);
-    },
-  });
+  const currentPlan = user?.subscription_tier || "free";
+  const isPro = currentPlan === "pro";
 
-  const handleUpgradeToPro = () => {
-    // In production, this would redirect to Stripe Checkout
-    // For now, we'll simulate the upgrade
-    setUpgrading(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      updateSubscriptionMutation.mutate({
-        subscription_tier: 'pro',
-        subscription_status: 'active',
-        subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      });
-    }, 1500);
-  };
-
-  const handleCancelSubscription = () => {
-    if (confirm('Are you sure you want to cancel your Pro subscription?')) {
-      updateSubscriptionMutation.mutate({
-        subscription_tier: 'free',
-        subscription_status: 'canceled',
-      });
+  const handleUpgradeToPro = async () => {
+    setLoadingCheckout(true);
+    try {
+      const { url } = await billingApi.getCheckoutUrl(billingPeriod);
+      window.location.href = url;
+    } catch (err) {
+      toast.error(err.message || "Could not start checkout. Please try again.");
+      setLoadingCheckout(false);
     }
   };
 
-  const currentPlan = user?.subscription_tier || 'free';
-  const isPro = currentPlan === 'pro';
+  const handleCancelSubscription = async () => {
+    if (!window.confirm("Are you sure you want to cancel your Pro subscription?")) return;
+    setLoadingCancel(true);
+    try {
+      await billingApi.cancelSubscription();
+      // Refresh user from backend so subscription_tier reflects 'free'
+      const freshUser = await userApi.getById(user.id);
+      updateUser(freshUser);
+      toast.success("Subscription cancelled. You are now on the Free plan.");
+    } catch (err) {
+      toast.error(err.message || "Failed to cancel subscription.");
+    } finally {
+      setLoadingCancel(false);
+    }
+  };
 
   return (
     <div className="min-h-screen p-6 md:p-10 bg-white">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-5xl mx-auto">
+
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4">
-            Supercharge Your Job Search
+            {t('pricing.title')}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Start free and upgrade when you're ready to unlock AI-powered features
+            {t('pricing.subtitle')}
           </p>
         </div>
 
-        {/* Info Alert */}
-        {showInfo && (
-          <Alert className="mb-8 border-indigo-200 bg-indigo-50">
-            <AlertCircle className="w-4 h-4 text-indigo-600" />
-            <AlertDescription className="text-indigo-900">
-              <strong>Demo Mode:</strong> Payment processing requires backend functions to be enabled. 
-              In production, this would integrate with Stripe/Paddle for secure payments.
-              <button 
-                onClick={() => setShowInfo(false)}
-                className="ml-2 underline hover:no-underline"
-              >
-                Dismiss
-              </button>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Current Plan Badge */}
         {user && (
-          <div className="text-center mb-10">
-            <Badge className={`text-base px-5 py-2 ${
-              isPro ? 'bg-indigo-600' : 'bg-gray-600'
-            }`}>
-              Current Plan: {isPro ? '👑 Pro' : '✨ Free'}
+          <div className="text-center mb-8">
+            <Badge className={`text-base px-5 py-2 ${isPro ? "bg-indigo-600" : "bg-gray-600"}`}>
+              {`${t('pricing.currentPlan')}: ${isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}`}
             </Badge>
           </div>
         )}
+
+        {/* Billing Period Toggle */}
+        <div className="flex items-center justify-center gap-4 mb-10">
+          <span className={`font-medium ${billingPeriod === "monthly" ? "text-gray-900" : "text-gray-400"}`}>
+            {t('pricing.monthly')}
+          </span>
+          <button
+            onClick={() => setBillingPeriod(p => p === "monthly" ? "annual" : "monthly")}
+            className={`relative w-14 h-7 rounded-full transition-colors ${
+              billingPeriod === "annual" ? "bg-indigo-600" : "bg-gray-300"
+            }`}
+          >
+            <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+              billingPeriod === "annual" ? "translate-x-7" : ""
+            }`} />
+          </button>
+          <span className={`font-medium ${billingPeriod === "annual" ? "text-gray-900" : "text-gray-400"}`}>
+            {t('pricing.annual')}
+          </span>
+          {billingPeriod === "annual" && (
+            <Badge className="bg-green-100 text-green-700 border-green-200">{t('pricing.save')}</Badge>
+          )}
+        </div>
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {Object.entries(plans).map(([key, plan]) => {
             const PlanIcon = plan.icon;
             const isCurrentPlan = currentPlan === key;
-            
+
+            const priceDisplay = key === "free"
+              ? { main: "₪0", sub: t('pricing.forever') }
+              : billingPeriod === "monthly"
+                ? { main: `₪${MONTHLY_PRICE}`, sub: t('pricing.perMonth') }
+                : { main: `₪${ANNUAL_PRICE}`, sub: `per year (₪${Math.round(ANNUAL_PRICE / 12)}/mo)` };
+
             return (
-              <Card 
+              <Card
                 key={key}
                 className={`border transition-all ${
-                  plan.popular ? 'border-indigo-600' : 'border-gray-100'
-                } ${isCurrentPlan ? 'ring-2 ring-indigo-200' : ''}`}
+                  plan.popular ? "border-indigo-600" : "border-gray-100"
+                } ${isCurrentPlan ? "ring-2 ring-indigo-200" : ""}`}
               >
                 <CardHeader className="text-center pb-8 pt-8">
                   {plan.popular && (
-                    <Badge className="mb-4 bg-indigo-600">
+                    <Badge className="mb-4 bg-indigo-600 self-center">
                       <Star className="w-3 h-3 mr-1" />
-                      Most Popular
+                      {t('pricing.mostPopular')}
                     </Badge>
                   )}
-                  
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-lg ${key === 'pro' ? 'bg-indigo-600' : 'bg-gray-600'} flex items-center justify-center`}>
+
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-lg ${
+                    key === "pro" ? "bg-indigo-600" : "bg-gray-600"
+                  } flex items-center justify-center`}>
                     <PlanIcon className="w-8 h-8 text-white" />
                   </div>
-                  
+
                   <CardTitle className="text-3xl mb-2">{plan.name}</CardTitle>
                   <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-600">/ {plan.period}</span>
+                    <span className="text-5xl font-bold text-gray-900">{priceDisplay.main}</span>
+                    <span className="text-gray-600 text-sm">/ {priceDisplay.sub}</span>
                   </div>
-                  
+
                   {isCurrentPlan && (
-                    <Badge variant="outline" className="mt-2">
+                    <Badge variant="outline" className="mt-2 self-center">
                       <Check className="w-3 h-3 mr-1" />
-                      Your Current Plan
+                      {t('pricing.yourPlan')}
                     </Badge>
                   )}
                 </CardHeader>
@@ -195,47 +194,45 @@ export default function Pricing() {
 
                   {/* Action Button */}
                   <div className="pt-6">
-                    {key === 'free' ? (
+                    {key === "free" ? (
                       isCurrentPlan ? (
                         <Button variant="outline" className="w-full" disabled>
                           Current Plan
                         </Button>
                       ) : (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full"
                           onClick={handleCancelSubscription}
-                          disabled={updateSubscriptionMutation.isPending}
+                          disabled={loadingCancel}
                         >
-                          Downgrade to Free
+                          {loadingCancel ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('pricing.cancelling')}</>
+                          ) : t('pricing.downgradeToFree')}
                         </Button>
                       )
                     ) : (
                       isCurrentPlan ? (
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
+                        <Button
+                          variant="outline"
+                          className="w-full border-red-200 text-red-600 hover:bg-red-50"
                           onClick={handleCancelSubscription}
-                          disabled={updateSubscriptionMutation.isPending}
+                          disabled={loadingCancel}
                         >
-                          Cancel Subscription
+                          {loadingCancel ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('pricing.cancelling')}</>
+                          ) : t('pricing.cancelSubscription')}
                         </Button>
                       ) : (
-                        <Button 
+                        <Button
                           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-6 text-lg"
                           onClick={handleUpgradeToPro}
-                          disabled={upgrading || updateSubscriptionMutation.isPending}
+                          disabled={loadingCheckout}
                         >
-                          {upgrading ? (
-                            <>
-                              <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                              Processing...
-                            </>
+                          {loadingCheckout ? (
+                            <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{t('pricing.redirecting')}</>
                           ) : (
-                            <>
-                              <Crown className="w-5 h-5 mr-2" />
-                              Upgrade to Pro
-                            </>
+                            <><Crown className="w-5 h-5 mr-2" />{t('pricing.upgradeToPro')}</>
                           )}
                         </Button>
                       )
@@ -248,70 +245,52 @@ export default function Pricing() {
         </div>
 
         {/* Feature Comparison Table */}
-        <Card className="border border-gray-100">
+        <Card className="border border-gray-100 mb-12">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-center">Feature Comparison</CardTitle>
-            <CardDescription className="text-center">
-              See what's included in each plan
-            </CardDescription>
+            <CardTitle className="text-2xl font-semibold text-center">{t('pricing.featureComparison')}</CardTitle>
+            <CardDescription className="text-center">{t('pricing.featureComparisonSubtitle')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b-2">
-                    <th className="text-left py-4 px-4">Feature</th>
-                    <th className="text-center py-4 px-4">Free</th>
-                    <th className="text-center py-4 px-4 bg-indigo-50 rounded-t-lg">Pro</th>
+                    <th className="text-left py-4 px-4">{t('pricing.feature')}</th>
+                    <th className="text-center py-4 px-4">{t('pricing.free')}</th>
+                    <th className="text-center py-4 px-4 bg-indigo-50 rounded-t-lg">{t('pricing.pro')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b">
-                    <td className="py-4 px-4 font-medium">Job matches per day</td>
-                    <td className="text-center py-4 px-4">5</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50">Unlimited</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-4 px-4 font-medium">AI Cover Letter Generator</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50">✅</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-4 px-4 font-medium">Job URL Extraction</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50">✅</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-4 px-4 font-medium">Application Tracking</td>
-                    <td className="text-center py-4 px-4">✅</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50">✅</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-4 px-4 font-medium">Priority Support</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50">✅</td>
-                  </tr>
-                  <tr>
-                    <td className="py-4 px-4 font-medium">Interview Prep Tips</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-indigo-50 rounded-b-lg">✅</td>
-                  </tr>
+                  {[
+                    [t('pricing.jobMatchesPerDay'), "5", t('pricing.unlimited')],
+                    ["AI Cover Letter Generator", "❌", "✅"],
+                    ["Job URL Extraction", "❌", "✅"],
+                    ["Application Tracking", "✅", "✅"],
+                    ["Priority Support", "❌", "✅"],
+                    ["Interview Prep Tips", "❌", "✅"],
+                  ].map(([feature, free, pro], idx, arr) => (
+                    <tr key={idx} className={idx < arr.length - 1 ? "border-b" : ""}>
+                      <td className="py-4 px-4 font-medium">{feature}</td>
+                      <td className="text-center py-4 px-4">{free}</td>
+                      <td className="text-center py-4 px-4 bg-indigo-50">{pro}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
 
-        {/* FAQ Section */}
-        <div className="mt-12 text-center">
-          <h2 className="text-2xl font-bold mb-4">Questions?</h2>
+        {/* Footer */}
+        <div className="text-center">
           <p className="text-gray-600 mb-6">
-            Contact us at support@hirematex.ai or check out our FAQ section
+            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:support@hirematex.ai" className="text-indigo-600 underline">support@hirematex.ai</a>
           </p>
           <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
-            Back to Dashboard
+            {t('pricing.backToDashboard')}
           </Button>
         </div>
+
       </div>
     </div>
   );
