@@ -7,11 +7,11 @@ import {
   FileText,
   User,
   LogOut,
-  Sparkles,
   CreditCard,
   BarChart3,
   Globe
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -84,15 +84,10 @@ export default function Layout({ children, currentPageName }) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100">
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-gray-200 bg-white/80 backdrop-blur-xl">
-          <SidebarHeader className="border-b border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-gray-900 text-lg tracking-tight">HireMatex</h2>
-                <p className="text-xs text-gray-500">{t('nav.appTagline')}</p>
-              </div>
+          <SidebarHeader className="border-b border-gray-200 p-4">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="HireMatrix" className="h-10 w-auto" />
+              <p className="text-xs text-gray-500">{t('nav.appTagline')}</p>
             </div>
           </SidebarHeader>
 
@@ -153,10 +148,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors" />
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">HireMatex</h1>
+                <img src={logo} alt="HireMatrix" className="h-8 w-auto" />
               </div>
             </div>
           </header>

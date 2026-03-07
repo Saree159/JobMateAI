@@ -37,10 +37,10 @@
   "auth": {
     "login": "התחבר",
     "loginTitle": "ברוך שובך",
-    "loginSubtitle": "התחבר לחשבון HireMateAI שלך",
+    "loginSubtitle": "התחבר לחשבון HireMatrix שלך",
     "register": "צור חשבון",
     "registerTitle": "התחל עכשיו",
-    "registerSubtitle": "צור חשבון HireMateAI חינמי",
+    "registerSubtitle": "צור חשבון HireMatrix חינמי",
     "email": "אימייל",
     "password": "סיסמה",
     "fullName": "שם מלא",
@@ -241,7 +241,7 @@
   },
   "payment": {
     "successTitle": "עכשיו אתה Pro! 🎉",
-    "successSubtitle": "ברוך הבא ל-HireMateAI Pro. המנוי שלך פעיל עכשיו.",
+    "successSubtitle": "ברוך הבא ל-HireMatrix Pro. המנוי שלך פעיל עכשיו.",
     "activating": "מפעיל את חשבון ה-Pro שלך…",
     "unlocked": "כל תכונות ה-Pro פתוחות ומוכנות לשימוש.",
     "paymentReceived": "התשלום שלך התקבל. החשבון שלך ישודרג תוך מספר דקות.",
@@ -252,7 +252,7 @@
     "backToPricing": "חזור למחירים"
   },
   "onboarding": {
-    "title": "ברוך הבא ל-HireMateAI",
+    "title": "ברוך הבא ל-HireMatrix",
     "subtitle": "בוא נגדיר את הפרופיל שלך כדי למצוא את ההתאמות הטובות ביותר",
     "step": "שלב {{current}} מתוך {{total}}",
     "next": "הבא",
@@ -269,13 +269,13 @@
   },
   "login": {
     "title": "ברוך שובך",
-    "subtitle": "התחבר לחשבון HireMateAI שלך",
+    "subtitle": "התחבר לחשבון HireMatrix שלך",
     "noAccount": "אין לך חשבון?",
     "signUp": "הרשמה חינמית"
   },
   "register": {
     "title": "התחל בחינם",
-    "subtitle": "צור חשבון HireMateAI",
+    "subtitle": "צור חשבון HireMatrix",
     "haveAccount": "כבר יש לך חשבון?",
     "signIn": "כניסה"
   }

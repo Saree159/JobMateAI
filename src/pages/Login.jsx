@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Briefcase } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -72,10 +73,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Briefcase className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-3xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Welcome to HireMatex</CardTitle>
+          <img src={logo} alt="HireMatrix" className="mx-auto h-16 w-auto" />
+          <CardTitle className="text-3xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Welcome to HireMatrix</CardTitle>
           <CardDescription className="text-base">
             Your AI-powered job application assistant
           </CardDescription>

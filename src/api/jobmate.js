@@ -1,5 +1,5 @@
 /**
- * HireMatex Backend API Client
+ * HireMatrix Backend API Client
  * 
  * Provides a clean interface for the frontend to interact with the FastAPI backend.
  * Handles API calls for users, jobs, match scoring, and AI-powered features.

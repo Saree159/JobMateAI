@@ -37,10 +37,10 @@
   "auth": {
     "login": "Log In",
     "loginTitle": "Welcome Back",
-    "loginSubtitle": "Sign in to your HireMateAI account",
+    "loginSubtitle": "Sign in to your HireMatrix account",
     "register": "Create Account",
     "registerTitle": "Get Started",
-    "registerSubtitle": "Create your free HireMateAI account",
+    "registerSubtitle": "Create your free HireMatrix account",
     "email": "Email",
     "password": "Password",
     "fullName": "Full Name",
@@ -241,7 +241,7 @@
   },
   "payment": {
     "successTitle": "You're now Pro! 🎉",
-    "successSubtitle": "Welcome to HireMateAI Pro. Your subscription is now active.",
+    "successSubtitle": "Welcome to HireMatrix Pro. Your subscription is now active.",
     "activating": "Activating your Pro account…",
     "unlocked": "All Pro features are unlocked and ready to use.",
     "paymentReceived": "Your payment was received. Your account will be upgraded within a few minutes.",
@@ -252,7 +252,7 @@
     "backToPricing": "Back to Pricing"
   },
   "onboarding": {
-    "title": "Welcome to HireMateAI",
+    "title": "Welcome to HireMatrix",
     "subtitle": "Let's set up your profile to find the best job matches",
     "step": "Step {{current}} of {{total}}",
     "next": "Next",
@@ -269,13 +269,13 @@
   },
   "login": {
     "title": "Welcome Back",
-    "subtitle": "Sign in to your HireMateAI account",
+    "subtitle": "Sign in to your HireMatrix account",
     "noAccount": "Don't have an account?",
     "signUp": "Sign up free"
   },
   "register": {
     "title": "Get Started Free",
-    "subtitle": "Create your HireMateAI account",
+    "subtitle": "Create your HireMatrix account",
     "haveAccount": "Already have an account?",
     "signIn": "Sign in"
   }
