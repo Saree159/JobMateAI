@@ -208,7 +208,7 @@ export default function Profile() {
       </div>
 
       {success && (
-        <Alert className="mb-6 border-green-500 bg-green-50">
+        <Alert className="mb-6 border-green-500 bg-green-900/30">
           <CheckCircle2 className="w-4 h-4 text-green-600" />
           <AlertDescription className="text-green-700">
             {t('profile.profileUpdated')}
@@ -253,7 +253,7 @@ export default function Profile() {
         </Card>
 
         {/* Subscription Card */}
-        <Card className={`border ${isPro ? 'border-indigo-200 bg-indigo-50' : 'border-white/5'}`}>
+        <Card className={`border ${isPro ? 'border-blue-500/30 bg-blue-900/30' : 'border-white/5'}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -384,8 +384,8 @@ export default function Profile() {
               <span className="text-sm text-gray-500">{t('profile.maxFileSize')}</span>
             </div>
 
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-700">
+            <Alert className="bg-blue-900/30 border-blue-500/30">
+              <AlertDescription className="text-sm text-blue-300">
                 💡 {t('profile.resumeTip')}
               </AlertDescription>
             </Alert>
@@ -393,7 +393,7 @@ export default function Profile() {
         </Card>
 
         {/* Rewrite Resume for a Job */}
-        <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30">
+        <Card className="border border-blue-500/20 bg-gradient-to-br from-white to-indigo-50/30">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-blue-600" />
@@ -608,8 +608,8 @@ export default function Profile() {
               </div>
             </div>
 
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm text-blue-700">
+            <Alert className="bg-blue-900/30 border-blue-500/30">
+              <AlertDescription className="text-sm text-blue-300">
                 💡 Configure SMTP settings in backend to enable email notifications
               </AlertDescription>
             </Alert>

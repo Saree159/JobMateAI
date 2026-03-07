@@ -214,7 +214,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.target_role === opt.value
-                          ? "border-blue-600 bg-indigo-50 text-blue-700"
+                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
                           : "border-white/10 text-gray-400"
                       )}
                     >
@@ -248,7 +248,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex flex-col items-center gap-0.5 py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.experience_level === lvl.value
-                          ? "border-blue-600 bg-indigo-50 text-blue-700"
+                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
                           : "border-white/10 text-gray-400"
                       )}
                     >
@@ -270,7 +270,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.work_mode_preference === mode.value
-                          ? "border-blue-600 bg-indigo-50 text-blue-700"
+                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
                           : "border-white/10 text-gray-400"
                       )}
                     >
@@ -308,9 +308,9 @@ export default function Onboarding() {
                 onClick={() => !isUploading && fileInputRef.current?.click()}
                 className={cn(
                   "border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all",
-                  isDragging ? "border-blue-600 bg-indigo-50" :
-                  resumeUploaded ? "border-green-400 bg-green-50 cursor-default" :
-                  "border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/30"
+                  isDragging ? "border-blue-600 bg-blue-900/30" :
+                  resumeUploaded ? "border-green-400 bg-green-900/30 cursor-default" :
+                  "border-gray-300 hover:border-indigo-400 hover:bg-blue-900/30/30"
                 )}
               >
                 <input
@@ -323,7 +323,7 @@ export default function Onboarding() {
                 {isUploading ? (
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                    <p className="font-medium text-blue-700">Analyzing your resume...</p>
+                    <p className="font-medium text-blue-300">Analyzing your resume...</p>
                     <p className="text-sm text-gray-500">Extracting skills and experience</p>
                   </div>
                 ) : resumeUploaded ? (

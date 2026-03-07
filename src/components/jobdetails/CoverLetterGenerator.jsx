@@ -67,7 +67,7 @@ export default function CoverLetterGenerator({ job }) {
         )}
 
         {!isPro && (
-          <Alert className="border-indigo-200 bg-indigo-50">
+          <Alert className="border-blue-500/30 bg-blue-900/30">
             <Crown className="w-4 h-4 text-blue-600" />
             <AlertDescription className="text-indigo-900">
               <strong>Pro Feature:</strong> Upgrade to Pro to generate AI-powered cover letters.
@@ -85,7 +85,7 @@ export default function CoverLetterGenerator({ job }) {
           <div className="text-center py-8">
             <div className={`w-16 h-16 mx-auto mb-4 rounded-lg flex items-center justify-center ${
               isPro 
-                ? 'bg-indigo-50' 
+                ? 'bg-blue-900/30' 
                 : 'bg-white/10'
             }`}>
               {isPro ? (

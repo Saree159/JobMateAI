@@ -128,7 +128,7 @@ export default function Pricing() {
             {t('pricing.annual')}
           </span>
           {billingPeriod === "annual" && (
-            <Badge className="bg-green-900/40 text-green-700 border-green-200">{t('pricing.save')}</Badge>
+            <Badge className="bg-green-900/40 text-green-700 border-green-500/30">{t('pricing.save')}</Badge>
           )}
         </div>
 
@@ -215,7 +215,7 @@ export default function Pricing() {
                       isCurrentPlan ? (
                         <Button
                           variant="outline"
-                          className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                          className="w-full border-red-200 text-red-600 hover:bg-red-900/30"
                           onClick={handleCancelSubscription}
                           disabled={loadingCancel}
                         >
@@ -257,7 +257,7 @@ export default function Pricing() {
                   <tr className="border-b-2">
                     <th className="text-left py-4 px-4">{t('pricing.feature')}</th>
                     <th className="text-center py-4 px-4">{t('pricing.free')}</th>
-                    <th className="text-center py-4 px-4 bg-indigo-50 rounded-t-lg">{t('pricing.pro')}</th>
+                    <th className="text-center py-4 px-4 bg-blue-900/20 rounded-t-lg">{t('pricing.pro')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -272,7 +272,7 @@ export default function Pricing() {
                     <tr key={idx} className={idx < arr.length - 1 ? "border-b" : ""}>
                       <td className="py-4 px-4 font-medium">{feature}</td>
                       <td className="text-center py-4 px-4">{free}</td>
-                      <td className="text-center py-4 px-4 bg-indigo-50">{pro}</td>
+                      <td className="text-center py-4 px-4 bg-blue-900/20">{pro}</td>
                     </tr>
                   ))}
                 </tbody>

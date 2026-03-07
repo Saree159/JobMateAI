@@ -10,9 +10,9 @@ import { createPageUrl } from "@/utils";
 
 function MatchBadge({ score }) {
   const color =
-    score >= 70 ? "text-green-600 bg-green-50 border-green-200" :
-    score >= 40 ? "text-yellow-600 bg-yellow-50 border-yellow-200" :
-    "text-gray-500 bg-white/5 border-white/10";
+    score >= 70 ? "text-green-400 bg-green-900/30 border-green-500/30" :
+    score >= 40 ? "text-yellow-400 bg-yellow-900/30 border-yellow-500/30" :
+    "text-gray-400 bg-white/5 border-white/10";
   return (
     <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 shrink-0 ${color}`}>
       <span className="text-lg font-bold leading-none">{score}%</span>
@@ -72,7 +72,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
           jobs.map((job, idx) => (
             <div
               key={idx}
-              className="flex gap-4 p-4 border border-white/5 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-white cursor-pointer"
+              className="flex gap-4 p-4 border border-white/5 rounded-xl hover:border-blue-500/30 hover:bg-blue-500/5 transition-all bg-card cursor-pointer"
               onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
             >
               <MatchBadge score={job.match_score ?? 0} />
@@ -114,7 +114,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
                       className="ml-auto"
                       onClick={e => e.stopPropagation()}
                     >
-                      <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-indigo-50 h-7 px-2">
+                      <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-7 px-2">
                         Apply <ExternalLink className="w-3 h-3 ml-1" />
                       </Button>
                     </a>

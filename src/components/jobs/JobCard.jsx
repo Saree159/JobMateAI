@@ -33,8 +33,8 @@ export default function JobCard({ job, onView }) {
           {job.matchScore > 0 && (
             <div className="text-center bg-white/5 px-3 py-2 rounded-lg">
               <div className={`text-xl font-semibold ${
-                job.matchScore >= 70 ? 'text-green-600' : 
-                job.matchScore >= 50 ? 'text-yellow-600' : 
+                job.matchScore >= 70 ? 'text-green-400' :
+                job.matchScore >= 50 ? 'text-yellow-400' :
                 'text-gray-400'
               }`}>
                 {job.matchScore}%
@@ -81,7 +81,7 @@ export default function JobCard({ job, onView }) {
           <Button
             size="sm"
             variant="ghost"
-            className="text-blue-600 hover:text-blue-700 hover:bg-indigo-50 group-hover:translate-x-1 transition-transform"
+            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 group-hover:translate-x-1 transition-transform"
           >
             View
             <ArrowRight className="w-4 h-4 ml-1" />

@@ -58,7 +58,7 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
                 Priority support
               </li>
             </ul>
-            <div className="pt-4 border-t border-indigo-200">
+            <div className="pt-4 border-t border-blue-500/30">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-white">₪69</span>
                 <span className="text-gray-400">/ month</span>

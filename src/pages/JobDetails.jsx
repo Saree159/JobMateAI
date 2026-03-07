@@ -287,7 +287,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Interview Preparation */}
-          <Card className="border border-indigo-100 bg-indigo-50/30">
+          <Card className="border border-blue-500/20 bg-blue-900/30/30">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Salary Insights */}
-          <Card className="border border-green-100 bg-green-50/30">
+          <Card className="border border-green-500/20 bg-green-900/30/30">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -420,7 +420,7 @@ export default function JobDetails() {
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   {/* Salary Range */}
-                  <div className="bg-white p-4 rounded-lg border border-green-200">
+                  <div className="bg-card p-4 rounded-lg border border-green-500/30">
                     <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                       💰 Estimated Range
                     </h4>

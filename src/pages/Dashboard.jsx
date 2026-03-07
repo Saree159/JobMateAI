@@ -130,12 +130,12 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400 mb-2">{t('dashboard.skills')}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {user.skills.slice(0, 6).map((skill, idx) => (
-                        <Badge key={idx} variant="secondary" className="bg-white text-xs">
+                        <Badge key={idx} variant="secondary" className="text-xs">
                           {skill}
                         </Badge>
                       ))}
                       {user.skills.length > 6 && (
-                        <Badge variant="secondary" className="bg-white text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {t('dashboard.moreSkills', { count: user.skills.length - 6 })}
                         </Badge>
                       )}

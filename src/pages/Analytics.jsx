@@ -244,7 +244,7 @@ export default function AnalyticsDashboard() {
                     </div>
                     <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-500"
+                        className="h-full bg-blue-500"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

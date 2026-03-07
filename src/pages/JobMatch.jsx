@@ -74,7 +74,7 @@ function processInlineDiff(rawLines) {
 function DiffLine({ type, text }) {
   if (type === "added") {
     return (
-      <div className="flex gap-2 bg-green-50 border-l-4 border-green-400 px-3 py-0.5">
+      <div className="flex gap-2 bg-green-900/20 border-l-4 border-green-500 px-3 py-0.5">
         <span className="select-none text-green-600 font-bold font-mono text-xs w-3 shrink-0">+</span>
         <span className="font-mono text-xs text-green-300 break-all">{text}</span>
       </div>
@@ -82,7 +82,7 @@ function DiffLine({ type, text }) {
   }
   if (type === "removed") {
     return (
-      <div className="flex gap-2 bg-red-50 border-l-4 border-red-400 px-3 py-0.5 opacity-80">
+      <div className="flex gap-2 bg-red-900/20 border-l-4 border-red-500 px-3 py-0.5 opacity-80">
         <span className="select-none text-red-500 font-bold font-mono text-xs w-3 shrink-0">−</span>
         <span className="font-mono text-xs text-red-300 line-through break-all">{text}</span>
       </div>
@@ -101,7 +101,7 @@ function DiffLine({ type, text }) {
 function ModifiedLine({ oldText, newText }) {
   const { prefix, removed, added, suffix } = charDiff(oldText, newText);
   return (
-    <div className="flex gap-2 bg-yellow-50 border-l-4 border-yellow-400 px-3 py-0.5">
+    <div className="flex gap-2 bg-yellow-900/20 border-l-4 border-yellow-500 px-3 py-0.5">
       <span className="select-none text-yellow-600 font-bold font-mono text-xs w-3 shrink-0">~</span>
       <span className="font-mono text-xs break-all">
         <span className="text-gray-300">{prefix}</span>
@@ -400,7 +400,7 @@ export default function JobMatch() {
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {matchAnalysis.matched.map((s, i) => (
-                      <Badge key={i} className="text-xs bg-green-900/40 text-green-300 border-green-200 hover:bg-green-900/40">
+                      <Badge key={i} className="text-xs bg-green-900/40 text-green-300 border-green-500/30 hover:bg-green-900/40">
                         {s}
                       </Badge>
                     ))}
@@ -481,7 +481,7 @@ export default function JobMatch() {
 
         {/* ── Right column — Resume Diff ────────────────────────── */}
         <div>
-          <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/20">
+          <Card className="border border-blue-500/20 bg-gradient-to-br from-white to-indigo-50/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600" />
@@ -565,7 +565,7 @@ export default function JobMatch() {
                         {gapAnalysis.gaps.map((gap, i) => (
                           <div key={i} className="space-y-1.5">
                             <div className="flex items-start gap-1.5">
-                              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5 shrink-0">
+                              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 bg-blue-900/30 border border-blue-500/30 rounded px-1.5 py-0.5 shrink-0">
                                 {gap.requirement}
                               </span>
                             </div>
@@ -637,7 +637,7 @@ export default function JobMatch() {
                     </button>
                   </div>
 
-                  <div className="border border-white/10 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-white">
+                  <div className="border border-white/10 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-card">
                     {displayDiff.map((line) =>
                       line.type === "ellipsis" ? (
                         <div key={line.key} className="px-4 py-1 text-xs text-gray-400 italic bg-white/5 border-y border-dashed border-white/10">

@@ -7,10 +7,10 @@ import { format } from "date-fns";
 
 const statusConfig = {
   saved: { label: 'Saved', icon: Clock, color: 'bg-white/10 text-gray-300' },
-  applied: { label: 'Applied', icon: Send, color: 'bg-blue-900/40 text-blue-700' },
-  interview: { label: 'Interview', icon: Calendar, color: 'bg-purple-100 text-purple-700' },
-  offer: { label: 'Offer', icon: CheckCircle2, color: 'bg-green-900/40 text-green-700' },
-  rejected: { label: 'Rejected', icon: CheckCircle2, color: 'bg-red-900/40 text-red-700' },
+  applied: { label: 'Applied', icon: Send, color: 'bg-blue-900/40 text-blue-300' },
+  interview: { label: 'Interview', icon: Calendar, color: 'bg-purple-900/40 text-purple-300' },
+  offer: { label: 'Offer', icon: CheckCircle2, color: 'bg-green-900/40 text-green-300' },
+  rejected: { label: 'Rejected', icon: CheckCircle2, color: 'bg-red-900/40 text-red-300' },
 };
 
 export default function RecentActivity({ applications, isLoading }) {
