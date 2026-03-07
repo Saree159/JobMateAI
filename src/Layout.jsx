@@ -84,8 +84,8 @@ export default function Layout({ children, currentPageName }) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-white/10">
-          <SidebarHeader className="p-5 pb-4">
-            <img src={logo} alt="HireMatrix" className="h-14 w-auto" />
+          <SidebarHeader className="px-4 py-3">
+            <img src={logo} alt="HireMatrix" className="w-full max-w-[160px] h-auto object-contain" />
           </SidebarHeader>
 
           <SidebarContent className="p-3">
@@ -145,7 +145,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-white/10 text-gray-400 p-2 rounded-lg transition-colors" />
               <div className="flex items-center gap-2">
-                <img src={logo} alt="HireMatrix" className="h-9 w-auto" />
+                <img src={logo} alt="HireMatrix" className="max-w-[120px] h-auto object-contain" />
               </div>
             </div>
           </header>

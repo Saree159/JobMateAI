@@ -107,7 +107,7 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-[#080d1a] p-4">
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-3 text-center">
-          <img src={logo} alt="HireMatrix" className="mx-auto h-16 w-auto" />
+          <img src={logo} alt="HireMatrix" className="mx-auto w-[180px] h-auto object-contain" />
           <CardTitle className="text-3xl bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent">Join HireMatrix</CardTitle>
           <CardDescription className="text-base">
             Start your AI-powered job search journey
