@@ -284,7 +284,7 @@ export default function Pricing() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-gray-400 mb-6">
-            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:support@hirematex.ai" className="text-blue-600 underline">support@hirematex.ai</a>
+            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:hirematrix.ai@gmail.com" className="text-blue-600 underline">hirematrix.ai@gmail.com</a>
           </p>
           <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
             {t('pricing.backToDashboard')}
