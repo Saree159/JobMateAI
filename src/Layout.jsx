@@ -83,12 +83,9 @@ export default function Layout({ children, currentPageName }) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100">
-        <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-gray-200 bg-white/80 backdrop-blur-xl">
-          <SidebarHeader className="border-b border-gray-200 p-4">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="HireMatrix" className="h-10 w-auto" />
-              <p className="text-xs text-gray-500">{t('nav.appTagline')}</p>
-            </div>
+        <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-white/10">
+          <SidebarHeader className="p-5 pb-4">
+            <img src={logo} alt="HireMatrix" className="h-14 w-auto" />
           </SidebarHeader>
 
           <SidebarContent className="p-3">
@@ -99,10 +96,10 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
-                        className={`hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 rounded-xl mb-1 ${
+                        className={`transition-all duration-200 rounded-xl mb-1 ${
                           location.pathname === item.url
-                            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 font-semibold shadow-sm'
-                            : 'text-gray-700'
+                            ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                            : 'text-gray-400 hover:bg-white/10 hover:text-white'
                         }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
@@ -117,24 +114,24 @@ export default function Layout({ children, currentPageName }) {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-gray-200 p-4 bg-white/50">
+          <SidebarFooter className="border-t border-white/10 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-indigo-700 font-semibold text-sm">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-white font-semibold text-sm">
                     {user?.full_name?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">
+                  <p className="font-medium text-white text-sm truncate">
                     {user?.full_name || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
+                className="p-2 hover:bg-white/10 hover:text-red-400 text-gray-400 rounded-lg transition-all duration-200"
                 title={t('nav.logout')}
               >
                 <LogOut className="w-4 h-4" />
@@ -144,11 +141,11 @@ export default function Layout({ children, currentPageName }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 px-6 py-4 md:hidden sticky top-0 z-10">
+          <header className="bg-[#0b1120] border-b border-white/10 px-6 py-4 md:hidden sticky top-0 z-10">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors" />
+              <SidebarTrigger className="hover:bg-white/10 text-gray-400 p-2 rounded-lg transition-colors" />
               <div className="flex items-center gap-2">
-                <img src={logo} alt="HireMatrix" className="h-8 w-auto" />
+                <img src={logo} alt="HireMatrix" className="h-9 w-auto" />
               </div>
             </div>
           </header>

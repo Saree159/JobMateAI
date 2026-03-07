@@ -355,7 +355,7 @@ export default function JobMatch() {
             </div>
             {job.url && (
               <a href={job.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block">
-                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                   Apply <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </a>
@@ -371,7 +371,7 @@ export default function JobMatch() {
           <Card className="border border-gray-100">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 Match Analysis
               </CardTitle>
             </CardHeader>
@@ -445,7 +445,7 @@ export default function JobMatch() {
                   const PREVIEW = 800;
                   return desc.length > PREVIEW ? (
                     <button
-                      className="text-xs text-indigo-600 hover:text-indigo-800 font-normal"
+                      className="text-xs text-blue-600 hover:text-indigo-800 font-normal"
                       onClick={() => setShowFullDesc(v => !v)}
                     >
                       {showFullDesc ? "Show less" : "Show full"}
@@ -484,7 +484,7 @@ export default function JobMatch() {
           <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-4 h-4 text-blue-600" />
                 Tailor Resume for This Job
               </CardTitle>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -525,7 +525,7 @@ export default function JobMatch() {
                 <Button
                   onClick={handleAnalyzeGaps}
                   disabled={!resumeFile}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                   size="sm"
                 >
                   <Sparkles className="w-3.5 h-3.5 mr-2" />
@@ -535,7 +535,7 @@ export default function JobMatch() {
 
               {/* ── Loading: gap analysis ── */}
               {flowStep === "analyzing-gaps" && (
-                <div className="flex items-center gap-2 text-sm text-indigo-600 py-2">
+                <div className="flex items-center gap-2 text-sm text-blue-600 py-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Analysing your resume against the job requirements…
                 </div>
@@ -565,7 +565,7 @@ export default function JobMatch() {
                         {gapAnalysis.gaps.map((gap, i) => (
                           <div key={i} className="space-y-1.5">
                             <div className="flex items-start gap-1.5">
-                              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5 shrink-0">
+                              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5 shrink-0">
                                 {gap.requirement}
                               </span>
                             </div>
@@ -586,7 +586,7 @@ export default function JobMatch() {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleGenerateDiff}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
                       size="sm"
                     >
                       <ArrowRight className="w-3.5 h-3.5 mr-1.5" />
@@ -606,7 +606,7 @@ export default function JobMatch() {
 
               {/* ── Loading: rewriting ── */}
               {flowStep === "rewriting" && (
-                <div className="flex items-center gap-2 text-sm text-indigo-600 py-2">
+                <div className="flex items-center gap-2 text-sm text-blue-600 py-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Rewriting your resume (this takes ~20s)…
                 </div>
@@ -662,7 +662,7 @@ export default function JobMatch() {
 
                   <div className="flex justify-center">
                     <button
-                      className="text-xs text-gray-400 hover:text-indigo-600"
+                      className="text-xs text-gray-400 hover:text-blue-600"
                       onClick={() => { setFlowStep("gap-qa"); setDiffResult(null); }}
                     >
                       ← Edit answers &amp; regenerate

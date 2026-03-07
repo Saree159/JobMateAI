@@ -9,7 +9,7 @@ export default function SubscriptionBadge({ tier, className = "" }) {
     <Badge 
       className={`${
         isPro 
-          ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0' 
+          ? 'bg-gradient-to-r from-blue-500 to-emerald-500 text-white border-0' 
           : 'bg-gray-100 text-gray-700 border-gray-300'
       } ${className}`}
     >

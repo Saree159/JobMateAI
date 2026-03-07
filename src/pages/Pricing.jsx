@@ -103,7 +103,7 @@ export default function Pricing() {
         {/* Current Plan Badge */}
         {user && (
           <div className="text-center mb-8">
-            <Badge className={`text-base px-5 py-2 ${isPro ? "bg-indigo-600" : "bg-gray-600"}`}>
+            <Badge className={`text-base px-5 py-2 ${isPro ? "bg-blue-600" : "bg-gray-600"}`}>
               {`${t('pricing.currentPlan')}: ${isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}`}
             </Badge>
           </div>
@@ -117,7 +117,7 @@ export default function Pricing() {
           <button
             onClick={() => setBillingPeriod(p => p === "monthly" ? "annual" : "monthly")}
             className={`relative w-14 h-7 rounded-full transition-colors ${
-              billingPeriod === "annual" ? "bg-indigo-600" : "bg-gray-300"
+              billingPeriod === "annual" ? "bg-blue-600" : "bg-gray-300"
             }`}
           >
             <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
@@ -148,19 +148,19 @@ export default function Pricing() {
               <Card
                 key={key}
                 className={`border transition-all ${
-                  plan.popular ? "border-indigo-600" : "border-gray-100"
-                } ${isCurrentPlan ? "ring-2 ring-indigo-200" : ""}`}
+                  plan.popular ? "border-blue-600" : "border-gray-100"
+                } ${isCurrentPlan ? "ring-2 ring-blue-200" : ""}`}
               >
                 <CardHeader className="text-center pb-8 pt-8">
                   {plan.popular && (
-                    <Badge className="mb-4 bg-indigo-600 self-center">
+                    <Badge className="mb-4 bg-blue-600 self-center">
                       <Star className="w-3 h-3 mr-1" />
                       {t('pricing.mostPopular')}
                     </Badge>
                   )}
 
                   <div className={`w-16 h-16 mx-auto mb-4 rounded-lg ${
-                    key === "pro" ? "bg-indigo-600" : "bg-gray-600"
+                    key === "pro" ? "bg-blue-600" : "bg-gray-600"
                   } flex items-center justify-center`}>
                     <PlanIcon className="w-8 h-8 text-white" />
                   </div>
@@ -225,7 +225,7 @@ export default function Pricing() {
                         </Button>
                       ) : (
                         <Button
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-6 text-lg"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 text-lg"
                           onClick={handleUpgradeToPro}
                           disabled={loadingCheckout}
                         >
@@ -284,7 +284,7 @@ export default function Pricing() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-gray-600 mb-6">
-            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:support@hirematex.ai" className="text-indigo-600 underline">support@hirematex.ai</a>
+            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:support@hirematex.ai" className="text-blue-600 underline">support@hirematex.ai</a>
           </p>
           <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
             {t('pricing.backToDashboard')}

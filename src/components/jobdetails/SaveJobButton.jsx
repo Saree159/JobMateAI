@@ -41,7 +41,7 @@ export default function SaveJobButton({ job, isSaved }) {
   return (
     <Button
       variant={isSaved ? "default" : "outline"}
-      className={`w-full ${isSaved ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+      className={`w-full ${isSaved ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
       onClick={handleToggleSave}
       disabled={isLoading}
     >

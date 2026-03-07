@@ -23,7 +23,7 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <DialogTitle className="text-2xl text-center">
@@ -37,24 +37,24 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
         <div className="space-y-4 py-4">
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 space-y-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Crown className="w-5 h-5 text-indigo-600" />
+              <Crown className="w-5 h-5 text-blue-600" />
               Pro Plan Benefits
             </h3>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 Unlimited job matches
               </li>
               <li className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 AI cover letter generation
               </li>
               <li className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 Job URL extraction
               </li>
               <li className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 Priority support
               </li>
             </ul>
@@ -72,7 +72,7 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
             </Button>
             <Button 
               onClick={handleUpgrade}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600"
             >
               <Zap className="w-4 h-4 mr-2" />
               Upgrade Now

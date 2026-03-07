@@ -143,10 +143,10 @@ export default function Onboarding() {
       <Card className="w-full max-w-2xl border border-gray-100 shadow-xl">
         {/* ── Header ── */}
         <CardHeader className="text-center pb-6 pt-10">
-          <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
             <Sparkles className="w-7 h-7 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent">
             {t('onboarding.title')}
           </CardTitle>
           <CardDescription className="text-base mt-1">
@@ -166,20 +166,20 @@ export default function Onboarding() {
                       className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
                         done
-                          ? "bg-indigo-600 text-white"
+                          ? "bg-blue-600 text-white"
                           : active
-                          ? "bg-indigo-600 text-white ring-4 ring-indigo-100"
+                          ? "bg-blue-600 text-white ring-4 ring-indigo-100"
                           : "bg-gray-100 text-gray-400"
                       )}
                     >
                       {done ? <Check className="w-4 h-4" /> : s}
                     </div>
-                    <span className={cn("text-xs font-medium", active ? "text-indigo-600" : "text-gray-400")}>
+                    <span className={cn("text-xs font-medium", active ? "text-blue-600" : "text-gray-400")}>
                       {label}
                     </span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={cn("w-16 h-0.5 mb-4 transition-all", done ? "bg-indigo-600" : "bg-gray-200")} />
+                    <div className={cn("w-16 h-0.5 mb-4 transition-all", done ? "bg-blue-600" : "bg-gray-200")} />
                   )}
                 </React.Fragment>
               );
@@ -214,7 +214,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.target_role === opt.value
-                          ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                          ? "border-blue-600 bg-indigo-50 text-blue-700"
                           : "border-gray-200 text-gray-600"
                       )}
                     >
@@ -248,7 +248,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex flex-col items-center gap-0.5 py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.experience_level === lvl.value
-                          ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                          ? "border-blue-600 bg-indigo-50 text-blue-700"
                           : "border-gray-200 text-gray-600"
                       )}
                     >
@@ -270,7 +270,7 @@ export default function Onboarding() {
                       className={cn(
                         "flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.work_mode_preference === mode.value
-                          ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                          ? "border-blue-600 bg-indigo-50 text-blue-700"
                           : "border-gray-200 text-gray-600"
                       )}
                     >
@@ -281,7 +281,7 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <Button onClick={handleNext} className="w-full bg-indigo-600 hover:bg-indigo-700 py-6 text-base" size="lg">
+              <Button onClick={handleNext} className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-base" size="lg">
                 Continue <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -308,7 +308,7 @@ export default function Onboarding() {
                 onClick={() => !isUploading && fileInputRef.current?.click()}
                 className={cn(
                   "border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all",
-                  isDragging ? "border-indigo-600 bg-indigo-50" :
+                  isDragging ? "border-blue-600 bg-indigo-50" :
                   resumeUploaded ? "border-green-400 bg-green-50 cursor-default" :
                   "border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/30"
                 )}
@@ -322,8 +322,8 @@ export default function Onboarding() {
                 />
                 {isUploading ? (
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                    <p className="font-medium text-indigo-700">Analyzing your resume...</p>
+                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                    <p className="font-medium text-blue-700">Analyzing your resume...</p>
                     <p className="text-sm text-gray-500">Extracting skills and experience</p>
                   </div>
                 ) : resumeUploaded ? (
@@ -337,7 +337,7 @@ export default function Onboarding() {
                 ) : (
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <Upload className="w-6 h-6 text-indigo-600" />
+                      <Upload className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
                       <p className="font-medium text-gray-700">Drop your resume here or click to browse</p>
@@ -388,7 +388,7 @@ export default function Onboarding() {
                 <Button onClick={() => setStep(1)} variant="outline" className="flex-1 py-5" size="lg">
                   <ChevronLeft className="w-4 h-4 mr-1" /> Back
                 </Button>
-                <Button onClick={handleNext} className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-5" size="lg">
+                <Button onClick={handleNext} className="flex-1 bg-blue-600 hover:bg-blue-700 py-5" size="lg">
                   Continue <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -434,7 +434,7 @@ export default function Onboarding() {
                 <Button
                   onClick={handleComplete}
                   disabled={updateUserMutation.isPending}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-5"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-5"
                   size="lg"
                 >
                   {updateUserMutation.isPending ? (

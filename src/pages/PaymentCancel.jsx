@@ -24,7 +24,7 @@ export default function PaymentCancel() {
 
         <div className="space-y-3">
           <Button
-            className="w-full bg-indigo-600 hover:bg-indigo-700"
+            className="w-full bg-blue-600 hover:bg-blue-700"
             onClick={() => navigate(createPageUrl("Pricing"))}
           >
             {t('payment.backToPricing')}

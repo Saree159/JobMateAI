@@ -201,7 +201,7 @@ export default function Profile() {
           <p className="text-gray-500">{t('profile.subtitle')}</p>
         </div>
         {!isEditing && (
-          <Button onClick={startEditing} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={startEditing} className="bg-blue-600 hover:bg-blue-700">
             {t('profile.editProfile')}
           </Button>
         )}
@@ -221,7 +221,7 @@ export default function Profile() {
         <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
-              <Languages className="w-5 h-5 text-indigo-600" />
+              <Languages className="w-5 h-5 text-blue-600" />
               {t('profile.language')}
             </CardTitle>
           </CardHeader>
@@ -232,7 +232,7 @@ export default function Profile() {
                 onClick={() => changeLang('en')}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'en'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                    ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -242,7 +242,7 @@ export default function Profile() {
                 onClick={() => changeLang('he')}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'he'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                    ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -257,7 +257,7 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                {isPro ? <Crown className="w-5 h-5 text-indigo-600" /> : <User className="w-5 h-5 text-gray-600" />}
+                {isPro ? <Crown className="w-5 h-5 text-blue-600" /> : <User className="w-5 h-5 text-gray-600" />}
                 {t('profile.subscription')}
               </span>
               <SubscriptionBadge tier={currentPlan} />
@@ -274,7 +274,7 @@ export default function Profile() {
               <Button
                 variant={isPro ? "outline" : "default"}
                 onClick={() => navigate(createPageUrl("Pricing"))}
-                className={!isPro ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" : ""}
+                className={!isPro ? "bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600" : ""}
               >
                 {isPro ? 'Manage Subscription' : t('pricing.upgradeToPro')}
               </Button>
@@ -343,7 +343,7 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <FileUp className="w-5 h-5 text-indigo-600" />
+                <FileUp className="w-5 h-5 text-blue-600" />
                 {t('profile.uploadResume')}
               </span>
             </CardTitle>
@@ -396,7 +396,7 @@ export default function Profile() {
         <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
-              <Wand2 className="w-5 h-5 text-indigo-600" />
+              <Wand2 className="w-5 h-5 text-blue-600" />
               {t('profile.rewriteResume')}
             </CardTitle>
           </CardHeader>
@@ -453,7 +453,7 @@ export default function Profile() {
             <Button
               onClick={handleResumeRewrite}
               disabled={isRewriting || !rewriteFile || !rewriteJD.trim()}
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full bg-blue-600 hover:bg-blue-700"
             >
               {isRewriting ? (
                 <><Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />{t('profile.rewriting')}</>
@@ -569,7 +569,7 @@ export default function Profile() {
         <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
-              <Bell className="w-5 h-5 text-indigo-600" />
+              <Bell className="w-5 h-5 text-blue-600" />
               {t('profile.notifications')}
             </CardTitle>
           </CardHeader>
@@ -582,7 +582,7 @@ export default function Profile() {
                   <p className="font-medium text-gray-900">{t('profile.interviewReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.interviewRemindersDesc')}</p>
                 </div>
-                <div className="text-indigo-600">
+                <div className="text-blue-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
@@ -592,7 +592,7 @@ export default function Profile() {
                   <p className="font-medium text-gray-900">{t('profile.followUpReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.followUpRemindersDesc')}</p>
                 </div>
-                <div className="text-indigo-600">
+                <div className="text-blue-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
@@ -602,7 +602,7 @@ export default function Profile() {
                   <p className="font-medium text-gray-900">{t('profile.deadlineAlerts')}</p>
                   <p className="text-sm text-gray-500">{t('profile.deadlineAlertsDesc')}</p>
                 </div>
-                <div className="text-indigo-600">
+                <div className="text-blue-600">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
@@ -628,7 +628,7 @@ export default function Profile() {
             <Button
               onClick={handleSave}
               disabled={updateUserMutation.isPending}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               <Save className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
               {updateUserMutation.isPending ? t('common.saving') : t('common.saveChanges')}

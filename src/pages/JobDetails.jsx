@@ -135,7 +135,7 @@ export default function JobDetails() {
   if (jobLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -227,7 +227,7 @@ export default function JobDetails() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
-                  <StickyNote className="w-5 h-5 text-indigo-600" />
+                  <StickyNote className="w-5 h-5 text-blue-600" />
                   Notes & Reminders
                 </CardTitle>
                 {!isEditingNotes && (
@@ -291,7 +291,7 @@ export default function JobDetails() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-indigo-600" />
+                  <HelpCircle className="w-5 h-5 text-blue-600" />
                   Interview Preparation
                 </CardTitle>
                 {!showInterviewQuestions && (
@@ -300,7 +300,7 @@ export default function JobDetails() {
                     size="sm"
                     onClick={() => generateQuestionsMutation.mutate()}
                     disabled={generateQuestionsMutation.isPending}
-                    className="text-indigo-600 border-indigo-300 hover:bg-indigo-100"
+                    className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
                   >
                     {generateQuestionsMutation.isPending ? (
                       <>

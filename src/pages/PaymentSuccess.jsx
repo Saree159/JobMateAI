@@ -53,7 +53,7 @@ export default function PaymentSuccess() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
       <div className="max-w-md w-full text-center">
 
-        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-indigo-600 flex items-center justify-center shadow-lg">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
           {loading
             ? <Loader2 className="w-10 h-10 text-white animate-spin" />
             : <Crown className="w-12 h-12 text-white" />
@@ -79,7 +79,7 @@ export default function PaymentSuccess() {
 
         <div className="space-y-3">
           <Button
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-6 text-lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
             disabled={loading}
             onClick={() => navigate(createPageUrl("Dashboard"))}
           >

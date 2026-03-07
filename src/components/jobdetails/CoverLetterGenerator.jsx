@@ -68,7 +68,7 @@ export default function CoverLetterGenerator({ job }) {
 
         {!isPro && (
           <Alert className="border-indigo-200 bg-indigo-50">
-            <Crown className="w-4 h-4 text-indigo-600" />
+            <Crown className="w-4 h-4 text-blue-600" />
             <AlertDescription className="text-indigo-900">
               <strong>Pro Feature:</strong> Upgrade to Pro to generate AI-powered cover letters.
               <button 
@@ -89,7 +89,7 @@ export default function CoverLetterGenerator({ job }) {
                 : 'bg-gray-100'
             }`}>
               {isPro ? (
-                <Sparkles className="w-8 h-8 text-indigo-600" />
+                <Sparkles className="w-8 h-8 text-blue-600" />
               ) : (
                 <Crown className="w-8 h-8 text-gray-400" />
               )}
@@ -107,8 +107,8 @@ export default function CoverLetterGenerator({ job }) {
               onClick={generateCoverLetter}
               disabled={generating || !isPro}
               className={isPro 
-                ? "bg-indigo-600 hover:bg-indigo-700" 
-                : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                ? "bg-blue-600 hover:bg-blue-700" 
+                : "bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600"
               }
             >
               {!isPro ? (

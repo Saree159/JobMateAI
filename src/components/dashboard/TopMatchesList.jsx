@@ -46,7 +46,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
     <Card className="border border-gray-100">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-semibold flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <Sparkles className="w-5 h-5 text-blue-600" />
           Top Matches for You
           {jobs.length > 0 && (
             <Badge variant="secondary" className="ml-auto text-xs font-normal">
@@ -114,7 +114,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
                       className="ml-auto"
                       onClick={e => e.stopPropagation()}
                     >
-                      <Button size="sm" variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 h-7 px-2">
+                      <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-indigo-50 h-7 px-2">
                         Apply <ExternalLink className="w-3 h-3 ml-1" />
                       </Button>
                     </a>

@@ -11,11 +11,11 @@ export default function JobCard({ job, onView }) {
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <div className="flex items-start gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                 {job.title}
               </h3>
               {job.isSaved && (
-                <Bookmark className="w-4 h-4 fill-indigo-600 text-indigo-600 flex-shrink-0" />
+                <Bookmark className="w-4 h-4 fill-indigo-600 text-blue-600 flex-shrink-0" />
               )}
             </div>
             <div className="flex flex-col gap-1 text-sm text-gray-600">
@@ -81,7 +81,7 @@ export default function JobCard({ job, onView }) {
           <Button
             size="sm"
             variant="ghost"
-            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 group-hover:translate-x-1 transition-transform"
+            className="text-blue-600 hover:text-blue-700 hover:bg-indigo-50 group-hover:translate-x-1 transition-transform"
           >
             View
             <ArrowRight className="w-4 h-4 ml-1" />

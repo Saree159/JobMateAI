@@ -108,7 +108,7 @@ export default function Register() {
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-3 text-center">
           <img src={logo} alt="HireMatrix" className="mx-auto h-16 w-auto" />
-          <CardTitle className="text-3xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Join HireMatrix</CardTitle>
+          <CardTitle className="text-3xl bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent">Join HireMatrix</CardTitle>
           <CardDescription className="text-base">
             Start your AI-powered job search journey
           </CardDescription>
@@ -179,7 +179,7 @@ export default function Register() {
 
             <Button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -194,7 +194,7 @@ export default function Register() {
 
             <div className="text-center text-sm text-gray-600">
               {t('auth.haveAccount')}{' '}
-              <Link to="/login" className="text-indigo-600 hover:underline font-medium">
+              <Link to="/login" className="text-blue-600 hover:underline font-medium">
                 {t('auth.signIn')}
               </Link>
             </div>

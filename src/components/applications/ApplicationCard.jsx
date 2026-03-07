@@ -62,7 +62,7 @@ export default function ApplicationCard({ application }) {
               </div>
               <div className="flex-1">
                 <h3 
-                  className="text-lg font-semibold text-gray-900 hover:text-indigo-600 cursor-pointer"
+                  className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
                   onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
                 >
                   {application.title}

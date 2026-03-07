@@ -124,7 +124,7 @@ export default function AddJobDialog({ open, onClose }) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Sparkles className="w-6 h-6 text-indigo-600" />
+            <Sparkles className="w-6 h-6 text-blue-600" />
             Add New Job
           </DialogTitle>
           <DialogDescription>
@@ -247,7 +247,7 @@ export default function AddJobDialog({ open, onClose }) {
             <Button
               onClick={handleSubmit}
               disabled={createJobMutation.isPending}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               {createJobMutation.isPending ? (
                 <>

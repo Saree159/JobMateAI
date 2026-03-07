@@ -57,7 +57,7 @@ export default function Dashboard() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header with modern gradient */}
       <div className="mb-10">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent mb-2">
           {t('dashboard.welcomeBack', { name: user?.full_name?.split(' ')[0] || 'there' })}
         </h1>
         <p className="text-gray-600 text-lg">
@@ -114,7 +114,7 @@ export default function Dashboard() {
             <Card className="border border-gray-100">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="w-5 h-5 text-indigo-600" />
+                  <Target className="w-5 h-5 text-blue-600" />
                   {t('dashboard.yourProfile')}
                 </CardTitle>
               </CardHeader>

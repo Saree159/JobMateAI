@@ -91,7 +91,7 @@ export default function IsraeliJobs() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Globe className="w-8 h-8 text-indigo-600" />
+            <Globe className="w-8 h-8 text-blue-600" />
             <h1 className="text-3xl font-bold text-gray-900">
               {t('israeliJobs.title')}
             </h1>
@@ -175,7 +175,7 @@ export default function IsraeliJobs() {
         {/* Results */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             <span className="ltr:ml-3 rtl:mr-3 text-gray-600">{t('israeliJobs.loading')}</span>
           </div>
         )}
