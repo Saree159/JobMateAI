@@ -60,7 +60,7 @@ export default function Dashboard() {
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent mb-2">
           {t('dashboard.welcomeBack', { name: user?.full_name?.split(' ')[0] || 'there' })}
         </h1>
-        <p className="text-gray-600 text-lg">
+        <p className="text-gray-400 text-lg">
           {user?.target_role ? t('dashboard.findingJobs', { role: user.target_role }) : t('dashboard.commandCenter')}
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function Dashboard() {
         <div className="space-y-6">
           {/* Profile Completion */}
           {user && (
-            <Card className="border border-gray-100">
+            <Card className="border border-white/5">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Target className="w-5 h-5 text-blue-600" />
@@ -121,13 +121,13 @@ export default function Dashboard() {
               <CardContent className="space-y-3">
                 {user.target_role && (
                   <div>
-                    <p className="text-sm text-gray-600">{t('dashboard.targetRole')}</p>
-                    <p className="font-semibold text-gray-900">{user.target_role}</p>
+                    <p className="text-sm text-gray-400">{t('dashboard.targetRole')}</p>
+                    <p className="font-semibold text-white">{user.target_role}</p>
                   </div>
                 )}
                 {user.skills && user.skills.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.skills')}</p>
+                    <p className="text-sm text-gray-400 mb-2">{t('dashboard.skills')}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {user.skills.slice(0, 6).map((skill, idx) => (
                         <Badge key={idx} variant="secondary" className="bg-white text-xs">

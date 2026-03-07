@@ -13,10 +13,10 @@ export default function ApplicationStats({ stats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
       {statItems.map((item) => (
-        <Card key={item.label} className="border border-gray-100">
+        <Card key={item.label} className="border border-white/5">
           <CardContent className="p-6">
             <p className="text-sm text-gray-500 mb-2">{item.label}</p>
-            <p className="text-3xl font-semibold text-gray-900">{item.value}</p>
+            <p className="text-3xl font-semibold text-white">{item.value}</p>
           </CardContent>
         </Card>
       ))}

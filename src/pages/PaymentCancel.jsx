@@ -10,15 +10,15 @@ export default function PaymentCancel() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-6">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="max-w-md w-full text-center">
 
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
           <XCircle className="w-10 h-10 text-gray-400" />
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">{t('payment.cancelledTitle')}</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-3xl font-bold text-white mb-3">{t('payment.cancelledTitle')}</h1>
+        <p className="text-gray-400 mb-8">
           {t('payment.cancelledSubtitle')}
         </p>
 

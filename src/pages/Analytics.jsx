@@ -118,7 +118,7 @@ export default function AnalyticsDashboard() {
               {Object.entries(stats.by_status).map(([status, count]) => {
                 const percentage = (count / stats.total_applications) * 100;
                 const statusColors = {
-                  saved: "bg-gray-500",
+                  saved: "bg-white/50",
                   applied: "bg-blue-500",
                   interview: "bg-purple-500",
                   offer: "bg-green-500",
@@ -133,7 +133,7 @@ export default function AnalyticsDashboard() {
                         {count} ({percentage.toFixed(0)}%)
                       </span>
                     </div>
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${statusColors[status]}`}
                         style={{ width: `${percentage}%` }}
@@ -242,7 +242,7 @@ export default function AnalyticsDashboard() {
                       <span className="font-medium">{range}%</span>
                       <span className="text-muted-foreground">{count} jobs</span>
                     </div>
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-indigo-500"
                         style={{ width: `${percentage}%` }}
@@ -268,7 +268,7 @@ export default function AnalyticsDashboard() {
                 top_companies.map((item, index) => (
                   <div key={item.company} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-medium">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-medium">
                         {index + 1}
                       </span>
                       <span className="font-medium">{item.company}</span>

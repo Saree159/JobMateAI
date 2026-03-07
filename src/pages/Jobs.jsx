@@ -105,10 +105,10 @@ export default function Jobs() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
+          <h1 className="text-3xl font-semibold text-white">
             {t('jobs.title')}
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-400 mt-1">
             {t('jobs.jobsSaved', { count: filteredJobs.length })}
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function Jobs() {
       </div>
 
       {/* Search & Filters */}
-      <Card className="border border-gray-100 mb-8">
+      <Card className="border border-white/5 mb-8">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -143,7 +143,7 @@ export default function Jobs() {
       {isLoading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="border border-gray-100">
+            <Card key={i} className="border border-white/5">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start gap-3">
                   <Skeleton className="w-12 h-12 rounded-lg" />
@@ -167,10 +167,10 @@ export default function Jobs() {
           ))}
         </div>
       ) : filteredJobs.length === 0 ? (
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardContent className="text-center py-20">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">{t('jobs.noJobsYet')}</h3>
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">{t('jobs.noJobsYet')}</h3>
             <p className="text-gray-500 mb-6">
               {searchQuery || filters.location ? t('jobs.adjustFilters') : t('jobs.startAdding')}
             </p>

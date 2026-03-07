@@ -82,7 +82,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen flex w-full bg-background">
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-white/10">
           <SidebarHeader className="p-5 pb-4">
             <img src={logo} alt="HireMatrix" className="h-14 w-auto" />

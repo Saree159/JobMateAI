@@ -70,7 +70,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#080d1a] p-4">
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-3 text-center">
           <img src={logo} alt="HireMatrix" className="mx-auto h-16 w-auto" />
@@ -130,7 +130,7 @@ export default function Login() {
               )}
             </Button>
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-gray-400">
               {t('auth.noAccount')}{' '}
               <Link to="/register" className="text-blue-600 hover:underline font-medium">
                 {t('auth.signUp')}

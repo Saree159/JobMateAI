@@ -50,7 +50,7 @@ export default function CoverLetterGenerator({ job }) {
   const isPro = user?.subscription_tier === 'pro';
 
   return (
-    <Card className="border border-gray-100">
+    <Card className="border border-white/5">
       <CardHeader>
         <CardTitle className="font-semibold flex items-center gap-2">
           AI Cover Letter Generator
@@ -86,7 +86,7 @@ export default function CoverLetterGenerator({ job }) {
             <div className={`w-16 h-16 mx-auto mb-4 rounded-lg flex items-center justify-center ${
               isPro 
                 ? 'bg-indigo-50' 
-                : 'bg-gray-100'
+                : 'bg-white/10'
             }`}>
               {isPro ? (
                 <Sparkles className="w-8 h-8 text-blue-600" />
@@ -94,10 +94,10 @@ export default function CoverLetterGenerator({ job }) {
                 <Crown className="w-8 h-8 text-gray-400" />
               )}
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">
+            <h3 className="font-semibold text-white mb-2">
               {isPro ? 'Generate Your Cover Letter' : 'Unlock AI Cover Letters'}
             </h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-gray-400 mb-6">
               {isPro 
                 ? 'AI will create a personalized cover letter based on your profile and this job'
                 : 'Upgrade to Pro to generate personalized cover letters with AI'

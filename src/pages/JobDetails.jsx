@@ -163,17 +163,17 @@ export default function JobDetails() {
       </Button>
 
       {/* Job Header */}
-      <Card className="border border-gray-100 mb-8">
+      <Card className="border border-white/5 mb-8">
         <CardHeader>
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
             <div className="flex-1">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-8 h-8 text-gray-600" />
+                <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-8 h-8 text-gray-400" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
-                  <div className="flex flex-wrap items-center gap-3 text-gray-600">
+                  <h1 className="text-3xl font-bold text-white mb-2">{job.title}</h1>
+                  <div className="flex flex-wrap items-center gap-3 text-gray-400">
                     <span className="flex items-center gap-1">
                       <Building2 className="w-4 h-4" />
                       {job.company}
@@ -188,11 +188,11 @@ export default function JobDetails() {
             </div>
 
             {/* Match Score */}
-            <div className="text-center bg-gray-50 p-6 rounded-lg">
+            <div className="text-center bg-white/5 p-6 rounded-lg">
               <div className={`text-4xl font-semibold mb-1 ${
                 matchScore >= 70 ? 'text-green-600' : 
                 matchScore >= 50 ? 'text-yellow-600' : 
-                'text-gray-600'
+                'text-gray-400'
               }`}>
                 {matchScore}%
               </div>
@@ -208,12 +208,12 @@ export default function JobDetails() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader>
               <CardTitle className="font-semibold">Job Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+              <p className="text-gray-300 whitespace-pre-wrap">{job.description}</p>
             </CardContent>
           </Card>
 
@@ -223,7 +223,7 @@ export default function JobDetails() {
           />
 
           {/* Interview Notes */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function JobDetails() {
               ) : (
                 <div>
                   {notes ? (
-                    <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
+                    <p className="text-gray-300 whitespace-pre-wrap">{notes}</p>
                   ) : (
                     <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
                   )}
@@ -323,12 +323,12 @@ export default function JobDetails() {
                   {/* Behavioral Questions */}
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         💼 Behavioral Questions
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -339,12 +339,12 @@ export default function JobDetails() {
                   {/* Technical Questions */}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         ⚙️ Technical Questions
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -355,12 +355,12 @@ export default function JobDetails() {
                   {/* Company-Specific Questions */}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         🏢 Questions to Ask Them
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -378,7 +378,7 @@ export default function JobDetails() {
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 text-center py-4">
+                <p className="text-sm text-gray-400 text-center py-4">
                   Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.
                 </p>
               )}
@@ -399,7 +399,7 @@ export default function JobDetails() {
                     size="sm"
                     onClick={() => generateSalaryMutation.mutate()}
                     disabled={generateSalaryMutation.isPending}
-                    className="text-green-600 border-green-300 hover:bg-green-100"
+                    className="text-green-600 border-green-300 hover:bg-green-900/40"
                   >
                     {generateSalaryMutation.isPending ? (
                       <>
@@ -421,24 +421,24 @@ export default function JobDetails() {
                 <div className="space-y-6">
                   {/* Salary Range */}
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                       💰 Estimated Range
                     </h4>
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <p className="text-sm text-gray-600">Minimum</p>
+                        <p className="text-sm text-gray-400">Minimum</p>
                         <p className="text-xl font-bold text-green-700">
                           ${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Median</p>
+                        <p className="text-sm text-gray-400">Median</p>
                         <p className="text-2xl font-bold text-green-600">
                           ${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Maximum</p>
+                        <p className="text-sm text-gray-400">Maximum</p>
                         <p className="text-xl font-bold text-green-700">
                           ${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}
                         </p>
@@ -449,12 +449,12 @@ export default function JobDetails() {
                   {/* Insights */}
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         💡 Key Insights
                       </h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
-                          <li key={idx} className="text-sm text-gray-700 pl-4 border-l-2 border-green-300 py-1">
+                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-green-300 py-1">
                             {insight}
                           </li>
                         ))}
@@ -465,14 +465,14 @@ export default function JobDetails() {
                   {/* Factors */}
                   {salaryEstimate.factors && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">📊 Salary Factors</h4>
+                      <h4 className="font-semibold text-white mb-3">📊 Salary Factors</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium text-gray-900 capitalize">
+                            <span className="font-medium text-white capitalize">
                               {key.replace('_', ' ')}:
                             </span>
-                            <span className="text-gray-700 ml-2">{value}</span>
+                            <span className="text-gray-300 ml-2">{value}</span>
                           </div>
                         ))}
                       </div>
@@ -489,7 +489,7 @@ export default function JobDetails() {
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 text-center py-4">
+                <p className="text-sm text-gray-400 text-center py-4">
                   Click "Estimate Salary" to get AI-powered salary insights for this position.
                 </p>
               )}
@@ -506,19 +506,19 @@ export default function JobDetails() {
           />
 
           {/* Application Status */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader>
               <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">Status</p>
+                  <p className="text-sm text-gray-400">Status</p>
                   <p className="font-medium capitalize">{job.status || 'saved'}</p>
                 </div>
                 {job.created_at && (
                   <div>
-                    <p className="text-sm text-gray-600">Added</p>
+                    <p className="text-sm text-gray-400">Added</p>
                     <p className="font-medium">
                       {new Date(job.created_at).toLocaleDateString()}
                     </p>
@@ -529,7 +529,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader>
               <CardTitle className="font-semibold text-sm">Actions</CardTitle>
             </CardHeader>

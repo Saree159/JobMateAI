@@ -36,11 +36,11 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
 
         <div className="space-y-4 py-4">
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 space-y-3">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="font-semibold text-white flex items-center gap-2">
               <Crown className="w-5 h-5 text-blue-600" />
               Pro Plan Benefits
             </h3>
-            <ul className="space-y-2 text-sm text-gray-700">
+            <ul className="space-y-2 text-sm text-gray-300">
               <li className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600" />
                 Unlimited job matches
@@ -60,8 +60,8 @@ export default function UpgradePrompt({ open, onClose, feature, limit }) {
             </ul>
             <div className="pt-4 border-t border-indigo-200">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-gray-900">₪69</span>
-                <span className="text-gray-600">/ month</span>
+                <span className="text-3xl font-bold text-white">₪69</span>
+                <span className="text-gray-400">/ month</span>
               </div>
             </div>
           </div>

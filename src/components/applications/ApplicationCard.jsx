@@ -24,11 +24,11 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 const statusConfig = {
-  saved: { label: 'Saved', color: 'bg-gray-100 text-gray-700 border-gray-300' },
-  applied: { label: 'Applied', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  saved: { label: 'Saved', color: 'bg-white/10 text-gray-300 border-gray-300' },
+  applied: { label: 'Applied', color: 'bg-blue-900/40 text-blue-700 border-blue-300' },
   interview: { label: 'Interview', color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  offer: { label: 'Offer', color: 'bg-green-100 text-green-700 border-green-300' },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-300' },
+  offer: { label: 'Offer', color: 'bg-green-900/40 text-green-700 border-green-300' },
+  rejected: { label: 'Rejected', color: 'bg-red-900/40 text-red-700 border-red-300' },
 };
 
 export default function ApplicationCard({ application }) {
@@ -52,22 +52,22 @@ export default function ApplicationCard({ application }) {
   const status = statusConfig[application.status];
 
   return (
-    <Card className="border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all">
+    <Card className="border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-6 h-6 text-gray-400" />
               </div>
               <div className="flex-1">
                 <h3 
-                  className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
+                  className="text-lg font-semibold text-white hover:text-blue-600 cursor-pointer"
                   onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
                 >
                   {application.title}
                 </h3>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mt-1">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400 mt-1">
                   <span className="flex items-center gap-1">
                     <Building2 className="w-4 h-4" />
                     {application.company}
@@ -101,7 +101,7 @@ export default function ApplicationCard({ application }) {
             </div>
 
             {application.notes && (
-              <p className="text-sm text-gray-600 mt-3 line-clamp-2">
+              <p className="text-sm text-gray-400 mt-3 line-clamp-2">
                 {application.notes}
               </p>
             )}

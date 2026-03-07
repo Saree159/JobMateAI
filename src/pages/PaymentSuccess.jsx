@@ -60,10 +60,10 @@ export default function PaymentSuccess() {
           }
         </div>
 
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">
+        <h1 className="text-4xl font-bold text-white mb-3">
           {loading ? t('payment.activating') : t('payment.successTitle')}
         </h1>
-        <p className="text-lg text-gray-600 mb-2">
+        <p className="text-lg text-gray-400 mb-2">
           {t('payment.successSubtitle')}
         </p>
         {error && (

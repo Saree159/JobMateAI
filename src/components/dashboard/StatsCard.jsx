@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StatsCard({ title, value, icon: Icon, gradient, isLoading }) {
   return (
-    <Card className="border border-gray-100">
+    <Card className="border border-white/5">
       <CardContent className="p-6">
         {isLoading ? (
           <>
@@ -14,7 +14,7 @@ export default function StatsCard({ title, value, icon: Icon, gradient, isLoadin
         ) : (
           <>
             <p className="text-sm text-gray-500 mb-3">{title}</p>
-            <p className="text-3xl font-semibold text-gray-900">{value}</p>
+            <p className="text-3xl font-semibold text-white">{value}</p>
           </>
         )}
       </CardContent>

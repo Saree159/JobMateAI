@@ -69,7 +69,7 @@ export default function Applications() {
       {/* Header */}
       <div className="mb-10 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-3xl font-semibold text-white mb-2">
             {t('applications.title')}
           </h1>
           <p className="text-gray-500">
@@ -104,10 +104,10 @@ export default function Applications() {
       <ApplicationStats stats={stats} />
 
       {/* Filter Tabs */}
-      <Card className="border border-gray-100 mb-8">
+      <Card className="border border-white/5 mb-8">
         <CardContent className="p-6">
           <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-            <TabsList className="bg-gray-100">
+            <TabsList className="bg-white/10">
               <TabsTrigger value="all">{t('jobs.all')} ({stats.total})</TabsTrigger>
               <TabsTrigger value="saved">{t('jobs.saved_status')} ({stats.saved})</TabsTrigger>
               <TabsTrigger value="applied">{t('jobs.applied_status')} ({stats.applied})</TabsTrigger>
@@ -123,7 +123,7 @@ export default function Applications() {
       {appsLoading ? (
         <div className="grid gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="border border-gray-100">
+            <Card key={i} className="border border-white/5">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-4 flex-1">
@@ -145,10 +145,10 @@ export default function Applications() {
           ))}
         </div>
       ) : filteredApplications.length === 0 ? (
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardContent className="text-center py-20">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">
               {t('applications.noApplications')}
             </h3>
             <p className="text-gray-500">

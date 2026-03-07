@@ -12,7 +12,7 @@ function MatchBadge({ score }) {
   const color =
     score >= 70 ? "text-green-600 bg-green-50 border-green-200" :
     score >= 40 ? "text-yellow-600 bg-yellow-50 border-yellow-200" :
-    "text-gray-500 bg-gray-50 border-gray-200";
+    "text-gray-500 bg-white/5 border-white/10";
   return (
     <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 shrink-0 ${color}`}>
       <span className="text-lg font-bold leading-none">{score}%</span>
@@ -26,7 +26,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
 
   if (isLoading) {
     return (
-      <Card className="border border-gray-100">
+      <Card className="border border-white/5">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5 rounded" />
@@ -43,7 +43,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
   }
 
   return (
-    <Card className="border border-gray-100">
+    <Card className="border border-white/5">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-semibold flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-blue-600" />
@@ -72,13 +72,13 @@ export default function TopMatchesList({ jobs, isLoading }) {
           jobs.map((job, idx) => (
             <div
               key={idx}
-              className="flex gap-4 p-4 border border-gray-100 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-white cursor-pointer"
+              className="flex gap-4 p-4 border border-white/5 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-all bg-white cursor-pointer"
               onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
             >
               <MatchBadge score={job.match_score ?? 0} />
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate">{job.title}</h3>
+                <h3 className="font-semibold text-white truncate">{job.title}</h3>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-gray-500 mt-0.5">
                   {job.company && (
                     <span className="flex items-center gap-1">
@@ -93,7 +93,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
                 </div>
 
                 {job.description && (
-                  <p className="text-sm text-gray-600 line-clamp-2 mt-1.5">{job.description}</p>
+                  <p className="text-sm text-gray-400 line-clamp-2 mt-1.5">{job.description}</p>
                 )}
 
                 <div className="flex items-center gap-2 mt-2 flex-wrap">

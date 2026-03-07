@@ -86,17 +86,17 @@ export default function IsraeliJobs() {
   const jobs = data?.jobs || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Globe className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-white">
               {t('israeliJobs.title')}
             </h1>
           </div>
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             {t('israeliJobs.subtitle')} • Drushim.co.il • GotFriends.co.il
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function IsraeliJobs() {
             <div className="space-y-4">
               {/* Site Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   בחר אתר
                 </label>
                 <div className="flex gap-2">
@@ -131,7 +131,7 @@ export default function IsraeliJobs() {
               {/* Category Selection (Drushim only) */}
               {selectedSite === "drushim" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     בחר קטגוריה
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -151,7 +151,7 @@ export default function IsraeliJobs() {
 
               {/* Custom URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   או הזן כתובת מותאמת אישית
                 </label>
                 <div className="flex gap-2">
@@ -176,7 +176,7 @@ export default function IsraeliJobs() {
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ltr:ml-3 rtl:mr-3 text-gray-600">{t('israeliJobs.loading')}</span>
+            <span className="ltr:ml-3 rtl:mr-3 text-gray-400">{t('israeliJobs.loading')}</span>
           </div>
         )}
 
@@ -193,10 +193,10 @@ export default function IsraeliJobs() {
           <Card>
             <CardContent className="p-12 text-center">
               <Globe className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-white mb-2">
                 {t('israeliJobs.noJobsFound')}
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-400">
                 {t('israeliJobs.tryDifferent')}
               </p>
             </CardContent>
@@ -205,7 +205,7 @@ export default function IsraeliJobs() {
 
         {!isLoading && !error && jobs.length > 0 && (
           <>
-            <div className="mb-4 text-gray-600">
+            <div className="mb-4 text-gray-400">
               {t('israeliJobs.totalJobs', { count: jobs.length })} — {data.source}
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -246,12 +246,12 @@ export default function IsraeliJobs() {
                   {/* Company & Location */}
                   <div className="flex flex-wrap gap-4 justify-end">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-700">{selectedJob.company}</span>
+                      <span className="text-gray-300">{selectedJob.company}</span>
                       <Building2 className="w-5 h-5 text-gray-500" />
                     </div>
                     {selectedJob.location && (
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-700">{selectedJob.location}</span>
+                        <span className="text-gray-300">{selectedJob.location}</span>
                         <MapPin className="w-5 h-5 text-gray-500" />
                       </div>
                     )}
@@ -276,7 +276,7 @@ export default function IsraeliJobs() {
                   {/* Description */}
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4">תיאור המשרה</h3>
-                    <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
+                    <div className="prose prose-sm max-w-none text-gray-300 whitespace-pre-wrap">
                       {selectedJob.description}
                     </div>
                   </div>
@@ -299,7 +299,7 @@ export default function IsraeliJobs() {
                   {(selectedJob.salary_min || selectedJob.salary_max) && (
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-semibold mb-2">שכר</h3>
-                      <div className="text-gray-700">
+                      <div className="text-gray-300">
                         {selectedJob.salary_min && selectedJob.salary_max
                           ? `₪${selectedJob.salary_min.toLocaleString()} - ₪${selectedJob.salary_max.toLocaleString()}`
                           : selectedJob.salary_min

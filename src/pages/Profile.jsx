@@ -195,7 +195,7 @@ export default function Profile() {
       {/* Header */}
       <div className="flex justify-between items-start mb-10">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-3xl font-semibold text-white mb-2">
             {t('profile.title')}
           </h1>
           <p className="text-gray-500">{t('profile.subtitle')}</p>
@@ -218,7 +218,7 @@ export default function Profile() {
 
       <div className="space-y-6">
         {/* Language Toggle Card */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Languages className="w-5 h-5 text-blue-600" />
@@ -226,14 +226,14 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 mb-4">{t('profile.languageSubtitle')}</p>
+            <p className="text-sm text-gray-400 mb-4">{t('profile.languageSubtitle')}</p>
             <div className="flex gap-3">
               <button
                 onClick={() => changeLang('en')}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'en'
                     ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
                 English
@@ -243,7 +243,7 @@ export default function Profile() {
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'he'
                     ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
                 עברית
@@ -253,11 +253,11 @@ export default function Profile() {
         </Card>
 
         {/* Subscription Card */}
-        <Card className={`border ${isPro ? 'border-indigo-200 bg-indigo-50' : 'border-gray-100'}`}>
+        <Card className={`border ${isPro ? 'border-indigo-200 bg-indigo-50' : 'border-white/5'}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                {isPro ? <Crown className="w-5 h-5 text-blue-600" /> : <User className="w-5 h-5 text-gray-600" />}
+                {isPro ? <Crown className="w-5 h-5 text-blue-600" /> : <User className="w-5 h-5 text-gray-400" />}
                 {t('profile.subscription')}
               </span>
               <SubscriptionBadge tier={currentPlan} />
@@ -266,8 +266,8 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-medium text-gray-900">{isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-white">{isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}</p>
+                <p className="text-sm text-gray-400">
                   {isPro ? 'Unlimited access to all features' : 'Limited to 5 job views per day'}
                 </p>
               </div>
@@ -288,7 +288,7 @@ export default function Profile() {
         </Card>
 
         {/* Basic Info */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold">
               {t('profile.careerInfo')}
@@ -304,7 +304,7 @@ export default function Profile() {
                   placeholder={t('profile.targetRolePlaceholder')}
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.target_role || t('common.notSet')}</p>
+                <p className="text-white font-medium">{user.target_role || t('common.notSet')}</p>
               )}
             </div>
 
@@ -318,7 +318,7 @@ export default function Profile() {
                   placeholder="5"
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.experience_years || t('common.notSet')}</p>
+                <p className="text-white font-medium">{user.experience_years || t('common.notSet')}</p>
               )}
             </div>
 
@@ -332,14 +332,14 @@ export default function Profile() {
                   rows={4}
                 />
               ) : (
-                <p className="text-gray-700">{user.bio || t('common.notSet')}</p>
+                <p className="text-gray-300">{user.bio || t('common.notSet')}</p>
               )}
             </div>
           </CardContent>
         </Card>
 
         {/* Resume Upload */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -349,7 +349,7 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">{t('profile.uploadSubtitle')}</p>
+            <p className="text-sm text-gray-400">{t('profile.uploadSubtitle')}</p>
 
             <div className="flex items-center gap-4">
               <input
@@ -401,7 +401,7 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">{t('profile.rewriteSubtitle')}</p>
+            <p className="text-sm text-gray-400">{t('profile.rewriteSubtitle')}</p>
 
             <div className="flex items-center gap-4">
               <input
@@ -440,7 +440,7 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">{t('profile.jobDescription')}</label>
+              <label className="text-sm font-medium text-gray-300">{t('profile.jobDescription')}</label>
               <Textarea
                 placeholder={t('profile.jobDescPlaceholder')}
                 rows={6}
@@ -471,7 +471,7 @@ export default function Profile() {
         </Card>
 
         {/* Skills */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold">{t('profile.skills')}</CardTitle>
           </CardHeader>
@@ -510,7 +510,7 @@ export default function Profile() {
         </Card>
 
         {/* Preferences */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold">
               {t('profile.preferences')}
@@ -526,7 +526,7 @@ export default function Profile() {
                   placeholder={t('profile.locationPlaceholder')}
                 />
               ) : (
-                <p className="text-gray-900 font-medium">{user.location_preference || t('common.notSet')}</p>
+                <p className="text-white font-medium">{user.location_preference || t('common.notSet')}</p>
               )}
             </div>
 
@@ -541,7 +541,7 @@ export default function Profile() {
                     placeholder="10000"
                   />
                 ) : (
-                  <p className="text-gray-900 font-medium">
+                  <p className="text-white font-medium">
                     {user.salary_min ? `₪${user.salary_min.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
@@ -556,7 +556,7 @@ export default function Profile() {
                     placeholder="20000"
                   />
                 ) : (
-                  <p className="text-gray-900 font-medium">
+                  <p className="text-white font-medium">
                     {user.salary_max ? `₪${user.salary_max.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
@@ -566,7 +566,7 @@ export default function Profile() {
         </Card>
 
         {/* Email Notifications */}
-        <Card className="border border-gray-100">
+        <Card className="border border-white/5">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Bell className="w-5 h-5 text-blue-600" />
@@ -574,12 +574,12 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600 mb-4">{t('profile.notificationsSubtitle')}</p>
+            <p className="text-sm text-gray-400 mb-4">{t('profile.notificationsSubtitle')}</p>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{t('profile.interviewReminders')}</p>
+                  <p className="font-medium text-white">{t('profile.interviewReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.interviewRemindersDesc')}</p>
                 </div>
                 <div className="text-blue-600">
@@ -587,9 +587,9 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{t('profile.followUpReminders')}</p>
+                  <p className="font-medium text-white">{t('profile.followUpReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.followUpRemindersDesc')}</p>
                 </div>
                 <div className="text-blue-600">
@@ -597,9 +597,9 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{t('profile.deadlineAlerts')}</p>
+                  <p className="font-medium text-white">{t('profile.deadlineAlerts')}</p>
                   <p className="text-sm text-gray-500">{t('profile.deadlineAlertsDesc')}</p>
                 </div>
                 <div className="text-blue-600">

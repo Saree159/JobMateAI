@@ -76,7 +76,7 @@ function DiffLine({ type, text }) {
     return (
       <div className="flex gap-2 bg-green-50 border-l-4 border-green-400 px-3 py-0.5">
         <span className="select-none text-green-600 font-bold font-mono text-xs w-3 shrink-0">+</span>
-        <span className="font-mono text-xs text-green-800 break-all">{text}</span>
+        <span className="font-mono text-xs text-green-300 break-all">{text}</span>
       </div>
     );
   }
@@ -84,7 +84,7 @@ function DiffLine({ type, text }) {
     return (
       <div className="flex gap-2 bg-red-50 border-l-4 border-red-400 px-3 py-0.5 opacity-80">
         <span className="select-none text-red-500 font-bold font-mono text-xs w-3 shrink-0">−</span>
-        <span className="font-mono text-xs text-red-800 line-through break-all">{text}</span>
+        <span className="font-mono text-xs text-red-300 line-through break-all">{text}</span>
       </div>
     );
   }
@@ -104,14 +104,14 @@ function ModifiedLine({ oldText, newText }) {
     <div className="flex gap-2 bg-yellow-50 border-l-4 border-yellow-400 px-3 py-0.5">
       <span className="select-none text-yellow-600 font-bold font-mono text-xs w-3 shrink-0">~</span>
       <span className="font-mono text-xs break-all">
-        <span className="text-gray-700">{prefix}</span>
+        <span className="text-gray-300">{prefix}</span>
         {removed && (
-          <span className="bg-red-200 text-red-800 line-through">{removed}</span>
+          <span className="bg-red-200 text-red-300 line-through">{removed}</span>
         )}
         {added && (
-          <span className="bg-green-200 text-green-800">{added}</span>
+          <span className="bg-green-200 text-green-300">{added}</span>
         )}
-        <span className="text-gray-700">{suffix}</span>
+        <span className="text-gray-300">{suffix}</span>
       </span>
     </div>
   );
@@ -122,9 +122,9 @@ function ModifiedLine({ oldText, newText }) {
 // ---------------------------------------------------------------------------
 function ScoreBadge({ score }) {
   const color =
-    score >= 70 ? "text-green-700 bg-green-100 border-green-300" :
-    score >= 40 ? "text-yellow-700 bg-yellow-100 border-yellow-300" :
-    "text-gray-600 bg-gray-100 border-gray-300";
+    score >= 70 ? "text-green-700 bg-green-900/40 border-green-300" :
+    score >= 40 ? "text-yellow-700 bg-yellow-900/40 border-yellow-300" :
+    "text-gray-400 bg-white/10 border-gray-300";
   return (
     <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-2xl border-2 shrink-0 ${color}`}>
       <span className="text-2xl font-bold leading-none">{score}%</span>
@@ -327,17 +327,17 @@ export default function JobMatch() {
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-100 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
       {/* ── Job Header ────────────────────────────────────────────── */}
-      <Card className="border border-gray-100">
+      <Card className="border border-white/5">
         <CardContent className="pt-6 flex gap-5 items-start">
           <ScoreBadge score={job.match_score ?? 0} />
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">{job.title}</h1>
+            <h1 className="text-2xl font-bold text-white leading-tight">{job.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
               {job.company && (
                 <span className="flex items-center gap-1">
@@ -368,7 +368,7 @@ export default function JobMatch() {
         {/* ── Left column ──────────────────────────────────────────── */}
         <div className="space-y-6">
           {/* Match Analysis */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600" />
@@ -382,7 +382,7 @@ export default function JobMatch() {
                   <span>Overall match</span>
                   <span className="font-semibold">{job.match_score ?? 0}%</span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
                       (job.match_score ?? 0) >= 70 ? "bg-green-500" :
@@ -400,7 +400,7 @@ export default function JobMatch() {
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {matchAnalysis.matched.map((s, i) => (
-                      <Badge key={i} className="text-xs bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
+                      <Badge key={i} className="text-xs bg-green-900/40 text-green-300 border-green-200 hover:bg-green-900/40">
                         {s}
                       </Badge>
                     ))}
@@ -436,7 +436,7 @@ export default function JobMatch() {
           </Card>
 
           {/* Job Description */}
-          <Card className="border border-gray-100">
+          <Card className="border border-white/5">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex justify-between items-center">
                 <span>Job Description</span>
@@ -458,7 +458,7 @@ export default function JobMatch() {
               {isFetchingDesc ? (
                 <div className="space-y-2 animate-pulse">
                   {[1,2,3,4,5].map(i => (
-                    <div key={i} className={`h-3 bg-gray-200 rounded ${i === 5 ? "w-2/3" : "w-full"}`} />
+                    <div key={i} className={`h-3 bg-white/20 rounded ${i === 5 ? "w-2/3" : "w-full"}`} />
                   ))}
                 </div>
               ) : (() => {
@@ -468,7 +468,7 @@ export default function JobMatch() {
                   ? desc.slice(0, PREVIEW) + "…"
                   : desc;
                 return desc ? (
-                  <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                  <p className="text-sm text-gray-400 whitespace-pre-line leading-relaxed">
                     {displayed}
                   </p>
                 ) : (
@@ -556,7 +556,7 @@ export default function JobMatch() {
                     </p>
                   ) : (
                     <>
-                      <p className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                      <p className="text-xs font-medium text-gray-400 flex items-center gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
                         Answer any questions below to strengthen your resume (skip if not applicable):
                       </p>
@@ -569,7 +569,7 @@ export default function JobMatch() {
                                 {gap.requirement}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-600">{gap.question}</p>
+                            <p className="text-xs text-gray-400">{gap.question}</p>
                             <Textarea
                               rows={2}
                               placeholder="Your answer (optional)…"
@@ -630,17 +630,17 @@ export default function JobMatch() {
                       modified &nbsp;·&nbsp; {changedCount} changes total
                     </span>
                     <button
-                      className="flex items-center gap-0.5 hover:text-gray-800"
+                      className="flex items-center gap-0.5 hover:text-gray-100"
                       onClick={() => setShowFullDiff(v => !v)}
                     >
                       {showFullDiff ? <><ChevronUp className="w-3 h-3" />Collapse</> : <><ChevronDown className="w-3 h-3" />Show all</>}
                     </button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-white">
+                  <div className="border border-white/10 rounded-lg overflow-hidden max-h-[420px] overflow-y-auto bg-white">
                     {displayDiff.map((line) =>
                       line.type === "ellipsis" ? (
-                        <div key={line.key} className="px-4 py-1 text-xs text-gray-400 italic bg-gray-50 border-y border-dashed border-gray-200">
+                        <div key={line.key} className="px-4 py-1 text-xs text-gray-400 italic bg-white/5 border-y border-dashed border-white/10">
                           {line.text}
                         </div>
                       ) : line.type === "modified" ? (
