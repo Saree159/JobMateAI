@@ -217,8 +217,11 @@ export const jobsApi = {
    * @param {string} url - The job detail URL (e.g. https://www.drushim.co.il/job/123/)
    * @returns {Promise<{description: string}>}
    */
-  fetchDescription: (url) =>
-    apiRequest(`/api/jobs/description?url=${encodeURIComponent(url)}`),
+  fetchDescription: (url, userId) => {
+    const params = new URLSearchParams({ url });
+    if (userId) params.set("user_id", userId);
+    return apiRequest(`/api/jobs/description?${params}`);
+  },
 };
 
 export const resumeApi = {

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Sparkles, Upload, X, Check,
-  ChevronRight, ChevronLeft, Loader2, Globe, Building2, Laptop2,
+  ChevronRight, ChevronLeft, Loader2, Globe, Building2, Laptop2, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -57,6 +57,7 @@ export default function Onboarding() {
     custom_role: "",
     experience_level: "",
     work_mode_preference: "remote",
+    location_preference: "",
     skills: [],
   });
   const [skillInput, setSkillInput] = useState("");
@@ -132,6 +133,7 @@ export default function Onboarding() {
       target_role: role,
       skills: formData.skills,
       work_mode_preference: formData.work_mode_preference,
+      location_preference: formData.location_preference,
     });
   };
 
@@ -279,6 +281,18 @@ export default function Onboarding() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Preferred location */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-base font-semibold">
+                  <MapPin className="w-4 h-4" /> Preferred Location
+                </Label>
+                <Input
+                  placeholder="e.g. Tel Aviv, Remote, New York"
+                  value={formData.location_preference}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, location_preference: e.target.value }))}
+                />
               </div>
 
               <Button onClick={handleNext} className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-base" size="lg">

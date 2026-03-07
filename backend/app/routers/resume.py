@@ -16,6 +16,7 @@ from ..database import get_db
 from ..models import User
 from .users import get_current_user
 from app.config import settings
+from app.services.usage_logger import log_ai_usage
 from openai import OpenAI
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
@@ -298,6 +299,7 @@ Guidelines for the JSON:
             max_tokens=3000,
             response_format={"type": "json_object"},
         )
+        log_ai_usage(response.usage, feature="resume_rewrite")
         data = json.loads(response.choices[0].message.content)
         return data.get("sections", [])
     except Exception as e:
@@ -398,6 +400,7 @@ IMPORTANT: lines must be plain strings only — no nested objects."""
             max_tokens=2500,
             response_format={"type": "json_object"},
         )
+        log_ai_usage(response.usage, feature="resume_evaluation")
         data = json.loads(response.choices[0].message.content)
         corrected = data.get("sections", [])
         # Fall back to original if evaluation returned nothing
@@ -588,6 +591,7 @@ Return at most 5 gaps. Focus on the most important gaps that would affect gettin
             max_tokens=800,
             response_format={"type": "json_object"},
         )
+        log_ai_usage(response.usage, feature="gap_analysis")
         data = json.loads(response.choices[0].message.content)
         return {
             "summary": data.get("summary", ""),

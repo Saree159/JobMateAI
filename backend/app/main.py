@@ -2,32 +2,36 @@
 JobMate AI Backend - FastAPI Application
 Main entry point for the FastAPI application.
 """
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database import init_db
-from app.routers import users, jobs, resume, notifications, alerts, analytics, ingest, billing
+from app.routers import users, jobs, resume, notifications, alerts, analytics, ingest, billing, admin
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan manager.
-    Handles startup and shutdown events.
-    """
-    # Startup: Initialize database
-    print("🚀 Starting JobMate AI Backend...")
+    """Application lifespan: init DB, start background scheduler, clean up on exit."""
+    print("Starting JobMate AI Backend...")
     init_db()
-    print("✓ Database initialized")
-    print(f"✓ Server running on http://{settings.host}:{settings.port}")
-    print(f"✓ API docs available at http://localhost:{settings.port}/docs")
-    
+    print("Database initialized")
+    print(f"Server running on http://{settings.host}:{settings.port}")
+    print(f"API docs available at http://localhost:{settings.port}/docs")
+
+    from app.services.scrape_scheduler import run_scheduler
+    scheduler_task = asyncio.create_task(run_scheduler())
+
     yield
-    
-    # Shutdown
-    print("🛑 Shutting down JobMate AI Backend...")
+
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
+    print("Shutting down JobMate AI Backend...")
 
 
 # Create FastAPI application
@@ -71,6 +75,7 @@ app.include_router(notifications.router)
 app.include_router(alerts.router)
 app.include_router(analytics.router)
 app.include_router(billing.router)
+app.include_router(admin.router)
 
 
 @app.get("/")

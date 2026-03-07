@@ -5,6 +5,7 @@ Provides match scoring and cover letter generation using OpenAI GPT.
 from typing import List, Tuple
 from openai import OpenAI
 from app.config import settings
+from app.services.usage_logger import log_ai_usage
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
@@ -138,6 +139,7 @@ Generate the cover letter:"""
             max_tokens=600
         )
         
+        log_ai_usage(response.usage, feature="cover_letter")
         cover_letter = response.choices[0].message.content.strip()
         return cover_letter
         
@@ -258,6 +260,7 @@ Format as JSON with this structure:
             response_format={"type": "json_object"}
         )
         
+        log_ai_usage(response.usage, feature="interview_questions")
         import json
         questions = json.loads(response.choices[0].message.content)
         return questions
@@ -362,6 +365,7 @@ Return your response as JSON with this structure:
             response_format={"type": "json_object"}
         )
         
+        log_ai_usage(response.usage, feature="salary_estimate")
         import json
         salary_data = json.loads(response.choices[0].message.content)
         return salary_data

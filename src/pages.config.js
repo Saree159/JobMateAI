@@ -7,6 +7,7 @@ import JobDetails from './pages/JobDetails';
 import Pricing from './pages/Pricing';
 import Analytics from './pages/Analytics';
 import IsraeliJobs from './pages/IsraeliJobs';
+import LinkedInJobs from './pages/LinkedInJobs';
 import JobMatch from './pages/JobMatch';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -18,6 +19,7 @@ export const PAGES = {
     "onboarding": Onboarding,
     "jobs": Jobs,
     "israeliJobs": IsraeliJobs,
+    "linkedinJobs": LinkedInJobs,
     "applications": Applications,
     "analytics": Analytics,
     "profile": Profile,

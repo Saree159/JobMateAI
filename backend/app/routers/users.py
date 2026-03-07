@@ -2,16 +2,19 @@
 User API router.
 Handles user registration, profile management, and authentication.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 import bcrypt
 from jose import JWTError, jwt
+
+logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models import User
+from app.models import User, UserSession
 from app.schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest
 from app.config import settings
 
@@ -166,15 +169,23 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
     
     for field, value in update_data.items():
         setattr(user, field, value)
-    
+
     user.updated_at = datetime.utcnow()
-    
+
     db.commit()
     db.refresh(user)
-    
+
+    # Invalidate the per-user top-matches cache whenever a profile field that
+    # affects job matching has changed.
+    from app.services.scrape_scheduler import PROFILE_CACHE_FIELDS, user_cache_key
+    from app.services.cache import get_cache
+    if any(f in update_data for f in PROFILE_CACHE_FIELDS):
+        get_cache().delete(user_cache_key(user_id))
+        logger.info(f"Invalidated top-matches cache for user {user_id}")
+
     response = UserResponse.model_validate(user)
     response.skills = user.skills_list
-    
+
     return response
 
 
@@ -195,8 +206,70 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     
     db.delete(user)
     db.commit()
-    
+
     return None
+
+
+@router.post("/{user_id}/linkedin/connect")
+async def linkedin_connect_browser(user_id: int, db: Session = Depends(get_db)):
+    """
+    Opens a real (visible) Playwright browser window so the user can log in to LinkedIn.
+    Once the li_at session cookie appears (login succeeded), it is saved to the user's
+    profile and the browser closes automatically.
+
+    This endpoint runs on localhost where the server == the user's machine.
+    Timeout: 3 minutes.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        from playwright.async_api import async_playwright
+        import asyncio
+
+        TIMEOUT_SECONDS = 180  # 3 minutes
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=False,
+                args=["--start-maximized"],
+            )
+            context = await browser.new_context(no_viewport=True)
+            page = await context.new_page()
+
+            await page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
+
+            # Poll for li_at cookie — appears after successful login
+            li_at = None
+            for _ in range(TIMEOUT_SECONDS * 2):  # check every 0.5s
+                cookies = await context.cookies("https://www.linkedin.com")
+                for c in cookies:
+                    if c["name"] == "li_at":
+                        li_at = c["value"]
+                        break
+                if li_at:
+                    break
+                await asyncio.sleep(0.5)
+
+            await browser.close()
+
+        if not li_at:
+            raise HTTPException(status_code=408, detail="Login timed out — please try again")
+
+        # Save to DB
+        user.linkedin_li_at = li_at
+        user.updated_at = datetime.utcnow()
+        db.commit()
+
+        return {"success": True, "message": "LinkedIn connected successfully"}
+
+    except HTTPException:
+        raise
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Playwright not installed. Run: pip install playwright && playwright install chromium")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during LinkedIn login: {str(e)}")
 
 
 @router.post("/login", response_model=Token)
@@ -216,5 +289,11 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         )
     
     access_token = create_access_token(data={"sub": user.email, "user_id": user.id})
-    
+
+    try:
+        db.add(UserSession(user_id=user.id))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return Token(access_token=access_token)

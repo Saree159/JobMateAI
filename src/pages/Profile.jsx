@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText, Languages } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText, Languages, Linkedin, Link, Unlink } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -35,6 +35,10 @@ export default function Profile() {
   const [skillInput, setSkillInput] = useState('');
   const [success, setSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // LinkedIn li_at session token
+  const [liAtInput, setLiAtInput] = useState('');
+  const [liAtSaving, setLiAtSaving] = useState(false);
 
   // Resume rewriter state
   const [rewriteFile, setRewriteFile] = useState(null);
@@ -128,6 +132,55 @@ export default function Profile() {
       toast.error(err.message || 'Rewrite failed');
     } finally {
       setIsRewriting(false);
+    }
+  };
+
+  const handleConnectLinkedIn = async () => {
+    setLiAtSaving(true);
+    toast.info('A browser window will open — log in to LinkedIn there. This window will close automatically.');
+    try {
+      const res = await fetch(`http://localhost:8000/api/users/${user.id}/linkedin/connect`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Connection failed');
+      // Refresh user to get updated linkedin_connected status
+      const updated = await userApi.getById(user.id);
+      updateUser(updated);
+      queryClient.setQueryData(['currentUser'], updated);
+      toast.success('LinkedIn connected successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to connect LinkedIn');
+    } finally {
+      setLiAtSaving(false);
+    }
+  };
+
+  const handleSaveLiAt = async () => {
+    if (!liAtInput.trim()) return;
+    setLiAtSaving(true);
+    try {
+      const updated = await userApi.update(user.id, { linkedin_li_at: liAtInput.trim() });
+      updateUser(updated);
+      queryClient.setQueryData(['currentUser'], updated);
+      setLiAtInput('');
+      toast.success('LinkedIn connected successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save LinkedIn token');
+    } finally {
+      setLiAtSaving(false);
+    }
+  };
+
+  const handleDisconnectLinkedIn = async () => {
+    setLiAtSaving(true);
+    try {
+      const updated = await userApi.update(user.id, { linkedin_li_at: '' });
+      updateUser(updated);
+      queryClient.setQueryData(['currentUser'], updated);
+      toast.success('LinkedIn disconnected');
+    } catch (err) {
+      toast.error('Failed to disconnect LinkedIn');
+    } finally {
+      setLiAtSaving(false);
     }
   };
 
@@ -562,6 +615,92 @@ export default function Profile() {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* LinkedIn Integration */}
+        <Card className={`border ${user.linkedin_connected ? 'border-blue-500/30 bg-blue-950/20' : 'border-white/5'}`}>
+          <CardHeader>
+            <CardTitle className="font-semibold flex items-center gap-2">
+              <Linkedin className="w-5 h-5 text-blue-500" />
+              LinkedIn Integration
+              {user.linkedin_connected && (
+                <span className="ml-auto text-xs font-normal text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Link className="w-3 h-3" /> Connected
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user.linkedin_connected ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-400">
+                  Your LinkedIn session is active. Job searches and descriptions will use your account for authenticated access.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  onClick={handleDisconnectLinkedIn}
+                  disabled={liAtSaving}
+                >
+                  <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                  {liAtSaving ? 'Disconnecting…' : 'Disconnect LinkedIn'}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-400">
+                  Connect your LinkedIn account to unlock real job listings and full descriptions.
+                </p>
+
+                {/* Primary: browser login */}
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={handleConnectLinkedIn}
+                  disabled={liAtSaving}
+                >
+                  {liAtSaving ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for login…</>
+                  ) : (
+                    <><Linkedin className="w-4 h-4 mr-2" />Sign in with LinkedIn</>
+                  )}
+                </Button>
+
+                {liAtSaving && (
+                  <p className="text-xs text-center text-blue-400 animate-pulse">
+                    A browser window opened — log in to LinkedIn there. It will close automatically once you're signed in.
+                  </p>
+                )}
+
+                {/* Fallback: manual paste */}
+                <details className="group">
+                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
+                    Advanced: paste session token manually
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-gray-500">Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-400">li_at</code> value</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        placeholder="Paste li_at value…"
+                        value={liAtInput}
+                        onChange={(e) => setLiAtInput(e.target.value)}
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        onClick={handleSaveLiAt}
+                        disabled={liAtSaving || !liAtInput.trim()}
+                        variant="outline"
+                        className="shrink-0"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -2,6 +2,7 @@
 Job API router.
 Handles job CRUD operations, match scoring, and cover letter generation.
 """
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -143,197 +144,235 @@ def list_user_jobs(
 @router.get("/jobs/top-matches")
 async def get_top_matching_jobs(
     user_id: int = Query(..., description="User ID"),
-    limit: int = Query(10, description="Number of top matches"),
-    db: Session = Depends(get_db)
+    limit: int = Query(10, description="Number of top matches to return"),
+    force_refresh: bool = Query(False, description="Bypass cache and re-scrape"),
+    db: Session = Depends(get_db),
 ):
     """
-    Fetch Israeli jobs from Drushim and rank them by skill match against the user's profile.
-    Uses Redis caching (30 min TTL) for the scraped results.
+    Return top job matches for a user based on their profile.
+
+    Results are cached per-user (30 min TTL).  The cache is automatically
+    invalidated when the user updates their skills, target role, or location.
+    A background scheduler also refreshes the cache every 30 minutes
+    (at :00 and :30 of each hour) when it detects a stale entry.
     """
+    from app.services.cache import get_cache
+    from app.services.scrape_scheduler import fetch_and_cache_top_matches, user_cache_key
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user_skills = user.skills_list
-    target_role = (user.target_role or "").lower()
+    cache = get_cache()
+    key = user_cache_key(user_id)
 
-    ROLE_CATEGORY_MAP = [
-        (["data scientist", "data science", "machine learning", "ml", "ai"], "75"),
-        (["product manager", "product management"], "73"),
-        (["qa", "quality", "testing"], "72"),
-        (["security", "cybersecurity", "אבטחה"], "236"),
-        (["frontend", "backend", "full stack", "fullstack", "software", "developer",
-          "devops", "cloud", "engineer"], "71"),
-    ]
-    category = "71"
-    for keywords, cat in ROLE_CATEGORY_MAP:
-        if any(kw in target_role for kw in keywords):
-            category = cat
-            break
+    if not force_refresh:
+        cached = cache.get(key)
+        if cached:
+            logger.info(f"Cache HIT top-matches for user {user_id}")
+            return {**cached, "jobs": cached["jobs"][:limit], "cached": True}
 
-    drushim_url = f"https://www.drushim.co.il/jobs/subcat/{category}"
+    logger.info(f"Cache MISS top-matches for user {user_id} — scraping...")
+    result = await fetch_and_cache_top_matches(user_id)
 
-    try:
-        from app.services.scrapers import DrushimScraper
-        from app.services.cache import get_cache, make_jobs_cache_key
-
-        cache_key = make_jobs_cache_key("drushim", category)
-        cache = get_cache()
-
-        jobs = cache.get(cache_key)
-        if not jobs:
-            logger.info(f"Cache MISS for top-matches category={category} — scraping...")
-            scraper = DrushimScraper()
-            jobs = await scraper.scrape_listing_async(drushim_url)
-            if jobs:
-                cache.set(cache_key, jobs, ttl=1800)
-
-        if not jobs:
-            return {"jobs": [], "user_skills": user_skills, "category": category, "total_scraped": 0}
-
-        # ── Improved matching ──────────────────────────────────────────────────
-        import re as _re
-
-        # Patterns to extract tech skills from any text (title, description)
-        _SKILL_PATTERNS = [
-            r'\b(Python|JavaScript|TypeScript|Java|C\+\+|C#|Ruby|PHP|Swift|Kotlin|Go|Rust|Scala|R)\b',
-            r'\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|\.NET|Laravel|Rails|Express|FastAPI|Next\.js)\b',
-            r'\b(SQL|MySQL|PostgreSQL|MongoDB|Redis|Oracle|SQLite|Cassandra|Elasticsearch)\b',
-            r'\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|Git|CI/CD|Terraform|Ansible|Linux)\b',
-            r'\b(HTML|CSS|REST|GraphQL|Machine Learning|AI|DevOps|Agile|Scrum)\b',
-        ]
-
-        def _extract_tech(text: str) -> set:
-            found = set()
-            for pat in _SKILL_PATTERNS:
-                for m in _re.findall(pat, text, _re.IGNORECASE):
-                    found.add(m.lower())
-            return found
-
-        # Deduplicate user skills (case-insensitive) — preserves order
-        seen = set()
-        deduped_skills = []
-        for s in user_skills:
-            key = s.lower()
-            if key not in seen:
-                seen.add(key)
-                deduped_skills.append(s)
-        user_set = {s.lower() for s in deduped_skills}
-
-        # Role keywords (words longer than 3 chars) for title bonus
-        role_keywords = [w for w in target_role.split() if len(w) > 3]
-
-        def score_job(job):
-            if not user_set:
-                return 0
-
-            job_title = (job.get("title") or "").lower()
-            job_desc  = (job.get("description") or "").lower()
-            job_skills_listed = {s.lower() for s in (job.get("skills") or [])}
-
-            # Re-extract tech skills from title + description to fill gaps
-            job_tech = _extract_tech(f"{job_title} {job_desc}") | job_skills_listed
-
-            # ── Three scoring signals ─────────────────────────────────────────
-            # 1. Forward: fraction of YOUR skills that appear in job
-            forward = len(user_set & job_tech) / len(user_set) if user_set else 0
-
-            # 2. Backward: fraction of job's tech that you cover
-            #    (rewards jobs where you cover most of the required stack)
-            backward = len(user_set & job_tech) / len(job_tech) if job_tech else 0
-
-            # 3. Role title bonus — job title contains your target-role keywords
-            role_bonus = 0.12 if any(rk in job_title for rk in role_keywords) else 0
-
-            # Weighted combination (forward=50%, backward=38%, role=12%)
-            combined = (forward * 0.50) + (backward * 0.38) + role_bonus
-            return round(min(combined * 100, 100))
-        # ── End improved matching ──────────────────────────────────────────────
-
-        scored = sorted(
-            [{**job, "match_score": score_job(job)} for job in jobs],
-            key=lambda x: x["match_score"],
-            reverse=True
-        )
-
+    if not result:
         return {
-            "jobs": scored[:limit],
-            "user_skills": deduped_skills,
-            "category": category,
-            "total_scraped": len(jobs),
+            "jobs": [],
+            "user_skills": user.skills_list,
+            "category": "71",
+            "total_scraped": 0,
+            "cached": False,
         }
 
-    except Exception as e:
-        logger.error(f"Error in top-matches: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching matches: {str(e)}")
+    return {**result, "jobs": result["jobs"][:limit], "cached": False}
 
 
 @router.get("/jobs/description")
 async def fetch_job_full_description(
-    url: str = Query(..., description="URL of the individual Drushim job detail page"),
+    url: str = Query(..., description="URL of the individual job detail page (Drushim or LinkedIn)"),
+    user_id: Optional[int] = Query(None, description="User ID — used to load the user's li_at session cookie"),
+    db: Session = Depends(get_db),
 ):
     """
-    Fetch the full description from a Drushim.co.il individual job detail page.
-    The listing-page scraper only captures a teaser snippet; this endpoint
-    lazily retrieves the complete description for a specific job.
+    Fetch the full description from a Drushim or LinkedIn job detail page.
+    LinkedIn + li_at: uses plain httpx (authenticated SSR pages, no Playwright needed).
+    LinkedIn no token: uses Crawl4AI stealth mode (may hit login-wall).
+    Drushim: always uses Crawl4AI.
     """
+    from bs4 import BeautifulSoup
+    import re as _re
+
+    is_linkedin = "linkedin.com" in url
+
+    _UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+
     try:
-        from crawl4ai import AsyncWebCrawler, CacheMode
-        from bs4 import BeautifulSoup
+        # ── Fetch user's li_at ────────────────────────────────────────────────
+        li_at = None
+        if is_linkedin and user_id:
+            user_obj = db.query(User).filter(User.id == user_id).first()
+            if user_obj:
+                li_at = user_obj.linkedin_li_at
+
+        logger.info(f"description fetch: linkedin={is_linkedin} auth={'yes' if li_at else 'no'} url={url[:80]}")
+
+        # ── LinkedIn + li_at → Playwright with cookie (JS rendering required) ──
+        if is_linkedin and li_at:
+            from playwright.async_api import async_playwright
+
+            body_text = None
+            try:
+                async with async_playwright() as pw:
+                    browser = await pw.chromium.launch(headless=True)
+                    ctx = await browser.new_context(
+                        user_agent=_UA,
+                        locale="en-US",
+                        extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+                    )
+                    await ctx.add_cookies([{
+                        "name": "li_at",
+                        "value": li_at,
+                        "domain": ".linkedin.com",
+                        "path": "/",
+                        "secure": True,
+                        "httpOnly": True,
+                        "sameSite": "None",
+                    }])
+                    page = await ctx.new_page()
+                    await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+
+                    # Check for login wall
+                    page_url = page.url
+                    if any(p in page_url for p in ["/login", "/authwall", "/checkpoint"]):
+                        await browser.close()
+                        raise HTTPException(
+                            status_code=403,
+                            detail="LinkedIn session expired — please reconnect LinkedIn in your Profile"
+                        )
+
+                    # Wait for content + click "show more" to expand truncated description
+                    await asyncio.sleep(2)
+                    for btn_sel in [
+                        "button[aria-label*='more']",
+                        "button.show-more-less-html__button",
+                        "button[data-tracking-control-name*='description']",
+                    ]:
+                        try:
+                            btn = await page.query_selector(btn_sel)
+                            if btn:
+                                await btn.click()
+                                await asyncio.sleep(0.5)
+                                break
+                        except Exception:
+                            pass
+
+                    body_text = await page.inner_text("body")
+                    await browser.close()
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Playwright LinkedIn error: {e}")
+                raise HTTPException(status_code=503, detail=f"Failed to load LinkedIn page: {e}")
+
+            # LinkedIn uses hashed CSS classes — extract via text markers instead
+            # "אודות העבודה" = "About the job" in Hebrew (shown on il.linkedin.com)
+            # English fallback: "About the job"
+            _START_MARKERS = ["אודות העבודה", "About the job", "About this job"]
+            _STOP_MARKERS = [
+                "הגדרת התראה לעבודות דומות",
+                "על אודות החברה",
+                "חיפוש עבודה מהיר יותר",
+                "Set alert for similar jobs",
+                "About the company",
+                "Get AI-powered advice",
+                "Similar jobs",
+                "How you match",
+            ]
+
+            text = None
+            for marker in _START_MARKERS:
+                idx = body_text.find(marker)
+                if idx != -1:
+                    text = body_text[idx + len(marker):].lstrip()
+                    break
+
+            if text:
+                # Trim at first stop-marker
+                for stop in _STOP_MARKERS:
+                    stop_idx = text.find(stop)
+                    if stop_idx != -1:
+                        text = text[:stop_idx]
+                        break
+
+                # Remove trailing "... more" truncation artifacts
+                text = _re.sub(r'\s*[…\.]{1,3}\s*עוד\s*$', '', text).strip()
+                text = _re.sub(r'\n{3,}', '\n\n', text).strip()
+
+                if len(text) >= 80:
+                    return {"description": text}
+
+            raise HTTPException(status_code=404, detail="Could not extract description from LinkedIn page")
+
+        # ── LinkedIn without li_at → suggest connecting ───────────────────────
+        if is_linkedin and not li_at:
+            raise HTTPException(
+                status_code=403,
+                detail="Connect your LinkedIn account in Profile to view full job descriptions"
+            )
+
+        # ── Drushim / other → Crawl4AI ────────────────────────────────────────
+        try:
+            from crawl4ai import AsyncWebCrawler, CacheMode
+        except ImportError:
+            raise HTTPException(status_code=503, detail="Crawl4AI not available on this server")
+
+        css_sel = "div.job-details, div.job-requirements, div.jobDes, div.job-details-wrap"
 
         async with AsyncWebCrawler(verbose=False) as crawler:
             result = await crawler.arun(
                 url=url,
+                css_selector=css_sel,
                 cache_mode=CacheMode.BYPASS,
                 screenshot=False,
                 verbose=False,
+                magic=True,
+                simulate_user=True,
+                user_agent=_UA,
             )
 
         if not result.success:
             raise HTTPException(status_code=502, detail="Failed to fetch job page")
 
         soup = BeautifulSoup(result.html, "html.parser")
+        for el in soup.select("button, svg, script, style, [aria-hidden='true']"):
+            el.decompose()
 
-        # Collect all text parts from Drushim's job details structure:
-        # - div.job-details p  → role description
-        # - div.job-requirements p  → requirements
         parts = []
-
         desc_block = soup.select_one("div.job-details")
         if desc_block:
-            # Grab all <p> and <li> text under the description block
             texts = [t.get_text(separator=" ").strip() for t in desc_block.select("p, li") if t.get_text(strip=True)]
             if texts:
                 parts.append("\n".join(texts))
-
         req_block = soup.select_one("div.job-requirements")
         if req_block:
             texts = [t.get_text(separator=" ").strip() for t in req_block.select("p, li") if t.get_text(strip=True)]
             if texts:
                 parts.append("Requirements:\n" + "\n".join(texts))
-
-        description = "\n\n".join(parts) if parts else None
-
-        # Fallback: try the wider jobDes wrapper
-        if not description:
+        if not parts:
             wrap = soup.select_one("div.jobDes, div.job-details-wrap")
             if wrap:
-                description = wrap.get_text(separator="\n").strip()
+                parts.append(wrap.get_text(separator="\n").strip())
 
-        # Last-resort: largest text block on the page
-        if not description:
-            candidates = soup.find_all(["div", "section", "article"])
-            best = max(candidates, key=lambda e: len(e.get_text()), default=None)
-            if best:
-                description = best.get_text(separator="\n").strip()
-
+        description = "\n\n".join(parts) if parts else None
         if not description:
             raise HTTPException(status_code=404, detail="Could not extract description from page")
 
         return {"description": description}
 
-    except ImportError:
-        raise HTTPException(status_code=503, detail="Crawl4AI not available on this server")
     except HTTPException:
         raise
     except Exception as e:
@@ -801,6 +840,81 @@ async def scrape_gotfriends_jobs(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error scraping GotFriends: {str(e)}"
+        )
+
+
+@router.get("/jobs/scrape/linkedin")
+async def scrape_linkedin_jobs(
+    role: str = Query(..., description="Job title / keyword to search"),
+    location: str = Query("", description="City, country, or 'Remote'"),
+    user_id: Optional[int] = Query(None, description="User ID — used to load the user's li_at session cookie"),
+    force_refresh: bool = Query(False, description="Force refresh cache"),
+    db: Session = Depends(get_db),
+):
+    """
+    Search LinkedIn public job listings by role and location.
+    When user_id is provided and the user has a stored li_at token, the search
+    runs as an authenticated LinkedIn session (no login-wall, full descriptions).
+    Results are cached for 30 minutes unless force_refresh=true.
+    """
+    try:
+        import re
+        from app.services.scrapers import LinkedInJobSearchScraper
+        from app.services.cache import get_cache, make_jobs_cache_key
+
+        # Fetch user's li_at token if available
+        li_at = None
+        if user_id:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                li_at = user.linkedin_li_at
+
+        cache_key = make_jobs_cache_key(
+            "linkedin",
+            re.sub(r'\W+', '_', f"{role}_{location}").lower().strip('_')
+        )
+        cache = get_cache()
+
+        if not force_refresh:
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                logger.info(f"Cache HIT for {cache_key}")
+                return {
+                    "success": True,
+                    "count": len(cached_data),
+                    "jobs": cached_data,
+                    "source": "linkedin.com",
+                    "cached": True,
+                }
+
+        logger.info(f"Cache MISS for {cache_key} - scraping LinkedIn (auth={'yes' if li_at else 'no'})...")
+        scraper = LinkedInJobSearchScraper()
+        jobs = await scraper.search_async(role, location, li_at=li_at)
+
+        if not jobs:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No jobs found — LinkedIn may be blocking the request or no results exist for this search",
+            )
+
+        cache.set(cache_key, jobs, ttl=1800)
+        logger.info(f"Cached {len(jobs)} LinkedIn jobs for {cache_key}")
+
+        return {
+            "success": True,
+            "count": len(jobs),
+            "jobs": jobs,
+            "source": "linkedin.com",
+            "cached": False,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error scraping LinkedIn: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error scraping LinkedIn: {str(e)}",
         )
 
 

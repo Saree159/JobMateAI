@@ -55,6 +55,9 @@ class User(Base):
         nullable=True
     )
 
+    # LinkedIn integration
+    linkedin_li_at = Column(Text, nullable=True)  # li_at session cookie for authenticated scraping
+
     # Subscription / billing
     subscription_tier = Column(String(20), default="free", nullable=False)
     subscription_status = Column(String(20), nullable=True)          # active | canceled | expired
@@ -78,6 +81,11 @@ class User(Base):
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role='{self.target_role}')>"
     
+    @property
+    def linkedin_connected(self) -> bool:
+        """True when the user has stored a LinkedIn li_at session cookie."""
+        return bool(self.linkedin_li_at)
+
     @property
     def skills_list(self):
         """Return skills as a list."""
@@ -211,6 +219,15 @@ class Application(Base):
         return f"<Application(id={self.id}, job_id={self.job_id}, status='{self.final_status}')>"
 
 
+class UserSession(Base):
+    """Records each login event. Used for DAU/WAU/MAU and cohort retention."""
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
 class FeedJobStatus(str, enum.Enum):
     NEW = "new"
     SAVED = "saved"
@@ -237,6 +254,20 @@ class IngestEvent(Base):
     error = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AIUsageLog(Base):
+    """Logs every OpenAI API call with token counts and estimated cost."""
+    __tablename__ = "ai_usage_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    feature = Column(String(100), nullable=False, index=True)   # cover_letter | interview_questions | salary_estimate | resume_rewrite | resume_evaluation | gap_analysis
+    model = Column(String(100), nullable=False, default="gpt-4o-mini")
+    tokens_in = Column(Integer, nullable=False, default=0)
+    tokens_out = Column(Integer, nullable=False, default=0)
+    cost_usd = Column(Float, nullable=False, default=0.0)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class IngestJob(Base):

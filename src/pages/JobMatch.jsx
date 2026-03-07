@@ -181,13 +181,18 @@ export default function JobMatch() {
   // Full description lazy-fetch
   const [fullDescription, setFullDescription] = useState(null);
   const [isFetchingDesc, setIsFetchingDesc] = useState(false);
+  const [descBlocked, setDescBlocked] = useState(false);
 
   useEffect(() => {
     if (!job?.url) return;
     setIsFetchingDesc(true);
-    jobsApi.fetchDescription(job.url)
+    setDescBlocked(false);
+    jobsApi.fetchDescription(job.url, user?.id)
       .then(data => setFullDescription(data.description))
-      .catch(() => {/* silently fall back to listing teaser */})
+      .catch((err) => {
+        // 403 = LinkedIn login-wall; surface a note instead of silent fallback
+        if (err?.status === 403 || err?.message?.includes('403')) setDescBlocked(true);
+      })
       .finally(() => setIsFetchingDesc(false));
   }, [job?.url]);
 
@@ -460,6 +465,18 @@ export default function JobMatch() {
                   {[1,2,3,4,5].map(i => (
                     <div key={i} className={`h-3 bg-white/20 rounded ${i === 5 ? "w-2/3" : "w-full"}`} />
                   ))}
+                </div>
+              ) : descBlocked ? (
+                <div className="text-sm text-gray-400 py-2">
+                  LinkedIn requires you to be logged in to view the full description.{" "}
+                  {job.url && (
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
+                      View on LinkedIn
+                    </a>
+                  )}
+                  {job.description && (
+                    <p className="mt-3 whitespace-pre-line text-gray-400">{job.description}</p>
+                  )}
                 </div>
               ) : (() => {
                 const desc = fullDescription || job.description || "";

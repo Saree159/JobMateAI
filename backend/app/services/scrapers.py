@@ -21,6 +21,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _is_linkedin_login_wall(soup, result_url: str = "") -> bool:
+    """
+    Detect LinkedIn login-wall regardless of page language (EN / HE / etc).
+    LinkedIn redirects unauthenticated headless browsers to its login page.
+    We check three signals, any one of which is conclusive:
+      1. A password <input> exists  → login form present
+      2. Known redirect URL patterns (/login, /authwall, /checkpoint, loginRedirect)
+      3. LinkedIn-specific login page meta or CSS class markers
+    """
+    # 1. Password input — language-independent
+    if soup.select_one("input[type='password']"):
+        return True
+    # 2. Redirect URL
+    if result_url and any(tok in result_url for tok in ("/login", "/authwall", "/checkpoint", "loginRedirect")):
+        return True
+    # 3. LinkedIn login page always has this specific element
+    if soup.select_one("form.login__form, #session_key, #session_password"):
+        return True
+    return False
+
+
 class JobScraper:
     """Base class for job scraping with common utilities."""
     
@@ -369,157 +390,103 @@ class GlassdoorScraper(JobScraper):
 
 
 class DrushimScraper(JobScraper):
-    """Scraper for Drushim.co.il (Israeli job board) using Crawl4AI for JS rendering."""
-    
+    """Scraper for Drushim.co.il using their public RSS feed (no browser required)."""
+
+    # Maps drushim.co.il subcat IDs to RSS cat IDs (same number)
+    _RSS_BASE = "https://www.drushim.co.il/rss/?cat={cat}"
+
+    @staticmethod
+    def _cat_from_url(url: str) -> str:
+        """Extract category number from a drushim subcat URL."""
+        import re as _re
+        m = _re.search(r'/subcat/(\d+)', url)
+        return m.group(1) if m else "71"
+
     async def scrape_async(self, url: str) -> Optional[Dict]:
-        """Extract job details from Drushim listing page using Crawl4AI.
-        
-        Note: Drushim shows all jobs on listing pages, not individual job pages.
-        This method extracts the first job from the listing for compatibility,
-        but see scrape_listing_async for extracting all jobs.
-        """
         jobs = await self.scrape_listing_async(url)
         return jobs[0] if jobs else None
-    
+
     async def scrape_listing_async(self, url: str) -> List[Dict]:
-        """Extract all jobs from a Drushim listing page."""
-        if not CRAWL4AI_AVAILABLE:
-            logger.warning("Crawl4AI not available, using fallback scraper")
-            return []
-        
-        try:
-            async with AsyncWebCrawler(verbose=False) as crawler:
-                result = await crawler.arun(
-                    url=url,
-                    css_selector="div.job-item-main",
-                    cache_mode=CacheMode.BYPASS,
-                    screenshot=False,
-                    verbose=False
-                )
-                
-                if not result.success:
-                    logger.error(f"Crawl4AI failed for {url}")
-                    return []
-                
-                soup = BeautifulSoup(result.html, 'html.parser')
-                
-                # Find all job cards
-                job_cards = soup.select('div.job-item-main')
-                logger.info(f"Found {len(job_cards)} jobs on {url}")
-                
-                jobs = []
-                for card in job_cards:
-                    try:
-                        job_data = self._extract_job_from_card(card, url)
-                        if job_data and job_data.get("title"):
-                            jobs.append(job_data)
-                    except Exception as e:
-                        logger.error(f"Error extracting job card: {str(e)}")
-                        continue
-                
-                return jobs
-                
-        except Exception as e:
-            logger.error(f"Error scraping Drushim URL {url}: {str(e)}")
-            return []
-    
-    def _extract_job_from_card(self, card, base_url: str) -> Optional[Dict]:
-        """Extract job data from a single job card element."""
-        job_data = {
-            "title": None,
-            "company": None,
-            "location": None,
-            "description": None,
-            "job_type": "Full-time",
-            "work_mode": "Onsite",
-            "experience_level": None,
-            "salary_min": None,
-            "salary_max": None,
-            "skills": [],
-            "url": base_url
+        """Fetch jobs from Drushim RSS feed — no browser/bot-detection issues."""
+        import httpx
+        cat = self._cat_from_url(url)
+        rss_url = self._RSS_BASE.format(cat=cat)
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            )
         }
-        
-        # Extract the actual job URL from the "open in new window" link
-        # (div.open-job a has the correct /job/{id}/{slug}/ URL)
-        open_link = card.select_one('div.open-job a[href]')
-        if not open_link:
-            open_link = card.select_one('a[href*="/job/"][target="_blank"]')
-        if open_link and open_link.get('href'):
-            href = open_link['href']
-            job_data["url"] = f"https://www.drushim.co.il{href}" if href.startswith('/') else href
-        else:
-            # Fallback: construct from listingid attribute
-            listing_id = card.get('listingid')
-            if listing_id:
-                job_data["url"] = f"https://www.drushim.co.il/job/{listing_id}/"
-        
-        # Extract title - Drushim uses h3.display-28 with span.job-url
-        title_elem = card.select_one('h3.display-28 span.job-url')
-        if not title_elem:
-            # Fallback to just h3.display-28
-            title_elem = card.select_one('h3.display-28')
-        
-        if title_elem:
-            job_data["title"] = self.clean_text(title_elem.get_text())
-        
-        # Extract company - Drushim uses span.bidi inside company link
-        company_elem = card.select_one('a[href*="דרושים"] span.font-weight-medium.bidi')
-        if not company_elem:
-            # Try alternative selector
-            company_elem = card.select_one('p.display-22 a span.bidi')
-        if not company_elem:
-            # Final fallback
-            company_elem = card.select_one('span.font-weight-medium.bidi')
-        
-        if company_elem:
-            job_data["company"] = self.clean_text(company_elem.get_text())
-        
-        # Extract location from job-details-sub (format: "Location | X-Y שנים | Job Type | Time posted")
-        details_sub = card.select_one('div.job-details-sub')
-        if details_sub:
-            # Get all text and split by pipe separator
-            details_text = self.clean_text(details_sub.get_text())
-            parts = [p.strip() for p in details_text.split('|')]
-            
-            if parts:
-                # First part is usually location
-                job_data["location"] = parts[0]
-                
-                # Look for experience years (X-Y שנים format)
-                for part in parts:
-                    if 'שנים' in part or 'שנה' in part:
-                        # Extract experience level from Hebrew text
-                        if any(word in part for word in ['מנוסה', '5-10', '10+']):
-                            job_data["experience_level"] = "Senior"
-                        elif any(word in part for word in ['1-2', '2-5', 'ללא ניסיון']):
-                            job_data["experience_level"] = "Entry Level"
-                        else:
-                            job_data["experience_level"] = "Mid Level"
-                        break
-        
-        # Extract description - Try job-intro first, then full job-details
-        desc_elem = card.select_one('div.job-intro p.display-18')
-        if not desc_elem:
-            desc_elem = card.select_one('div.job-details p.display-18')
-        if not desc_elem:
-            # Fallback to job-details wrapper
-            desc_elem = card.select_one('div.job-details-wrap div.job-details')
-        
-        if desc_elem:
-            job_data["description"] = self.clean_text(desc_elem.get_text())
-        
-        # Extract salary
-        salary_elem = card.find(['span', 'div'], class_=re.compile('salary'))
-        if salary_elem:
-            salary_info = self.extract_salary(salary_elem.get_text())
-            job_data["salary_min"] = salary_info["min"]
-            job_data["salary_max"] = salary_info["max"]
-        
-        # Extract skills
-        if job_data["description"]:
-            job_data["skills"] = self.extract_skills(job_data["description"])
-        
-        return job_data
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+                resp = await client.get(rss_url, headers=headers)
+            if resp.status_code != 200:
+                logger.error(f"Drushim RSS returned {resp.status_code} for {rss_url}")
+                return []
+
+            soup = BeautifulSoup(resp.text, "xml")
+            items = soup.find_all("item")
+            logger.info(f"Drushim RSS: {len(items)} jobs for cat={cat}")
+
+            jobs = []
+            for item in items:
+                try:
+                    job = self._parse_rss_item(item)
+                    if job and job.get("title"):
+                        jobs.append(job)
+                except Exception as e:
+                    logger.error(f"Error parsing Drushim RSS item: {e}")
+            return jobs
+
+        except Exception as e:
+            logger.error(f"Error fetching Drushim RSS {rss_url}: {e}")
+            return []
+
+    def _parse_rss_item(self, item) -> Optional[Dict]:
+        """Parse a single <item> from the Drushim RSS feed."""
+        def txt(tag):
+            el = item.find(tag)
+            return self.clean_text(el.get_text()) if el else None
+
+        title       = txt("title")
+        company     = txt("company")
+        link        = txt("link")
+        raw_desc = txt("desc") or txt("description") or ""
+        raw_req  = txt("requirements") or ""
+        description  = BeautifulSoup(f"<div>{raw_desc}</div>",  "html.parser").get_text(" ", strip=True)
+        requirements = BeautifulSoup(f"<div>{raw_req}</div>",   "html.parser").get_text(" ", strip=True)
+        location    = txt("zones")       # e.g. "מרכז", "צפון"
+        scopes      = txt("scopes") or ""
+        experience  = txt("experience") or ""
+
+        full_text = f"{description} {requirements}"
+
+        job_type = "Full-time"
+        if "חלקית" in scopes or "part" in scopes.lower():
+            job_type = "Part-time"
+
+        exp_level = None
+        if "ללא" in experience or "ראשונה" in experience:
+            exp_level = "Entry Level"
+        elif any(x in experience for x in ["5", "6", "7", "8", "10", "בכיר"]):
+            exp_level = "Senior"
+        elif experience:
+            exp_level = "Mid Level"
+
+        return {
+            "title":            title,
+            "company":          company,
+            "location":         location,
+            "description":      full_text.strip() or None,
+            "job_type":         job_type,
+            "work_mode":        "Onsite",
+            "experience_level": exp_level,
+            "salary_min":       None,
+            "salary_max":       None,
+            "skills":           self.extract_skills(full_text) if full_text else [],
+            "url":              link or "https://www.drushim.co.il",
+            "source":           "drushim",
+        }
     
     def scrape(self, url: str) -> Optional[Dict]:
         """Synchronous wrapper for async scrape method."""
@@ -738,8 +705,221 @@ class GotFriendsScraper(JobScraper):
             salary_info = self.extract_salary(salary_text)
             job_data["salary_min"] = salary_info.get("min")
             job_data["salary_max"] = salary_info.get("max")
-        
+
         return job_data
+
+
+class LinkedInJobSearchScraper(JobScraper):
+    """Search LinkedIn public job listings by keyword and location using Crawl4AI."""
+
+    # Fetch descriptions for at most this many jobs to avoid rate limiting
+    MAX_DESCRIPTION_FETCHES = 10
+
+    @staticmethod
+    def _build_browser_config(li_at: Optional[str] = None):
+        """Return a BrowserConfig with the li_at session cookie injected when available."""
+        try:
+            from crawl4ai import BrowserConfig
+            if li_at:
+                cookies = [{
+                    "name": "li_at",
+                    "value": li_at,
+                    "domain": ".linkedin.com",
+                    "path": "/",
+                    "secure": True,
+                    "httpOnly": True,
+                    "sameSite": "None",
+                }]
+                return BrowserConfig(headless=True, cookies=cookies)
+            return BrowserConfig(headless=True)
+        except Exception:
+            return None
+
+    async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None) -> List[Dict]:
+        """Search LinkedIn jobs, then concurrently fetch descriptions for each result.
+
+        When `li_at` (LinkedIn session cookie) is provided, the browser will be
+        authenticated — no login-wall, full results, and real descriptions.
+        """
+        if not CRAWL4AI_AVAILABLE:
+            logger.warning("Crawl4AI not available for LinkedIn scraping")
+            return []
+        from urllib.parse import quote_plus
+        url = (
+            f"https://www.linkedin.com/jobs/search/"
+            f"?keywords={quote_plus(role)}&location={quote_plus(location)}"
+        )
+        try:
+            browser_cfg = self._build_browser_config(li_at)
+            crawler_kwargs = {"verbose": False}
+            if browser_cfg is not None:
+                crawler_kwargs["config"] = browser_cfg
+
+            async with AsyncWebCrawler(**crawler_kwargs) as crawler:
+                result = await crawler.arun(
+                    url=url,
+                    css_selector="ul.jobs-search__results-list",
+                    cache_mode=CacheMode.BYPASS,
+                    screenshot=False,
+                    verbose=False,
+                    magic=True,
+                    simulate_user=True,
+                    user_agent=self._UA,
+                )
+                if not result.success:
+                    logger.error(f"Crawl4AI failed for LinkedIn search: {url}")
+                    return []
+
+                soup = BeautifulSoup(result.html, 'html.parser')
+                cards = soup.select("li > div.base-card")
+                logger.info(f"Found {len(cards)} LinkedIn job cards for '{role}' in '{location}' (auth={'yes' if li_at else 'no'})")
+
+                jobs = []
+                for card in cards:
+                    try:
+                        job = self._parse_card(card)
+                        if job and job.get("title"):
+                            jobs.append(job)
+                    except Exception as e:
+                        logger.error(f"Error parsing LinkedIn card: {e}")
+                        continue
+
+            # Fetch descriptions concurrently (limited to MAX_DESCRIPTION_FETCHES)
+            if jobs:
+                await self._enrich_descriptions(jobs[:self.MAX_DESCRIPTION_FETCHES], li_at=li_at)
+
+            return jobs
+        except Exception as e:
+            logger.error(f"LinkedIn search error: {e}")
+            return []
+
+    # CSS selector passed to Crawl4AI — limits result.html to just the description area
+    _DESC_CSS = (
+        "div.show-more-less-html__markup,"
+        "div.description__text--rich,"
+        "div.description__text"
+    )
+
+    # Realistic Chrome UA to reduce bot-detection fingerprint
+    _UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+
+    @staticmethod
+    def _og_description(full_html: str) -> Optional[str]:
+        """Extract og:description meta tag — present even on login-wall redirects."""
+        try:
+            soup = BeautifulSoup(full_html, 'html.parser')
+            tag = (
+                soup.find("meta", property="og:description")
+                or soup.find("meta", attrs={"name": "description"})
+            )
+            if tag and tag.get("content"):
+                text = tag["content"].strip()
+                return text if len(text) >= 40 else None
+        except Exception:
+            pass
+        return None
+
+    async def _enrich_descriptions(self, jobs: List[Dict], li_at: Optional[str] = None) -> None:
+        """Fetch description for each job concurrently (in-place update)."""
+        semaphore = asyncio.Semaphore(2)  # keep concurrency low to avoid rate limits
+        browser_cfg = self._build_browser_config(li_at)
+
+        async def fetch_one(job: Dict) -> None:
+            job_url = job.get("url")
+            if not job_url:
+                return
+            async with semaphore:
+                try:
+                    crawler_kwargs = {"verbose": False}
+                    if browser_cfg is not None:
+                        crawler_kwargs["config"] = browser_cfg
+
+                    async with AsyncWebCrawler(**crawler_kwargs) as crawler:
+                        # magic=True  → playwright_stealth (hides navigator.webdriver)
+                        #             + simulates mouse/keyboard to look human
+                        # css_selector → result.html contains only the description area
+                        result = await crawler.arun(
+                            url=job_url,
+                            css_selector=self._DESC_CSS,
+                            cache_mode=CacheMode.BYPASS,
+                            screenshot=False,
+                            verbose=False,
+                            magic=True,
+                            simulate_user=True,
+                            user_agent=self._UA,
+                        )
+                        if not result.success or not result.html:
+                            return
+
+                        soup = BeautifulSoup(result.html, 'html.parser')
+
+                        # Detect login-wall (works for any language / redirect)
+                        result_url = getattr(result, 'url', '') or job_url
+                        if _is_linkedin_login_wall(soup, result_url):
+                            logger.warning(f"LinkedIn login-wall hit for {job_url} — trying og:description")
+                            # Last resort: og:description from the full crawled HTML
+                            og = self._og_description(result.html)
+                            if og:
+                                job["description"] = og
+                                job["skills"] = self.extract_skills(og)
+                            return
+
+                        # Remove noise nodes: buttons ("See more"), icons, scripts
+                        for el in soup.select("button, svg, script, style, [aria-hidden='true']"):
+                            el.decompose()
+
+                        # Take the most specific description element available
+                        desc_el = (
+                            soup.select_one("div.show-more-less-html__markup")
+                            or soup.select_one("div.description__text--rich")
+                            or soup.select_one("div.description__text")
+                            or soup.find()  # root of the css-filtered HTML
+                        )
+                        if not desc_el:
+                            return
+
+                        # Preserve paragraph structure; collapse 3+ blank lines to 2
+                        text = desc_el.get_text(separator="\n", strip=True)
+                        text = re.sub(r'\n{3,}', '\n\n', text).strip()
+
+                        if len(text) < 80:
+                            return
+
+                        job["description"] = text
+                        job["skills"] = self.extract_skills(text)
+                        text_lower = text.lower()
+                        if "remote" in text_lower:
+                            job["work_mode"] = "Remote"
+                        elif "hybrid" in text_lower:
+                            job["work_mode"] = "Hybrid"
+
+                except Exception as e:
+                    logger.warning(f"Could not fetch description for {job_url}: {e}")
+
+        await asyncio.gather(*[fetch_one(job) for job in jobs])
+
+    def _parse_card(self, card) -> Optional[Dict]:
+        """Extract job data from a LinkedIn base-card element."""
+        link_el = card.select_one("a.base-card__full-link")
+        title_el = card.select_one("h3.base-search-card__title")
+        company_el = card.select_one("h4.base-search-card__subtitle a")
+        location_el = card.select_one("span.job-search-card__location")
+        return {
+            "title":    self.clean_text(title_el.get_text() if title_el else ""),
+            "company":  self.clean_text(company_el.get_text() if company_el else ""),
+            "location": self.clean_text(location_el.get_text() if location_el else ""),
+            "url":      link_el["href"] if link_el else None,
+            "description": None,
+            "job_type": "Full-time",
+            "work_mode": "Onsite",
+            "skills": [],
+            "salary_min": None,
+            "salary_max": None,
+        }
 
 
 class ScraperFactory:

@@ -53,6 +53,7 @@ class UserUpdate(BaseModel):
     subscription_end_date: Optional[datetime] = None
     paypal_payer_id: Optional[str] = None
     paypal_subscription_id: Optional[str] = None
+    linkedin_li_at: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -61,6 +62,7 @@ class UserResponse(UserBase):
     subscription_tier: str = "free"
     subscription_status: Optional[str] = None
     subscription_end_date: Optional[datetime] = None
+    linkedin_connected: bool = False  # True when li_at token is set
     created_at: datetime
     updated_at: datetime
 

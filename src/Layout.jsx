@@ -9,7 +9,8 @@ import {
   LogOut,
   CreditCard,
   BarChart3,
-  Globe
+  Globe,
+  Linkedin,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import {
@@ -52,6 +53,11 @@ export default function Layout({ children, currentPageName }) {
       title: t('nav.israeliJobs'),
       url: createPageUrl("IsraeliJobs"),
       icon: Globe,
+    },
+    {
+      title: t('nav.linkedinJobs'),
+      url: createPageUrl("LinkedInJobs"),
+      icon: Linkedin,
     },
     {
       title: t('nav.applications'),
