@@ -202,3 +202,61 @@ class Application(Base):
     def __repr__(self):
         return f"<Application(id={self.id}, job_id={self.job_id}, status='{self.final_status}')>"
 
+
+class FeedJobStatus(str, enum.Enum):
+    NEW = "new"
+    SAVED = "saved"
+    APPLIED = "applied"
+    IGNORED = "ignored"
+
+
+class IngestEvent(Base):
+    """Records each ingestion attempt from an external source (e.g., n8n)."""
+    __tablename__ = "ingest_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source = Column(String(100), nullable=False)
+    run_id = Column(String(255), nullable=True)
+    email_id = Column(String(255), unique=True, index=True, nullable=False)
+    received_at = Column(DateTime, nullable=False)
+    subject = Column(String(500), nullable=True)
+    snippet = Column(Text, nullable=True)
+    payload = Column(Text, nullable=True)  # Raw JSON payload for debugging
+    processed = Column(Integer, default=0, nullable=False)  # 0 = not processed, 1 = processed
+    inserted = Column(Integer, default=0, nullable=False)
+    updated = Column(Integer, default=0, nullable=False)
+    skipped = Column(Integer, default=0, nullable=False)
+    error = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class IngestJob(Base):
+    """Represents a job extracted from external ingestion (LinkedIn email, etc.)."""
+    __tablename__ = "ingest_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    canonical_key = Column(String(1000), unique=True, index=True, nullable=False)
+    title = Column(String(255), nullable=True)
+    company = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    url = Column(String(1000), nullable=True)
+    raw = Column(Text, nullable=True)  # JSON string of raw source
+    source = Column(String(100), nullable=True)
+
+    status = Column(
+        Enum(FeedJobStatus),
+        default=FeedJobStatus.NEW,
+        nullable=False,
+        index=True
+    )
+
+    first_seen_at = Column(DateTime, nullable=False)
+    last_seen_at = Column(DateTime, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<IngestJob(id={self.id}, title='{self.title}', company='{self.company}', status='{self.status}')>"
+

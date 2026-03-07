@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     openai_api_key: str
     
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
     
     # JWT/Auth
     secret_key: str = "your-secret-key-change-in-production"
@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
+    # Simple shared secret for ingestion from n8n
+    ingestion_api_key: str = "changeme"
     
     class Config:
         env_file = ".env"

@@ -439,10 +439,19 @@ class DrushimScraper(JobScraper):
             "url": base_url
         }
         
-        # Extract job ID from listingid attribute
-        listing_id = card.get('listingid')
-        if listing_id:
-            job_data["url"] = f"https://www.drushim.co.il/job/{listing_id}/"
+        # Extract the actual job URL from the "open in new window" link
+        # (div.open-job a has the correct /job/{id}/{slug}/ URL)
+        open_link = card.select_one('div.open-job a[href]')
+        if not open_link:
+            open_link = card.select_one('a[href*="/job/"][target="_blank"]')
+        if open_link and open_link.get('href'):
+            href = open_link['href']
+            job_data["url"] = f"https://www.drushim.co.il{href}" if href.startswith('/') else href
+        else:
+            # Fallback: construct from listingid attribute
+            listing_id = card.get('listingid')
+            if listing_id:
+                job_data["url"] = f"https://www.drushim.co.il/job/{listing_id}/"
         
         # Extract title - Drushim uses h3.display-28 with span.job-url
         title_elem = card.select_one('h3.display-28 span.job-url')
@@ -608,6 +617,131 @@ class AllJobsScraper(JobScraper):
             return None
 
 
+class GotFriendsScraper(JobScraper):
+    """Scraper for GotFriends.co.il (Israeli tech recruiting platform) using Crawl4AI."""
+    
+    BASE_URL = "https://gotfriends.co.il"
+    
+    async def scrape_listing_async(self, url: str) -> List[Dict]:
+        """Scrape all jobs from a GotFriends listing page."""
+        try:
+            async with AsyncWebCrawler(verbose=False) as crawler:
+                result = await crawler.arun(
+                    url=url,
+                    word_count_threshold=10,
+                    cache_mode=CacheMode.BYPASS,
+                    wait_for="css:.job-card, .job-item, article.job"  # Multiple possible selectors
+                )
+                
+                if not result.success:
+                    logger.error(f"Crawl4AI failed for GotFriends: {url}")
+                    return []
+                
+                soup = BeautifulSoup(result.html, 'html.parser')
+                
+                # Try multiple selectors for GotFriends job cards
+                job_cards = soup.select('div.job-card')
+                if not job_cards:
+                    job_cards = soup.select('article.job, div.job-item, div[class*="job"]')
+                
+                logger.info(f"Found {len(job_cards)} jobs on GotFriends")
+                
+                jobs = []
+                for card in job_cards:
+                    try:
+                        job_data = self._extract_job_from_card(card, url)
+                        if job_data and job_data.get("title"):
+                            jobs.append(job_data)
+                    except Exception as e:
+                        logger.error(f"Error extracting GotFriends card: {str(e)}")
+                        continue
+                
+                return jobs
+                
+        except Exception as e:
+            logger.error(f"Error scraping GotFriends listing {url}: {str(e)}")
+            return []
+    
+    def _extract_job_from_card(self, card, base_url: str) -> Optional[Dict]:
+        """Extract job data from GotFriends card element."""
+        job_data = {
+            "title": None,
+            "company": None,
+            "location": None,
+            "description": None,
+            "url": base_url,
+            "source": "gotfriends.co.il",
+            "job_type": "Full-time",
+            "experience_level": None,
+            "skills": [],
+            "salary_min": None,
+            "salary_max": None
+        }
+        
+        # Extract job URL
+        link_elem = card.select_one('a[href*="/job/"], a[href*="/position/"], a.job-link')
+        if link_elem:
+            job_url = link_elem.get('href')
+            if job_url:
+                if not job_url.startswith('http'):
+                    job_url = f"{self.BASE_URL}{job_url}"
+                job_data["url"] = job_url
+        
+        # Extract title
+        title_elem = card.select_one('h2, h3, div.job-title, span.title, a.job-title')
+        if title_elem:
+            job_data["title"] = self.clean_text(title_elem.get_text())
+        
+        # Extract company
+        company_elem = card.select_one('div.company, span.company-name, div.company-name, a.company')
+        if company_elem:
+            job_data["company"] = self.clean_text(company_elem.get_text())
+        
+        # Extract location
+        location_elem = card.select_one('div.location, span.location, div[class*="location"]')
+        if location_elem:
+            location_text = self.clean_text(location_elem.get_text())
+            # Remove common Hebrew prefixes
+            location_text = re.sub(r'^(מיקום:|אזור:)\s*', '', location_text)
+            job_data["location"] = location_text
+        
+        # Extract description snippet
+        desc_elem = card.select_one('div.description, p.job-description, div.job-content, div.snippet')
+        if desc_elem:
+            job_data["description"] = self.clean_text(desc_elem.get_text())
+        
+        # Extract experience level
+        exp_elem = card.select_one('span.experience, div.seniority, span[class*="experience"]')
+        if exp_elem:
+            exp_text = exp_elem.get_text().lower()
+            if any(keyword in exp_text for keyword in ['senior', 'בכיר', 'lead', 'principal', '5+']):
+                job_data["experience_level"] = "Senior"
+            elif any(keyword in exp_text for keyword in ['junior', 'זוטר', 'entry', 'ללא ניסיון', '0-2']):
+                job_data["experience_level"] = "Entry Level"
+            else:
+                job_data["experience_level"] = "Mid Level"
+        
+        # Extract skills/technologies (GotFriends often has tech tags)
+        skills_container = card.select_one('div.tags, div.technologies, ul.skills')
+        if skills_container:
+            skill_elems = skills_container.select('span.tag, li, a.tech, span.skill')
+            skills = [self.clean_text(s.get_text()) for s in skill_elems if s.get_text().strip()]
+            job_data["skills"] = skills[:15]  # Limit to 15 skills
+        elif job_data["description"]:
+            # Extract skills from description if no tags
+            job_data["skills"] = self.extract_skills(job_data["description"])
+        
+        # Extract salary if present
+        salary_elem = card.select_one('span.salary, div.salary-range, div[class*="salary"]')
+        if salary_elem:
+            salary_text = salary_elem.get_text()
+            salary_info = self.extract_salary(salary_text)
+            job_data["salary_min"] = salary_info.get("min")
+            job_data["salary_max"] = salary_info.get("max")
+        
+        return job_data
+
+
 class ScraperFactory:
     """Factory class to get the appropriate scraper based on URL."""
     
@@ -626,6 +760,8 @@ class ScraperFactory:
             return DrushimScraper()
         elif 'alljobs.co.il' in domain:
             return AllJobsScraper()
+        elif 'gotfriends.co.il' in domain:
+            return GotFriendsScraper()
         else:
             logger.warning(f"No specific scraper for domain: {domain}, using base scraper")
             return LinkedInScraper()  # Default fallback

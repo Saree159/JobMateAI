@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { userApi } from "@/api/jobmate";
+import { userApi, resumeApi } from "@/api/jobmate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   
   // Helper function to normalize skills to array format
   const normalizeSkills = (skills) => {
@@ -34,13 +34,19 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Resume rewriter state
+  const [rewriteFile, setRewriteFile] = useState(null);
+  const [rewriteJD, setRewriteJD] = useState('');
+  const [isRewriting, setIsRewriting] = useState(false);
+
   const uploadResumeMutation = useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
       formData.append('file', file);
-      
-      const token = localStorage.getItem('hirematex_auth_token');
-      
+
+      const token = getToken();
+      if (!token) throw new Error('Session expired — please log in again.');
+
       const response = await fetch('http://localhost:8000/api/resume/upload', {
         method: 'POST',
         headers: {
@@ -88,6 +94,29 @@ export default function Profile() {
     
     setIsUploading(true);
     uploadResumeMutation.mutate(file);
+  };
+
+  const handleResumeRewrite = async () => {
+    if (!rewriteFile) { toast.error('Please upload your resume first'); return; }
+    if (!rewriteJD.trim()) { toast.error('Please paste the job description'); return; }
+
+    setIsRewriting(true);
+    try {
+      const token = getToken();
+      if (!token) { toast.error('Session expired — please log in again.'); return; }
+      const blob = await resumeApi.rewrite(rewriteFile, rewriteJD, token);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rewritten_resume.docx';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Resume rewritten and downloaded!');
+    } catch (err) {
+      toast.error(err.message || 'Rewrite failed');
+    } finally {
+      setIsRewriting(false);
+    }
   };
 
   const updateUserMutation = useMutation({
@@ -310,6 +339,88 @@ export default function Profile() {
             <Alert className="bg-blue-50 border-blue-200">
               <AlertDescription className="text-sm text-blue-700">
                 💡 We'll extract your skills, job title, and location from your resume
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Rewrite Resume for a Job */}
+        <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30">
+          <CardHeader>
+            <CardTitle className="font-semibold flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-indigo-600" />
+              Rewrite Resume for a Job
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Upload your resume and paste a job description — AI will tailor it to the role without inventing anything new.
+            </p>
+
+            {/* File pick */}
+            <div className="flex items-center gap-4">
+              <input
+                type="file"
+                accept=".pdf,.docx"
+                className="hidden"
+                id="rewrite-resume-input"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  if (!f.name.endsWith('.pdf') && !f.name.endsWith('.docx')) {
+                    toast.error('Please upload a PDF or DOCX file'); return;
+                  }
+                  if (f.size > 5 * 1024 * 1024) {
+                    toast.error('File size must be less than 5MB'); return;
+                  }
+                  setRewriteFile(f);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('rewrite-resume-input').click()}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                {rewriteFile ? rewriteFile.name : 'Choose Resume (PDF / DOCX)'}
+              </Button>
+              {rewriteFile && (
+                <button
+                  className="text-xs text-gray-400 hover:text-red-400"
+                  onClick={() => setRewriteFile(null)}
+                >
+                  ✕ clear
+                </button>
+              )}
+            </div>
+
+            {/* Job description */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Job Description</label>
+              <Textarea
+                placeholder="Paste the full job description here..."
+                rows={6}
+                value={rewriteJD}
+                onChange={(e) => setRewriteJD(e.target.value)}
+                className="text-sm resize-none"
+              />
+            </div>
+
+            <Button
+              onClick={handleResumeRewrite}
+              disabled={isRewriting || !rewriteFile || !rewriteJD.trim()}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isRewriting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rewriting Resume...</>
+              ) : (
+                <><Download className="w-4 h-4 mr-2" />Rewrite & Download .docx</>
+              )}
+            </Button>
+
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertDescription className="text-xs text-amber-700">
+                AI will only use skills and experience already in your resume — nothing is fabricated.
               </AlertDescription>
             </Alert>
           </CardContent>

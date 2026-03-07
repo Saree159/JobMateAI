@@ -41,7 +41,7 @@ export default function JobDetails() {
     mutationFn: async () => {
       const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/salary-estimate`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
         }
       });
       if (!response.ok) {
@@ -63,7 +63,7 @@ export default function JobDetails() {
     mutationFn: async () => {
       const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/interview-questions`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
         }
       });
       if (!response.ok) {

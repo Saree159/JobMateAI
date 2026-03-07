@@ -19,18 +19,35 @@ const DRUSHIM_CATEGORIES = {
   "75": "מדעי נתונים (Data Science)",
 };
 
+const JOB_SITES = {
+  drushim: {
+    name: "Drushim.co.il",
+    baseUrl: "https://www.drushim.co.il/jobs/subcat/",
+    endpoint: "/api/jobs/scrape/drushim",
+    categories: DRUSHIM_CATEGORIES
+  },
+  gotfriends: {
+    name: "GotFriends.co.il",
+    baseUrl: "https://gotfriends.co.il/jobs",
+    endpoint: "/api/jobs/scrape/gotfriends",
+    categories: null // Custom URL only
+  }
+};
+
 export default function IsraeliJobs() {
   const { user } = useAuth();
+  const [selectedSite, setSelectedSite] = useState("drushim");
   const [selectedCategory, setSelectedCategory] = useState("236");
   const [customUrl, setCustomUrl] = useState("");
   const [searchUrl, setSearchUrl] = useState(`https://www.drushim.co.il/jobs/subcat/${selectedCategory}`);
   const [selectedJob, setSelectedJob] = useState(null);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['israeli-jobs', searchUrl],
+    queryKey: ['israeli-jobs', searchUrl, selectedSite],
     queryFn: async () => {
+      const site = JOB_SITES[selectedSite];
       const response = await fetch(
-        `http://localhost:8000/api/jobs/scrape/drushim?url=${encodeURIComponent(searchUrl)}`
+        `http://localhost:8000${site.endpoint}?url=${encodeURIComponent(searchUrl)}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch jobs');
@@ -39,6 +56,15 @@ export default function IsraeliJobs() {
     },
     enabled: !!searchUrl,
   });
+
+  const handleSiteChange = (site) => {
+    setSelectedSite(site);
+    if (site === "drushim") {
+      setSearchUrl(`https://www.drushim.co.il/jobs/subcat/${selectedCategory}`);
+    } else if (site === "gotfriends") {
+      setSearchUrl("https://gotfriends.co.il/jobs");
+    }
+  };
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
@@ -69,7 +95,7 @@ export default function IsraeliJobs() {
             </h1>
           </div>
           <p className="text-gray-600">
-            חפש משרות מהאתרים המובילים בישראל • Drushim.co.il
+            חפש משרות מהאתרים המובילים בישראל • Drushim.co.il • GotFriends.co.il
           </p>
         </div>
 
@@ -77,24 +103,49 @@ export default function IsraeliJobs() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="space-y-4">
-              {/* Category Selection */}
+              {/* Site Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  בחר קטגוריה
+                  בחר אתר
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {Object.entries(DRUSHIM_CATEGORIES).map(([id, name]) => (
-                    <Button
-                      key={id}
-                      variant={selectedCategory === id ? "default" : "outline"}
-                      onClick={() => handleCategoryChange(id)}
-                      className="justify-start text-right"
-                    >
-                      {name}
-                    </Button>
-                  ))}
+                <div className="flex gap-2">
+                  <Button
+                    variant={selectedSite === "drushim" ? "default" : "outline"}
+                    onClick={() => handleSiteChange("drushim")}
+                    className="flex-1"
+                  >
+                    Drushim.co.il
+                  </Button>
+                  <Button
+                    variant={selectedSite === "gotfriends" ? "default" : "outline"}
+                    onClick={() => handleSiteChange("gotfriends")}
+                    className="flex-1"
+                  >
+                    GotFriends.co.il
+                  </Button>
                 </div>
               </div>
+
+              {/* Category Selection (Drushim only) */}
+              {selectedSite === "drushim" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    בחר קטגוריה
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {Object.entries(DRUSHIM_CATEGORIES).map(([id, name]) => (
+                      <Button
+                        key={id}
+                        variant={selectedCategory === id ? "default" : "outline"}
+                        onClick={() => handleCategoryChange(id)}
+                        className="justify-start text-right"
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Custom URL */}
               <div>

@@ -1,0 +1,137 @@
+{
+  "name": "LinkedIn Jobs → HireMateAI",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyHour" }]
+        },
+        "filters": {
+          "sender": "jobalerts-noreply@linkedin.com"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "node_gmail_trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Parse LinkedIn Job Alert Email ───────────────────────────────────────\n// Extracts job listings from LinkedIn job alert HTML emails.\n// LinkedIn sends alerts from jobalerts-noreply@linkedin.com\n// with job cards containing title, company, location, and apply URL.\n\nconst items = [];\n\nfor (const item of $input.all()) {\n  const html    = item.json.html || item.json.body || '';\n  const subject = item.json.subject || '';\n  const msgId   = item.json.id || item.json.messageId || String(Date.now());\n  const recvAt  = item.json.date || new Date().toISOString();\n\n  const jobs = [];\n  const seen = new Set();\n\n  // ── Strategy 1: Extract from HTML anchor tags ──────────────────────────\n  // LinkedIn job URLs look like:\n  //   https://www.linkedin.com/comm/jobs/view/1234567890?...\n  //   https://www.linkedin.com/jobs/view/1234567890?...\n  const linkRe = /href=[\"'](https:\\/\\/www\\.linkedin\\.com\\/(?:comm\\/)?jobs\\/view\\/(\\d+)[^\"']*)[\"'][^>]*>([\\s\\S]*?)<\\/a>/gi;\n  let m;\n\n  while ((m = linkRe.exec(html)) !== null) {\n    const rawUrl = m[1];\n    const jobId  = m[2];\n    const title  = m[3].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n\n    // Skip nav/footer links and duplicates\n    if (!title || title.length < 3 || seen.has(jobId)) continue;\n    seen.add(jobId);\n\n    // Build a clean URL without tracking params\n    const cleanUrl = `https://www.linkedin.com/jobs/view/${jobId}/`;\n\n    // Try to extract company & location from nearby HTML context\n    const cardStart  = Math.max(0, m.index - 800);\n    const cardEnd    = Math.min(html.length, m.index + 800);\n    const cardSlice  = html.slice(cardStart, cardEnd);\n    const plainCard  = cardSlice.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ');\n\n    // Heuristic: company is the first non-empty token after the job title\n    const afterTitle = plainCard.slice(plainCard.indexOf(title) + title.length);\n    const tokens = afterTitle.split('·').map(t => t.trim()).filter(Boolean);\n    const company  = tokens[0] || '';\n    const location = tokens[1] || '';\n\n    jobs.push({\n      title,\n      company,\n      location,\n      url: cleanUrl,\n      raw: { source: 'LinkedIn Email', originalUrl: rawUrl, subject }\n    });\n  }\n\n  // ── Strategy 2: Fallback to plain-text URL extraction ─────────────────\n  if (jobs.length === 0) {\n    const text   = item.json.text || item.json.snippet || '';\n    const urlRe  = /https:\\/\\/www\\.linkedin\\.com\\/(?:comm\\/)?jobs\\/view\\/(\\d+)/g;\n    let urlMatch;\n    while ((urlMatch = urlRe.exec(text)) !== null) {\n      const jobId = urlMatch[1];\n      if (seen.has(jobId)) continue;\n      seen.add(jobId);\n      jobs.push({\n        title:    subject.replace(/^\\d+\\+? (?:new )?jobs? (?:for|matching) /i, '').trim(),\n        company:  '',\n        location: '',\n        url:      `https://www.linkedin.com/jobs/view/${jobId}/`,\n        raw:      { source: 'LinkedIn Email (text fallback)', subject }\n      });\n    }\n  }\n\n  items.push({\n    json: {\n      source:   'linkedin_email',\n      runId:    `${recvAt}_${msgId}`,\n      email: {\n        emailId:    msgId,\n        receivedAt: recvAt,\n        subject:    subject,\n        snippet:    item.json.snippet || subject.slice(0, 200)\n      },\n      jobs,\n      _jobCount: jobs.length\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "node_parse_email",
+      "name": "Parse LinkedIn Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-jobs",
+              "leftValue": "={{ $json._jobCount }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node_has_jobs",
+      "name": "Has Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/ingest/linkedin-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-KEY",     "value": "changeme" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: $json.source, runId: $json.runId, email: $json.email, jobs: $json.jobs }) }}",
+        "options": {
+          "response": {
+            "response": { "responseFormat": "json" }
+          }
+        }
+      },
+      "id": "node_post_backend",
+      "name": "POST to HireMateAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1020, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log emails that contained no extractable jobs\nfor (const item of $input.all()) {\n  console.log(`[SKIP] No jobs found in: \"${item.json.email?.subject}\"`);\n}\nreturn $input.all();"
+      },
+      "id": "node_log_skip",
+      "name": "Log Skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log the result from the backend for monitoring\nfor (const item of $input.all()) {\n  const res = item.json;\n  console.log(`[INGEST] emailId=${res.emailId} inserted=${res.inserted} updated=${res.updated} skipped=${res.skipped} alreadyProcessed=${res.alreadyProcessed}`);\n}\nreturn $input.all();"
+      },
+      "id": "node_log_result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1260, 200]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [{ "node": "Parse LinkedIn Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse LinkedIn Email": {
+      "main": [
+        [{ "node": "Has Jobs?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Jobs?": {
+      "main": [
+        [{ "node": "POST to HireMateAI", "type": "main", "index": 0 }],
+        [{ "node": "Log Skipped",        "type": "main", "index": 0 }]
+      ]
+    },
+    "POST to HireMateAI": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": ["hirematex", "linkedin", "jobs"]
+}

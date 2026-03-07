@@ -7,6 +7,7 @@ import JobDetails from './pages/JobDetails';
 import Pricing from './pages/Pricing';
 import Analytics from './pages/Analytics';
 import IsraeliJobs from './pages/IsraeliJobs';
+import JobMatch from './pages/JobMatch';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Layout from './Layout.jsx';
@@ -22,6 +23,7 @@ export const PAGES = {
     "profile": Profile,
     "jobdetails": JobDetails,
     "pricing": Pricing,
+    "jobMatch": JobMatch,
 }
 
 export const pagesConfig = {

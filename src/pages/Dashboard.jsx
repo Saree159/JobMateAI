@@ -34,6 +34,13 @@ export default function Dashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: topMatchesData, isLoading: matchesLoading } = useQuery({
+    queryKey: ['top-matches', user?.id],
+    queryFn: () => jobApi.topMatches(user.id),
+    enabled: !!user?.id,
+    staleTime: 30 * 60 * 1000, // 30 min — matches cache lifetime
+  });
+
   const stats = {
     totalJobs: applications.length,
     saved: applications.filter(a => a.status === 'saved').length,
@@ -42,12 +49,7 @@ export default function Dashboard() {
   };
 
   const isLoading = appsLoading;
-  
-  // Get top matches (jobs with highest match scores)
-  const topMatches = applications
-    .filter(a => a.match_score !== null)
-    .sort((a, b) => (b.match_score || 0) - (a.match_score || 0))
-    .slice(0, 5);
+  const topMatches = topMatchesData?.jobs || [];
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -97,11 +99,9 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Top Matches */}
         <div className="lg:col-span-2">
-          <TopMatchesList 
+          <TopMatchesList
             jobs={topMatches}
-            applications={applications}
-            userSkills={user?.skills || []}
-            isLoading={isLoading}
+            isLoading={matchesLoading}
           />
         </div>
 

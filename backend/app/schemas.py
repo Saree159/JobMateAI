@@ -2,7 +2,7 @@
 Pydantic schemas for request validation and response serialization.
 These define the API contract for the frontend.
 """
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -55,7 +55,14 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    
+
+    @field_validator('skills', mode='before')
+    @classmethod
+    def parse_skills(cls, v):
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(',') if s.strip()]
+        return v or []
+
     class Config:
         from_attributes = True
 
@@ -209,3 +216,54 @@ class AnalyticsDashboard(BaseModel):
     match_score_distribution: dict  # {range: count} e.g. {"0-20": 5, "21-40": 10}
     top_companies: List[dict]  # [{company: str, count: int}]
     status_funnel: dict  # Conversion rates between stages
+
+
+# Ingestion Schemas
+class IngestJobItem(BaseModel):
+    title: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    url: Optional[str] = None
+    raw: Optional[dict] = None
+
+
+class IngestEmailRequest(BaseModel):
+    source: str
+    runId: Optional[str] = None
+    email: dict
+    jobs: List[IngestJobItem]
+
+
+class IngestEmailResponse(BaseModel):
+    emailId: str
+    alreadyProcessed: bool
+    inserted: int
+    updated: int
+    skipped: int
+
+
+# Feed job API schemas
+class FeedJobStatus(str, Enum):
+    new = "new"
+    saved = "saved"
+    applied = "applied"
+    ignored = "ignored"
+
+
+class FeedJobResponse(BaseModel):
+    id: int
+    title: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    url: Optional[str] = None
+    status: FeedJobStatus
+    firstSeenAt: datetime
+    lastSeenAt: datetime
+    source: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class StatusUpdateRequest(BaseModel):
+    status: FeedJobStatus

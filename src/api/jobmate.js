@@ -25,10 +25,16 @@ async function apiRequest(endpoint, options = {}) {
     const response = await fetch(url, config);
     
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('hirematex_auth_token');
+        localStorage.removeItem('hirematex_user');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
+      }
       const error = await response.json().catch(() => ({}));
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
-    
+
     // Handle 204 No Content
     if (response.status === 204) {
       return null;
@@ -188,7 +194,145 @@ export const jobApi = {
       method: 'POST',
     });
   },
+
+  /**
+   * Get top 10 Israeli jobs matching the user's profile
+   * @param {number} userId - User ID
+   * @returns {Promise<Object>} { jobs, user_skills, category, total_scraped }
+   */
+  topMatches: async (userId) => {
+    return apiRequest(`/api/jobs/top-matches?user_id=${userId}`);
+  },
 };
+
+// ============================================================================
+// RESUME API
+// ============================================================================
+
+export const jobsApi = {
+  /**
+   * Fetch the full description from a Drushim job detail page.
+   * @param {string} url - The job detail URL (e.g. https://www.drushim.co.il/job/123/)
+   * @returns {Promise<{description: string}>}
+   */
+  fetchDescription: (url) =>
+    apiRequest(`/api/jobs/description?url=${encodeURIComponent(url)}`),
+};
+
+export const resumeApi = {
+  /**
+   * Upload and parse a resume file (PDF or DOCX)
+   * @param {File} file - Resume file
+   * @param {string} token - JWT auth token
+   * @returns {Promise<Object>} Parsed resume data with extracted skills
+   */
+  upload: async (file, token) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/resume/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    await checkFetchResponse(response);
+    return await response.json();
+  },
+
+  /**
+   * Rewrite a resume tailored to a job description, returns a .docx Blob
+   * @param {File} file - Original resume (PDF or DOCX)
+   * @param {string} jobDescription - Job description text
+   * @param {string} token - JWT auth token
+   * @returns {Promise<Blob>} Rewritten resume as .docx blob
+   */
+  rewrite: async (file, jobDescription, token) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('job_description', jobDescription);
+
+    const response = await fetch(`${API_BASE_URL}/api/resume/rewrite`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    await checkFetchResponse(response);
+    return await response.blob();
+  },
+
+  /**
+   * Rewrite resume for a job and return a git-style diff + base64 docx
+   * @param {File} file - Original resume (PDF or DOCX)
+   * @param {string} jobDescription - Job description text
+   * @param {string} token - JWT auth token
+   * @param {string} [extraContext] - Optional Q&A answers from gap analysis
+   * @returns {Promise<{diff: Array, docx_b64: string}>}
+   */
+  rewriteDiff: async (file, jobDescription, token, extraContext = "") => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('job_description', jobDescription);
+    if (extraContext) formData.append('extra_context', extraContext);
+
+    const response = await fetch(`${API_BASE_URL}/api/resume/rewrite-diff`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    await checkFetchResponse(response);
+    return await response.json();
+  },
+
+  /**
+   * Analyze gaps between the resume and the job description.
+   * @param {File} file - Original resume (PDF or DOCX)
+   * @param {string} jobDescription - Job description text
+   * @param {string} token - JWT auth token
+   * @returns {Promise<{summary: string, gaps: Array<{requirement: string, question: string}>}>}
+   */
+  analyzeGaps: async (file, jobDescription, token) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('job_description', jobDescription);
+
+    const response = await fetch(`${API_BASE_URL}/api/resume/analyze-gaps`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    await checkFetchResponse(response);
+    return await response.json();
+  },
+};
+
+// ============================================================================
+// AUTH HELPERS
+// ============================================================================
+
+/** Clear stored session and redirect to /login. Called on any 401 response. */
+function handleSessionExpired() {
+  localStorage.removeItem('hirematex_auth_token');
+  localStorage.removeItem('hirematex_user');
+  window.location.href = '/login';
+}
+
+async function checkFetchResponse(response) {
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleSessionExpired();
+      throw new Error('Session expired. Please log in again.');
+    }
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+  }
+  return response;
+}
 
 // ============================================================================
 // HELPER FUNCTIONS
