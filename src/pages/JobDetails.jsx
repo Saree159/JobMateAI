@@ -39,7 +39,7 @@ export default function JobDetails() {
 
   const generateSalaryMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/salary-estimate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${jobId}/salary-estimate`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
         }
@@ -61,7 +61,7 @@ export default function JobDetails() {
 
   const generateQuestionsMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/interview-questions`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${jobId}/interview-questions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
         }

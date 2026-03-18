@@ -67,7 +67,7 @@ export default function AddJobDialog({ open, onClose }) {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/jobs/scrape-url?url=${encodeURIComponent(jobUrl)}&user_id=${user.id}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/scrape-url?url=${encodeURIComponent(jobUrl)}&user_id=${user.id}`,
         {
           method: 'POST',
           headers: {

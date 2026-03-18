@@ -53,7 +53,7 @@ export default function LinkedInJobs() {
       const params = new URLSearchParams({ role: role.trim() });
       if (location.trim()) params.set("location", location.trim());
       if (user?.id) params.set("user_id", user.id);
-      const response = await fetch(`http://localhost:8000/api/jobs/scrape/linkedin?${params}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/scrape/linkedin?${params}`);
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.detail || "Failed to fetch jobs");

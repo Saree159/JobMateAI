@@ -4,6 +4,7 @@ Handles user registration, profile management, and authentication.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
@@ -210,54 +211,63 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return None
 
 
-@router.post("/{user_id}/linkedin/connect")
-async def linkedin_connect_browser(user_id: int, db: Session = Depends(get_db)):
-    """
-    Opens a real (visible) Playwright browser window so the user can log in to LinkedIn.
-    Once the li_at session cookie appears (login succeeded), it is saved to the user's
-    profile and the browser closes automatically.
+class LinkedInLoginRequest(BaseModel):
+    email: str
+    password: str
 
-    This endpoint runs on localhost where the server == the user's machine.
-    Timeout: 3 minutes.
+
+@router.post("/{user_id}/linkedin/connect")
+async def linkedin_connect_headless(user_id: int, creds: LinkedInLoginRequest, db: Session = Depends(get_db)):
+    """
+    Headless Playwright login: fills LinkedIn email/password, waits for li_at cookie,
+    saves it to the user profile. Credentials are never stored.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     try:
-        from playwright.async_api import async_playwright
-        import asyncio
-
-        TIMEOUT_SECONDS = 180  # 3 minutes
+        from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=False,
-                args=["--start-maximized"],
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
             )
-            context = await browser.new_context(no_viewport=True)
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800},
+            )
             page = await context.new_page()
 
-            await page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded")
+            try:
+                await page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded", timeout=30000)
 
-            # Poll for li_at cookie — appears after successful login
-            li_at = None
-            for _ in range(TIMEOUT_SECONDS * 2):  # check every 0.5s
-                cookies = await context.cookies("https://www.linkedin.com")
-                for c in cookies:
-                    if c["name"] == "li_at":
-                        li_at = c["value"]
-                        break
-                if li_at:
-                    break
-                await asyncio.sleep(0.5)
+                await page.fill("#username", creds.email)
+                await page.fill("#password", creds.password)
+                await page.click('[type="submit"]')
 
+                # Wait for redirect away from /login — means login succeeded or 2FA
+                await page.wait_for_url(lambda url: "/login" not in url and "/checkpoint" not in url, timeout=20000)
+
+            except PWTimeout:
+                await browser.close()
+                # Check if we're stuck on checkpoint (2FA / security verification)
+                if "/checkpoint" in page.url or "/challenge" in page.url:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="LinkedIn requires additional verification (2FA or CAPTCHA). Please disable 2FA temporarily or use the manual cookie method."
+                    )
+                raise HTTPException(status_code=408, detail="Login timed out — check your credentials and try again")
+
+            # Extract li_at cookie
+            cookies = await context.cookies("https://www.linkedin.com")
             await browser.close()
 
+        li_at = next((c["value"] for c in cookies if c["name"] == "li_at"), None)
         if not li_at:
-            raise HTTPException(status_code=408, detail="Login timed out — please try again")
+            raise HTTPException(status_code=401, detail="Login failed — wrong email or password")
 
-        # Save to DB
         user.linkedin_li_at = li_at
         user.updated_at = datetime.utcnow()
         db.commit()
@@ -267,9 +277,9 @@ async def linkedin_connect_browser(user_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except ImportError:
-        raise HTTPException(status_code=503, detail="Playwright not installed. Run: pip install playwright && playwright install chromium")
+        raise HTTPException(status_code=503, detail="Playwright not installed")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during LinkedIn login: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"LinkedIn login error: {str(e)}")
 
 
 @router.post("/login", response_model=Token)

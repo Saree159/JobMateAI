@@ -6,8 +6,12 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (devDependencies needed for Vite build)
+RUN npm ci
+
+# Accept API URL as build arg so it gets baked into the bundle
+ARG VITE_API_URL=http://localhost:8000
+ENV VITE_API_URL=$VITE_API_URL
 
 # Copy source code
 COPY . .

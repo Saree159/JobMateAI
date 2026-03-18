@@ -49,7 +49,7 @@ export default function IsraeliJobs() {
     queryFn: async () => {
       const site = JOB_SITES[selectedSite];
       const response = await fetch(
-        `http://localhost:8000${site.endpoint}?url=${encodeURIComponent(searchUrl)}`
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${site.endpoint}?url=${encodeURIComponent(searchUrl)}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch jobs');

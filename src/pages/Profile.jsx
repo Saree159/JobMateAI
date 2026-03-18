@@ -36,9 +36,12 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // LinkedIn li_at session token
+  // LinkedIn login
+  const [liEmail, setLiEmail] = useState('');
+  const [liPassword, setLiPassword] = useState('');
   const [liAtInput, setLiAtInput] = useState('');
   const [liAtSaving, setLiAtSaving] = useState(false);
+  const [showManualCookie, setShowManualCookie] = useState(false);
 
   // Resume rewriter state
   const [rewriteFile, setRewriteFile] = useState(null);
@@ -62,7 +65,7 @@ export default function Profile() {
       const token = getToken();
       if (!token) throw new Error('Session expired — please log in again.');
 
-      const response = await fetch('http://localhost:8000/api/resume/upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/resume/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -135,18 +138,24 @@ export default function Profile() {
     }
   };
 
-  const handleConnectLinkedIn = async () => {
+  const handleLinkedInLogin = async () => {
+    if (!liEmail.trim() || !liPassword.trim()) return;
     setLiAtSaving(true);
-    toast.info('A browser window will open — log in to LinkedIn there. This window will close automatically.');
     try {
-      const res = await fetch(`http://localhost:8000/api/users/${user.id}/linkedin/connect`, { method: 'POST' });
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API}/api/users/${user.id}/linkedin/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: liEmail.trim(), password: liPassword }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Connection failed');
-      // Refresh user to get updated linkedin_connected status
       const updated = await userApi.getById(user.id);
       updateUser(updated);
       queryClient.setQueryData(['currentUser'], updated);
-      toast.success('LinkedIn connected successfully!');
+      setLiEmail('');
+      setLiPassword('');
+      toast.success('LinkedIn connected!');
     } catch (err) {
       toast.error(err.message || 'Failed to connect LinkedIn');
     } finally {
@@ -651,42 +660,54 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-400">
-                  Connect your LinkedIn account to unlock real job listings and full descriptions.
+                  Sign in with your LinkedIn credentials to unlock real job listings and full descriptions. Your credentials are used once to obtain a session token and are never stored.
                 </p>
 
-                {/* Primary: browser login */}
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={handleConnectLinkedIn}
-                  disabled={liAtSaving}
-                >
-                  {liAtSaving ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Waiting for login…</>
-                  ) : (
-                    <><Linkedin className="w-4 h-4 mr-2" />Sign in with LinkedIn</>
-                  )}
-                </Button>
+                <div className="space-y-3">
+                  <Input
+                    type="email"
+                    placeholder="LinkedIn email"
+                    value={liEmail}
+                    onChange={(e) => setLiEmail(e.target.value)}
+                    disabled={liAtSaving}
+                  />
+                  <Input
+                    type="password"
+                    placeholder="LinkedIn password"
+                    value={liPassword}
+                    onChange={(e) => setLiPassword(e.target.value)}
+                    disabled={liAtSaving}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLinkedInLogin()}
+                  />
+                  <Button
+                    onClick={handleLinkedInLogin}
+                    disabled={liAtSaving || !liEmail.trim() || !liPassword.trim()}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {liAtSaving ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting…</>
+                    ) : (
+                      <><Linkedin className="w-4 h-4 mr-2" />Connect LinkedIn</>
+                    )}
+                  </Button>
+                </div>
 
-                {liAtSaving && (
-                  <p className="text-xs text-center text-blue-400 animate-pulse">
-                    A browser window opened — log in to LinkedIn there. It will close automatically once you're signed in.
-                  </p>
-                )}
-
-                {/* Fallback: manual paste */}
-                <details className="group">
+                <details className="group" open={showManualCookie} onToggle={(e) => setShowManualCookie(e.target.open)}>
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
-                    Advanced: paste session token manually
+                    Have 2FA enabled? Paste your session cookie manually instead
                   </summary>
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-gray-500">Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-400">li_at</code> value</p>
+                    <p className="text-xs text-gray-500">
+                      Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-400">li_at</code> value
+                    </p>
                     <div className="flex gap-2">
                       <Input
                         type="password"
-                        placeholder="Paste li_at value…"
+                        placeholder="Paste li_at cookie value…"
                         value={liAtInput}
                         onChange={(e) => setLiAtInput(e.target.value)}
                         className="font-mono text-xs"
+                        disabled={liAtSaving}
                       />
                       <Button
                         onClick={handleSaveLiAt}
