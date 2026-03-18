@@ -7,7 +7,7 @@ on:
 
 env:
   RESOURCE_GROUP: hirematrix-rg
-  ACR_NAME: hirematrixacr
+  ACR_NAME: hirematrixacr2
   BACKEND_APP: hirematrix-backend
   SWA_NAME: hirematrix-frontend
 
