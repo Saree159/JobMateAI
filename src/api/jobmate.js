@@ -202,8 +202,9 @@ export const jobApi = {
    * @param {number} userId - User ID
    * @returns {Promise<Object>} { jobs, user_skills, category, total_scraped }
    */
-  topMatches: async (userId) => {
-    return apiRequest(`/api/jobs/top-matches?user_id=${userId}`);
+  topMatches: async (userId, forceRefresh = false) => {
+    const url = `/api/jobs/top-matches?user_id=${userId}${forceRefresh ? '&force_refresh=true' : ''}`;
+    return apiRequest(url);
   },
 };
 

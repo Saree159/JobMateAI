@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
   Sparkles, MapPin, Building2, ExternalLink,
-  Linkedin, Globe, Search, X, Briefcase, Clock,
+  Linkedin, Globe, Search, X, Briefcase, Clock, RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -57,7 +57,7 @@ function FilterChip({ active, onClick, children }) {
   );
 }
 
-export default function TopMatchesList({ jobs, isLoading }) {
+export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshing }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [search, setSearch]     = useState("");
@@ -104,11 +104,23 @@ export default function TopMatchesList({ jobs, isLoading }) {
             <Sparkles className="w-4 h-4 text-blue-400" />
             Top Matches for You
           </CardTitle>
-          {jobs.length > 0 && (
-            <span className="text-xs text-gray-500 tabular-nums">
-              {filtered.length} / {jobs.length}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {jobs.length > 0 && (
+              <span className="text-xs text-gray-500 tabular-nums">
+                {filtered.length} / {jobs.length}
+              </span>
+            )}
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                title="Refresh matches"
+                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter bar — only shown when there are jobs */}

@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Target,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,18 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshMatches = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await jobApi.topMatches(user.id, true);
+      queryClient.setQueryData(['top-matches', user?.id], result);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const { data: applications = [], isLoading: appsLoading } = useQuery({
     queryKey: ['applications', user?.id],
@@ -114,7 +127,12 @@ export default function Dashboard() {
 
         {/* Top Matches — takes 2/3 width */}
         <div className="lg:col-span-2">
-          <TopMatchesList jobs={topMatches} isLoading={matchesLoading} />
+          <TopMatchesList
+            jobs={topMatches}
+            isLoading={matchesLoading}
+            onRefresh={handleRefreshMatches}
+            isRefreshing={isRefreshing}
+          />
         </div>
 
         {/* Sidebar — takes 1/3 width */}
