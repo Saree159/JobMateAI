@@ -44,6 +44,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
     target_role = Column(String(255), nullable=True)
+    years_of_experience = Column(Integer, nullable=True)
     
     # Store skills as comma-separated string (or JSON in production)
     skills = Column(Text, nullable=True)  # e.g., "Python,React,SQL"

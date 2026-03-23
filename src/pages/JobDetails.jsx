@@ -132,6 +132,17 @@ export default function JobDetails() {
 
   const matchScore = calculateMatchScore();
 
+  // Extract required years of experience from job description
+  const extractRequiredYears = () => {
+    if (!job?.description) return null;
+    const match = job.description.match(/(\d+)\+?\s*(?:to\s*\d+)?\s*years?\s+(?:of\s+)?(?:experience|exp)/i)
+      || job.description.match(/experience[:\s]+(\d+)\+?\s*years?/i)
+      || job.description.match(/minimum\s+(\d+)\s*years?/i);
+    return match ? parseInt(match[1]) : null;
+  };
+
+  const requiredYears = extractRequiredYears();
+
   if (jobLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -187,18 +198,56 @@ export default function JobDetails() {
               </div>
             </div>
 
-            {/* Match Score */}
-            <div className="text-center bg-white/5 p-6 rounded-lg">
-              <div className={`text-4xl font-semibold mb-1 ${
-                matchScore >= 70 ? 'text-green-600' : 
-                matchScore >= 50 ? 'text-yellow-600' : 
-                'text-gray-400'
-              }`}>
-                {matchScore}%
+            {/* Match Details */}
+            <div className="bg-white/5 p-5 rounded-lg space-y-4 min-w-[180px]">
+              {/* Match Score */}
+              <div className="text-center">
+                <div className={`text-4xl font-semibold mb-1 ${
+                  matchScore >= 70 ? 'text-green-500' :
+                  matchScore >= 50 ? 'text-yellow-500' :
+                  'text-gray-400'
+                }`}>
+                  {matchScore}%
+                </div>
+                <p className="text-xs text-gray-500">Match Score</p>
               </div>
-              <p className="text-sm text-gray-500">
-                Match Score
-              </p>
+
+              <div className="border-t border-white/10 pt-3 space-y-2.5">
+                {/* User's role */}
+                {user?.target_role && (
+                  <div>
+                    <p className="text-xs text-gray-500">Your Role</p>
+                    <p className="text-sm text-white font-medium truncate">{user.target_role}</p>
+                  </div>
+                )}
+
+                {/* Years of experience */}
+                {user?.years_of_experience != null && (
+                  <div>
+                    <p className="text-xs text-gray-500">Your Experience</p>
+                    <p className="text-sm text-white font-medium">{user.years_of_experience} yrs</p>
+                  </div>
+                )}
+
+                {/* Required experience from job */}
+                {requiredYears && (
+                  <div>
+                    <p className="text-xs text-gray-500">Required</p>
+                    <p className={`text-sm font-medium ${
+                      user?.years_of_experience != null
+                        ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
+                        : 'text-white'
+                    }`}>
+                      {requiredYears}+ yrs
+                      {user?.years_of_experience != null && (
+                        <span className="ml-1 text-xs">
+                          {user.years_of_experience >= requiredYears ? '✓' : '✗'}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>

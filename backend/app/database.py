@@ -36,6 +36,7 @@ def _run_migrations():
         for col, col_type in [
             ("resume_filename", "VARCHAR(255)"),
             ("resume_content", "BYTEA" if not is_sqlite else "BLOB"),
+            ("years_of_experience", "INTEGER"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))

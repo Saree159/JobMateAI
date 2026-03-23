@@ -31,6 +31,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     target_role: Optional[str] = None
+    years_of_experience: Optional[int] = None
     skills: Optional[List[str]] = []
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = WorkModePreference.REMOTE
@@ -45,6 +46,7 @@ class UserUpdate(BaseModel):
     """Schema for updating a user profile."""
     full_name: Optional[str] = None
     target_role: Optional[str] = None
+    years_of_experience: Optional[int] = None
     skills: Optional[List[str]] = None
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = None

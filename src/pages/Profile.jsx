@@ -222,6 +222,7 @@ export default function Profile() {
   const startEditing = () => {
     setFormData({
       target_role: user?.target_role || '',
+      years_of_experience: user?.years_of_experience ?? '',
       skills: normalizeSkills(user?.skills),
       location_preference: user?.location_preference || '',
       work_mode_preference: user?.work_mode_preference || '',
@@ -233,6 +234,7 @@ export default function Profile() {
   const handleSave = () => {
     updateUserMutation.mutate({
       target_role: formData.target_role || undefined,
+      years_of_experience: formData.years_of_experience !== '' ? parseInt(formData.years_of_experience) : undefined,
       skills: formData.skills,
       location_preference: formData.location_preference || undefined,
       work_mode_preference: formData.work_mode_preference || undefined,
@@ -386,12 +388,14 @@ export default function Profile() {
               {isEditing ? (
                 <Input
                   type="number"
-                  value={formData.experience_years}
-                  onChange={(e) => setFormData({ ...formData, experience_years: e.target.value })}
+                  min="0"
+                  max="50"
+                  value={formData.years_of_experience}
+                  onChange={(e) => setFormData({ ...formData, years_of_experience: e.target.value })}
                   placeholder="5"
                 />
               ) : (
-                <p className="text-white font-medium">{user.experience_years || t('common.notSet')}</p>
+                <p className="text-white font-medium">{user.years_of_experience != null ? `${user.years_of_experience} years` : t('common.notSet')}</p>
               )}
             </div>
 
