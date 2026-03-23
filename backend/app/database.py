@@ -2,7 +2,7 @@
 Database configuration and session management.
 Provides dependency injection for database sessions in FastAPI routes.
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
 from app.models import Base
@@ -25,7 +25,24 @@ def init_db():
     Called on application startup.
     """
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     print("✓ Database tables created successfully")
+
+
+def _run_migrations():
+    """Add new columns to existing tables without full alembic setup."""
+    is_sqlite = "sqlite" in settings.database_url
+    with engine.connect() as conn:
+        for col, col_type in [
+            ("resume_filename", "VARCHAR(255)"),
+            ("resume_content", "BYTEA" if not is_sqlite else "BLOB"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+                conn.commit()
+                print(f"✓ Migration: added users.{col}")
+            except Exception:
+                conn.rollback()  # Column already exists — safe to ignore
 
 
 def get_db():

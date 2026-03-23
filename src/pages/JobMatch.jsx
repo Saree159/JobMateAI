@@ -198,6 +198,7 @@ export default function JobMatch() {
 
   // Resume diff state
   const [resumeFile, setResumeFile] = useState(null);
+  const [usingSavedResume, setUsingSavedResume] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
   // Gap analysis Q&A flow
@@ -260,6 +261,22 @@ export default function JobMatch() {
     setGapAnalysis(null);
     setGapAnswers({});
     setFlowStep("idle");
+  };
+
+  const handleUseSavedResume = async () => {
+    const token = getToken();
+    if (!token) { toast.error("Session expired — please log in again."); return; }
+    try {
+      const file = await resumeApi.getSavedFile(token, user.resume_filename);
+      setResumeFile(file);
+      setUsingSavedResume(true);
+      setDiffResult(null);
+      setGapAnalysis(null);
+      setGapAnswers({});
+      setFlowStep("idle");
+    } catch {
+      toast.error("Could not load saved resume");
+    }
   };
 
   const handleAnalyzeGaps = async () => {
@@ -509,31 +526,62 @@ export default function JobMatch() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* ── Step 0: File picker ── */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="file"
-                  accept=".pdf,.docx"
-                  className="hidden"
-                  id="job-match-resume"
-                  onChange={handleFileChange}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => document.getElementById("job-match-resume").click()}
-                  disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
-                >
-                  <FileText className="w-3.5 h-3.5 mr-1.5" />
-                  {resumeFile ? resumeFile.name : "Choose Resume (PDF / DOCX)"}
-                </Button>
-                {resumeFile && flowStep === "idle" && (
-                  <button
-                    className="text-xs text-gray-400 hover:text-red-400"
-                    onClick={() => { setResumeFile(null); setDiffResult(null); setGapAnalysis(null); setFlowStep("idle"); }}
-                  >
-                    ✕
-                  </button>
+              {/* ── Step 0: Resume picker ── */}
+              <div className="space-y-2">
+                {/* Saved resume option */}
+                {user?.resume_filename && !resumeFile && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-500/20">
+                    <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span className="text-xs text-gray-300 flex-1 truncate">{user.resume_filename}</span>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                      onClick={handleUseSavedResume}
+                      disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
+                    >
+                      Use saved resume
+                    </Button>
+                  </div>
+                )}
+
+                {/* Active resume + change option */}
+                {resumeFile && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-green-950/30 border border-green-500/20">
+                    <FileText className="w-4 h-4 text-green-400 shrink-0" />
+                    <span className="text-xs text-gray-300 flex-1 truncate">
+                      {usingSavedResume ? "Saved: " : ""}{resumeFile.name}
+                    </span>
+                    {flowStep === "idle" && (
+                      <button
+                        className="text-xs text-gray-400 hover:text-red-400"
+                        onClick={() => { setResumeFile(null); setUsingSavedResume(false); setDiffResult(null); setGapAnalysis(null); setFlowStep("idle"); }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* File picker — always available to upload a different file */}
+                {!resumeFile && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx"
+                      className="hidden"
+                      id="job-match-resume"
+                      onChange={handleFileChange}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("job-match-resume").click()}
+                      disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1.5" />
+                      {user?.resume_filename ? "Upload different resume" : "Choose Resume (PDF / DOCX)"}
+                    </Button>
+                  </div>
                 )}
               </div>
 

@@ -185,9 +185,13 @@ async def upload_resume(
         user.location_preference = parsed_data["location_preference"]
         updated_fields.append("location_preference")
     
-    if updated_fields:
-        db.commit()
-        db.refresh(user)
+    # Always store the resume file for later use
+    user.resume_filename = file.filename
+    user.resume_content = content
+    updated_fields.append("resume")
+
+    db.commit()
+    db.refresh(user)
 
     return {
         "message": "Resume parsed successfully",
@@ -198,8 +202,29 @@ async def upload_resume(
             "target_role": user.target_role,
             "skills": user.skills_list,
             "location_preference": user.location_preference,
+            "resume_filename": user.resume_filename,
         }
     }
+
+
+@router.get("/saved")
+async def get_saved_resume(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Download the user's saved resume file."""
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user or not user.resume_content:
+        raise HTTPException(status_code=404, detail="No saved resume found")
+
+    media_type = "application/pdf" if user.resume_filename and user.resume_filename.endswith(".pdf") else \
+                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    return StreamingResponse(
+        io.BytesIO(user.resume_content),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{user.resume_filename}"'}
+    )
 
 
 # ---------------------------------------------------------------------------

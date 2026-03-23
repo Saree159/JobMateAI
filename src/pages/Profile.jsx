@@ -116,14 +116,25 @@ export default function Profile() {
   };
 
   const handleResumeRewrite = async () => {
-    if (!rewriteFile) { toast.error('Please upload your resume first'); return; }
+    // Use saved resume if no file is selected
+    let fileToUse = rewriteFile;
+    if (!fileToUse && user?.resume_filename) {
+      const token2 = getToken();
+      if (!token2) { toast.error('Session expired — please log in again.'); return; }
+      try {
+        fileToUse = await resumeApi.getSavedFile(token2, user.resume_filename);
+      } catch {
+        toast.error('Could not load saved resume'); return;
+      }
+    }
+    if (!fileToUse) { toast.error('Please upload your resume first'); return; }
     if (!rewriteJD.trim()) { toast.error('Please paste the job description'); return; }
 
     setIsRewriting(true);
     try {
       const token = getToken();
       if (!token) { toast.error('Session expired — please log in again.'); return; }
-      const blob = await resumeApi.rewrite(rewriteFile, rewriteJD, token);
+      const blob = await resumeApi.rewrite(fileToUse, rewriteJD, token);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -465,7 +476,25 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-400">{t('profile.rewriteSubtitle')}</p>
 
-            <div className="flex items-center gap-4">
+            {/* Saved resume indicator */}
+            {user?.resume_filename && !rewriteFile && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-500/20">
+                <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                <span className="text-xs text-gray-300 flex-1 truncate">{user.resume_filename}</span>
+                <span className="text-xs text-blue-400">Will be used</span>
+              </div>
+            )}
+
+            {/* Active override file */}
+            {rewriteFile && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-green-950/30 border border-green-500/20">
+                <FileText className="w-4 h-4 text-green-400 shrink-0" />
+                <span className="text-xs text-gray-300 flex-1 truncate">{rewriteFile.name}</span>
+                <button className="text-xs text-gray-400 hover:text-red-400" onClick={() => setRewriteFile(null)}>✕</button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
               <input
                 type="file"
                 accept=".pdf,.docx"
@@ -486,19 +515,12 @@ export default function Profile() {
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => document.getElementById('rewrite-resume-input').click()}
               >
                 <FileText className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
-                {rewriteFile ? rewriteFile.name : t('profile.chooseResume')}
+                {user?.resume_filename ? 'Upload different resume' : t('profile.chooseResume')}
               </Button>
-              {rewriteFile && (
-                <button
-                  className="text-xs text-gray-400 hover:text-red-400"
-                  onClick={() => setRewriteFile(null)}
-                >
-                  ✕ clear
-                </button>
-              )}
             </div>
 
             <div className="space-y-1.5">
@@ -514,7 +536,7 @@ export default function Profile() {
 
             <Button
               onClick={handleResumeRewrite}
-              disabled={isRewriting || !rewriteFile || !rewriteJD.trim()}
+              disabled={isRewriting || (!rewriteFile && !user?.resume_filename) || !rewriteJD.trim()}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
               {isRewriting ? (

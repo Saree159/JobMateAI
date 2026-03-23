@@ -63,6 +63,7 @@ class UserResponse(UserBase):
     subscription_status: Optional[str] = None
     subscription_end_date: Optional[datetime] = None
     linkedin_connected: bool = False  # True when li_at token is set
+    resume_filename: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

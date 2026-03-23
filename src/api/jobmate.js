@@ -314,6 +314,16 @@ export const resumeApi = {
     await checkFetchResponse(response);
     return await response.json();
   },
+
+  /** Fetch the user's saved resume as a File object (for use in API calls). */
+  getSavedFile: async (token, filename) => {
+    const response = await fetch(`${API_BASE_URL}/api/resume/saved`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    await checkFetchResponse(response);
+    const blob = await response.blob();
+    return new File([blob], filename, { type: blob.type });
+  },
 };
 
 // ============================================================================

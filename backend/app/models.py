@@ -2,7 +2,7 @@
 SQLAlchemy database models for JobMate AI.
 Defines User and Job tables with relationships.
 """
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -54,6 +54,10 @@ class User(Base):
         default=WorkModePreference.REMOTE,
         nullable=True
     )
+
+    # Stored resume
+    resume_filename = Column(String(255), nullable=True)
+    resume_content = Column(LargeBinary, nullable=True)
 
     # LinkedIn integration
     linkedin_li_at = Column(Text, nullable=True)  # li_at session cookie for authenticated scraping
