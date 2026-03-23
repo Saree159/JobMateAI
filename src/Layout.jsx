@@ -88,7 +88,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-white/10">
           <SidebarHeader className="px-4 py-3">
             <img src={logo} alt="HireMatrix" className="w-full max-w-[160px] h-auto object-contain" />
@@ -156,7 +156,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {children}
           </div>
         </main>

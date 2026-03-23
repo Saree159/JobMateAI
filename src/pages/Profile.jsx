@@ -268,15 +268,15 @@ export default function Profile() {
   return (
     <div className="p-4 md:p-10 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex justify-between items-start mb-10">
+      <div className="flex flex-wrap justify-between items-start gap-3 mb-8">
         <div>
-          <h1 className="text-3xl font-semibold text-white mb-2">
+          <h1 className="text-2xl md:text-3xl font-semibold text-white mb-1">
             {t('profile.title')}
           </h1>
-          <p className="text-gray-500">{t('profile.subtitle')}</p>
+          <p className="text-gray-500 text-sm md:text-base">{t('profile.subtitle')}</p>
         </div>
         {!isEditing && (
-          <Button onClick={startEditing} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={startEditing} className="bg-blue-600 hover:bg-blue-700 shrink-0">
             {t('profile.editProfile')}
           </Button>
         )}

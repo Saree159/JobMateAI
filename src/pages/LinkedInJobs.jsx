@@ -80,7 +80,7 @@ export default function LinkedInJobs() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Linkedin className="w-8 h-8 text-blue-500" />
-            <h1 className="text-3xl font-bold text-white">LinkedIn Jobs</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">LinkedIn Jobs</h1>
           </div>
           <p className="text-gray-400">
             Search LinkedIn's public job listings by role and location

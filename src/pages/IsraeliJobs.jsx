@@ -92,7 +92,7 @@ export default function IsraeliJobs() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Globe className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
               {t('israeliJobs.title')}
             </h1>
           </div>
@@ -134,13 +134,13 @@ export default function IsraeliJobs() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     בחר קטגוריה
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {Object.entries(DRUSHIM_CATEGORIES).map(([id, name]) => (
                       <Button
                         key={id}
                         variant={selectedCategory === id ? "default" : "outline"}
                         onClick={() => handleCategoryChange(id)}
-                        className="justify-start text-right"
+                        className="justify-start text-right h-auto py-2 whitespace-normal leading-snug text-xs"
                       >
                         {name}
                       </Button>
@@ -233,7 +233,7 @@ export default function IsraeliJobs() {
 
         {/* Job Details Dialog */}
         <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto">
             {selectedJob && (
               <>
                 <DialogHeader>
