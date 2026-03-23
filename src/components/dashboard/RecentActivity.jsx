@@ -1,30 +1,37 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle2, Send, Calendar } from "lucide-react";
+import { Clock, Send, Calendar, CheckCircle2, XCircle, Bookmark } from "lucide-react";
 import { format } from "date-fns";
 
-const statusConfig = {
-  saved: { label: 'Saved', icon: Clock, color: 'bg-white/10 text-gray-300' },
-  applied: { label: 'Applied', icon: Send, color: 'bg-blue-900/40 text-blue-300' },
-  interview: { label: 'Interview', icon: Calendar, color: 'bg-purple-900/40 text-purple-300' },
-  offer: { label: 'Offer', icon: CheckCircle2, color: 'bg-green-900/40 text-green-300' },
-  rejected: { label: 'Rejected', icon: CheckCircle2, color: 'bg-red-900/40 text-red-300' },
+const STATUS_CONFIG = {
+  saved:     { label: 'Saved',     Icon: Bookmark,     dot: 'bg-gray-500',   text: 'text-gray-400'   },
+  applied:   { label: 'Applied',   Icon: Send,         dot: 'bg-blue-500',   text: 'text-blue-400'   },
+  interview: { label: 'Interview', Icon: Calendar,     dot: 'bg-purple-500', text: 'text-purple-400' },
+  offer:     { label: 'Offer',     Icon: CheckCircle2, dot: 'bg-green-500',  text: 'text-green-400'  },
+  rejected:  { label: 'Rejected',  Icon: XCircle,      dot: 'bg-red-500',    text: 'text-red-400'    },
 };
 
 export default function RecentActivity({ applications, isLoading }) {
-  const recentApps = applications.slice(0, 5);
+  const recentApps = [...applications]
+    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    .slice(0, 5);
 
   if (isLoading) {
     return (
       <Card className="border border-white/5">
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
+        <CardHeader className="pb-3">
+          <Skeleton className="h-5 w-32" />
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4 pt-1">
           {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <div key={i} className="flex gap-3 items-start">
+              <Skeleton className="h-4 w-4 rounded-full mt-1 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
           ))}
         </CardContent>
       </Card>
@@ -33,39 +40,60 @@ export default function RecentActivity({ applications, isLoading }) {
 
   return (
     <Card className="border border-white/5">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold text-white">
           Recent Activity
         </CardTitle>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="pt-1">
         {recentApps.length === 0 ? (
-          <div className="text-center py-8">
-            <Clock className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No activity yet</p>
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center mb-3">
+              <Clock className="w-4 h-4 text-gray-500" />
+            </div>
+            <p className="text-sm text-gray-400 font-medium">No activity yet</p>
+            <p className="text-xs text-gray-600 mt-1">Jobs you track will appear here</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {recentApps.map((app) => {
-              const status = statusConfig[app.status];
-              const StatusIcon = status.icon;
-              
-              return (
-                <div key={app.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
-                  <div className={`p-2 rounded-lg ${status.color}`}>
-                    <StatusIcon className="w-4 h-4" />
+          <div className="relative">
+            {/* Vertical timeline line */}
+            <div className="absolute left-[7px] top-2 bottom-2 w-px bg-white/5" />
+
+            <div className="space-y-4">
+              {recentApps.map((app, idx) => {
+                const cfg = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.saved;
+                const { Icon } = cfg;
+
+                return (
+                  <div key={app.id ?? idx} className="flex gap-3 items-start group">
+                    {/* Timeline dot */}
+                    <div className={`relative z-10 mt-1 w-3.5 h-3.5 rounded-full border-2 border-[hsl(var(--card))] shrink-0 ${cfg.dot}`} />
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 pb-0.5">
+                      <p className="text-sm font-medium text-white truncate leading-snug">
+                        {app.title ?? 'Untitled position'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-xs font-medium ${cfg.text}`}>
+                          {cfg.label}
+                        </span>
+                        {app.company && (
+                          <>
+                            <span className="text-gray-700 text-xs">·</span>
+                            <span className="text-xs text-gray-500 truncate">{app.company}</span>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-600 mt-0.5">
+                        {format(new Date(app.created_date), 'MMM d')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
-                      Application {status.label}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {format(new Date(app.created_date), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </CardContent>

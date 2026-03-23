@@ -1,32 +1,40 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { 
-  Briefcase, 
-  TrendingUp, 
-  Clock, 
+import {
+  Briefcase,
+  TrendingUp,
+  Clock,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
-  Target
+  Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import StatsCard from "../components/dashboard/StatsCard";
 import TopMatchesList from "../components/dashboard/TopMatchesList";
 import RecentActivity from "../components/dashboard/RecentActivity";
+
+// Derive a time-aware greeting without needing an i18n key
+function getGreeting(firstName) {
+  const h = new Date().getHours();
+  const salutation =
+    h < 12 ? "Good morning" :
+    h < 17 ? "Good afternoon" :
+              "Good evening";
+  return firstName ? `${salutation}, ${firstName}` : salutation;
+}
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const { data: applications = [], isLoading: appsLoading } = useQuery({
     queryKey: ['applications', user?.id],
     queryFn: async () => {
@@ -40,33 +48,37 @@ export default function Dashboard() {
     queryKey: ['top-matches', user?.id],
     queryFn: () => jobApi.topMatches(user.id),
     enabled: !!user?.id,
-    staleTime: 30 * 60 * 1000, // 30 min — matches cache lifetime
+    staleTime: 30 * 60 * 1000,
   });
 
   const stats = {
-    totalJobs: applications.length,
-    saved: applications.filter(a => a.status === 'saved').length,
-    applied: applications.filter(a => a.status === 'applied').length,
+    totalJobs:  applications.length,
+    saved:      applications.filter(a => a.status === 'saved').length,
+    applied:    applications.filter(a => a.status === 'applied').length,
     interviews: applications.filter(a => a.status === 'interview').length,
   };
 
-  const isLoading = appsLoading;
+  const isLoading  = appsLoading;
   const topMatches = topMatchesData?.jobs || [];
+  const firstName  = user?.full_name?.split(' ')[0] || null;
 
   return (
     <div className="p-4 md:p-10 max-w-7xl mx-auto">
-      {/* Header with modern gradient */}
-      <div className="mb-6 md:mb-10">
-        <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent mb-1 md:mb-2">
-          {t('dashboard.welcomeBack', { name: user?.full_name?.split(' ')[0] || 'there' })}
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="mb-8 md:mb-10">
+        <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">
+          {getGreeting(firstName)}
         </h1>
-        <p className="text-gray-400 text-sm md:text-lg">
-          {user?.target_role ? t('dashboard.findingJobs', { role: user.target_role }) : t('dashboard.commandCenter')}
+        <p className="text-sm text-gray-500 mt-1">
+          {user?.target_role
+            ? t('dashboard.findingJobs', { role: user.target_role })
+            : t('dashboard.commandCenter')}
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-10">
+      {/* ── Stats grid ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-10">
         <StatsCard
           title={t('dashboard.availableJobs')}
           value={stats.totalJobs}
@@ -97,46 +109,49 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Top Matches */}
+      {/* ── Main content ───────────────────────────────────────────────── */}
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+
+        {/* Top Matches — takes 2/3 width */}
         <div className="lg:col-span-2">
-          <TopMatchesList
-            jobs={topMatches}
-            isLoading={matchesLoading}
-          />
+          <TopMatchesList jobs={topMatches} isLoading={matchesLoading} />
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Profile Completion */}
+        {/* Sidebar — takes 1/3 width */}
+        <div className="space-y-4">
+
+          {/* Profile card */}
           {user && (
             <Card className="border border-white/5">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-400" />
                   {t('dashboard.yourProfile')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {user.target_role && (
                   <div>
-                    <p className="text-sm text-gray-400">{t('dashboard.targetRole')}</p>
-                    <p className="font-semibold text-white">{user.target_role}</p>
+                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-medium mb-1">
+                      {t('dashboard.targetRole')}
+                    </p>
+                    <p className="text-sm font-medium text-white">{user.target_role}</p>
                   </div>
                 )}
                 {user.skills && user.skills.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-400 mb-2">{t('dashboard.skills')}</p>
+                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-medium mb-2">
+                      {t('dashboard.skills')}
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {user.skills.slice(0, 6).map((skill, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} variant="secondary" className="text-[10px] font-normal h-5 px-1.5">
                           {skill}
                         </Badge>
                       ))}
                       {user.skills.length > 6 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {t('dashboard.moreSkills', { count: user.skills.length - 6 })}
+                        <Badge variant="secondary" className="text-[10px] font-normal h-5 px-1.5 text-gray-500">
+                          +{user.skills.length - 6}
                         </Badge>
                       )}
                     </div>
@@ -144,11 +159,12 @@ export default function Dashboard() {
                 )}
                 <Button
                   variant="outline"
-                  className="w-full mt-2"
+                  size="sm"
+                  className="w-full text-xs"
                   onClick={() => navigate(createPageUrl("Profile"))}
                 >
                   {t('dashboard.editProfile')}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </CardContent>
             </Card>
