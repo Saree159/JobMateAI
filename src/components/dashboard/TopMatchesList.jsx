@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Sparkles, MapPin, Building2, ExternalLink, Linkedin, Globe, Search, X } from "lucide-react";
+import { Sparkles, MapPin, Building2, ExternalLink, Linkedin, Globe, Search, X, Briefcase, Clock } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -28,8 +29,17 @@ function MatchBadge({ score }) {
   );
 }
 
+function extractRequiredYears(description) {
+  if (!description) return null;
+  const m = description.match(/(\d+)\+?\s*(?:to\s*\d+)?\s*years?\s+(?:of\s+)?(?:experience|exp)/i)
+    || description.match(/experience[:\s]+(\d+)\+?\s*years?/i)
+    || description.match(/minimum\s+(\d+)\s*years?/i);
+  return m ? parseInt(m[1]) : null;
+}
+
 export default function TopMatchesList({ jobs, isLoading }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch]       = useState("");
   const [source, setSource]       = useState("All");
   const [scoreFilter, setScore]   = useState("All");
@@ -201,6 +211,36 @@ export default function TopMatchesList({ jobs, isLoading }) {
                     {job.description.split("\n").filter(Boolean).slice(0, 2).join(" ")}
                   </p>
                 )}
+
+                {/* Experience & role details */}
+                {(() => {
+                  const reqYears = extractRequiredYears(job.description);
+                  const userYears = user?.years_of_experience;
+                  const userRole = user?.target_role;
+                  if (!reqYears && !userRole) return null;
+                  return (
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      {userRole && (
+                        <span className="flex items-center gap-1">
+                          <Briefcase className="w-3 h-3" />{userRole}
+                        </span>
+                      )}
+                      {reqYears && (
+                        <span className={`flex items-center gap-1 ${
+                          userYears != null
+                            ? userYears >= reqYears ? 'text-green-400' : 'text-amber-400'
+                            : ''
+                        }`}>
+                          <Clock className="w-3 h-3" />
+                          {reqYears}+ yrs required
+                          {userYears != null && (
+                            <span>{userYears >= reqYears ? '✓' : `(you: ${userYears})`}</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   {job.skills?.slice(0, 4).map((s, i) => (
