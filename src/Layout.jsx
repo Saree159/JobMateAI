@@ -18,7 +18,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -39,46 +38,14 @@ export default function Layout({ children, currentPageName }) {
   const isRTL = i18n.language === 'he';
 
   const navigationItems = [
-    {
-      title: t('nav.dashboard'),
-      url: createPageUrl("Dashboard"),
-      icon: LayoutDashboard,
-    },
-    {
-      title: t('nav.jobs'),
-      url: createPageUrl("Jobs"),
-      icon: Briefcase,
-    },
-    {
-      title: t('nav.israeliJobs'),
-      url: createPageUrl("IsraeliJobs"),
-      icon: Globe,
-    },
-    {
-      title: t('nav.linkedinJobs'),
-      url: createPageUrl("LinkedInJobs"),
-      icon: Linkedin,
-    },
-    {
-      title: t('nav.applications'),
-      url: createPageUrl("Applications"),
-      icon: FileText,
-    },
-    {
-      title: t('nav.analytics'),
-      url: createPageUrl("Analytics"),
-      icon: BarChart3,
-    },
-    {
-      title: t('nav.profile'),
-      url: createPageUrl("Profile"),
-      icon: User,
-    },
-    {
-      title: t('nav.pricing'),
-      url: createPageUrl("Pricing"),
-      icon: CreditCard,
-    },
+    { title: t('nav.dashboard'),    url: createPageUrl("Dashboard"),    icon: LayoutDashboard },
+    { title: t('nav.jobs'),         url: createPageUrl("Jobs"),         icon: Briefcase       },
+    { title: t('nav.israeliJobs'),  url: createPageUrl("IsraeliJobs"),  icon: Globe           },
+    { title: t('nav.linkedinJobs'), url: createPageUrl("LinkedInJobs"), icon: Linkedin        },
+    { title: t('nav.applications'), url: createPageUrl("Applications"), icon: FileText        },
+    { title: t('nav.analytics'),    url: createPageUrl("Analytics"),    icon: BarChart3       },
+    { title: t('nav.profile'),      url: createPageUrl("Profile"),      icon: User            },
+    { title: t('nav.pricing'),      url: createPageUrl("Pricing"),      icon: CreditCard      },
   ];
 
   const handleLogout = async () => {
@@ -86,73 +53,108 @@ export default function Layout({ children, currentPageName }) {
     navigate('/login');
   };
 
+  const initials = user?.full_name
+    ?.split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U';
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
-        <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-white/10">
-          <SidebarHeader className="px-4 py-3">
-            <img src={logo} alt="HireMatrix" className="w-full max-w-[160px] h-auto object-contain" />
+
+        {/* ── Sidebar ──────────────────────────────────────────────── */}
+        <Sidebar
+          side={isRTL ? "right" : "left"}
+          className="ltr:border-r rtl:border-l border-white/[0.06]"
+        >
+          {/* Logo */}
+          <SidebarHeader className="px-5 py-4 border-b border-white/[0.06]">
+            <img
+              src={logo}
+              alt="HireMatrix"
+              className="w-full max-w-[148px] h-auto object-contain opacity-90"
+            />
           </SidebarHeader>
 
-          <SidebarContent className="p-3">
+          {/* Nav */}
+          <SidebarContent className="px-3 py-3">
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {navigationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        className={`transition-all duration-200 rounded-xl mb-1 ${
-                          location.pathname === item.url
-                            ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                            : 'text-gray-400 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
-                          <item.icon className="w-5 h-5 shrink-0" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                <SidebarMenu className="space-y-0.5">
+                  {navigationItems.map((item) => {
+                    const isActive = location.pathname === item.url;
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          <Link
+                            to={item.url}
+                            className={`
+                              relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
+                              font-medium transition-all duration-150 group
+                              ${isActive
+                                ? 'bg-blue-600/15 text-blue-300'
+                                : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.05]'
+                              }
+                            `}
+                          >
+                            {/* Active left indicator */}
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
+                            )}
+                            <item.icon
+                              className={`w-4 h-4 shrink-0 transition-colors ${
+                                isActive ? 'text-blue-400' : 'text-gray-600 group-hover:text-gray-400'
+                              }`}
+                              strokeWidth={isActive ? 2.5 : 2}
+                            />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-white/10 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-white font-semibold text-sm">
-                    {user?.full_name?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white text-sm truncate">
-                    {user?.full_name || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
-                </div>
+          {/* Footer / User */}
+          <SidebarFooter className="border-t border-white/[0.06] p-3">
+            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.04] transition-colors group">
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shrink-0 shadow-lg">
+                <span className="text-white font-semibold text-xs tracking-wide">{initials}</span>
               </div>
+
+              {/* Name + email */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-200 truncate leading-none mb-0.5">
+                  {user?.full_name || 'User'}
+                </p>
+                <p className="text-[11px] text-gray-600 truncate">{user?.email}</p>
+              </div>
+
+              {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="p-2 hover:bg-white/10 hover:text-red-400 text-gray-400 rounded-lg transition-all duration-200"
                 title={t('nav.logout')}
+                className="p-1.5 rounded-md text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-[#0b1120] border-b border-white/10 px-6 py-4 md:hidden sticky top-0 z-10">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-white/10 text-gray-400 p-2 rounded-lg transition-colors" />
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="HireMatrix" className="max-w-[120px] h-auto object-contain" />
-              </div>
+        {/* ── Main ─────────────────────────────────────────────────── */}
+        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Mobile top bar */}
+          <header className="bg-[hsl(222_50%_4.5%)] border-b border-white/[0.06] px-4 py-3 md:hidden sticky top-0 z-20">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/[0.06] transition-colors" />
+              <img src={logo} alt="HireMatrix" className="max-w-[110px] h-auto object-contain opacity-90" />
             </div>
           </header>
 

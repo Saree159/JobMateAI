@@ -1,17 +1,8 @@
 import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobApi } from "@/api/jobmate";
-import { 
-  Building2, 
-  MapPin, 
-  Calendar,
-  MoreHorizontal,
-  ExternalLink,
-  Trash2
-} from "lucide-react";
+import { Building2, MapPin, Calendar, MoreHorizontal, ExternalLink, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,128 +14,145 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-const statusConfig = {
-  saved: { label: 'Saved', color: 'bg-white/10 text-gray-300 border-gray-300' },
-  applied: { label: 'Applied', color: 'bg-blue-900/40 text-blue-300 border-blue-300' },
-  interview: { label: 'Interview', color: 'bg-purple-100 text-purple-300 border-purple-300' },
-  offer: { label: 'Offer', color: 'bg-green-900/40 text-green-700 border-green-300' },
-  rejected: { label: 'Rejected', color: 'bg-red-900/40 text-red-700 border-red-300' },
+const STATUS = {
+  saved:     { label: 'Saved',     style: 'bg-gray-500/10   text-gray-400   border-gray-500/20'   },
+  applied:   { label: 'Applied',   style: 'bg-blue-500/10   text-blue-400   border-blue-500/20'   },
+  interview: { label: 'Interview', style: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+  offer:     { label: 'Offer',     style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  rejected:  { label: 'Rejected', style: 'bg-red-500/10    text-red-400    border-red-500/20'    },
 };
+
+// Deterministic gradient from company name
+const GRADIENTS = [
+  "from-blue-500 to-indigo-600",
+  "from-violet-500 to-purple-600",
+  "from-emerald-500 to-teal-600",
+  "from-orange-500 to-amber-600",
+  "from-pink-500 to-rose-600",
+];
+function companyGradient(name = "") {
+  return GRADIENTS[name.charCodeAt(0) % GRADIENTS.length];
+}
+function companyInitials(name = "") {
+  return name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+}
 
 export default function ApplicationCard({ application }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const updateStatusMutation = useMutation({
+  const updateStatus = useMutation({
     mutationFn: ({ id, status }) => jobApi.update(id, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applications'] }),
   });
 
-  const deleteApplicationMutation = useMutation({
+  const deleteApp = useMutation({
     mutationFn: (id) => jobApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applications'] }),
   });
 
-  const status = statusConfig[application.status];
+  const status = STATUS[application.status] ?? STATUS.saved;
+  const gradient = companyGradient(application.company || "");
+  const initials = companyInitials(application.company || "");
 
   return (
-    <Card className="border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3
-                  className="text-base font-semibold text-white hover:text-blue-600 cursor-pointer break-words"
-                  onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
-                >
-                  {application.title}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400 mt-1">
-                  <span className="flex items-center gap-1">
-                    <Building2 className="w-4 h-4" />
+    <div className="group bg-card border border-white/5 rounded-xl p-4 transition-all duration-200 hover:border-white/10 hover:bg-[hsl(221_40%_11%)]">
+      <div className="flex items-start gap-3">
+        {/* Company avatar */}
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-md`}>
+          <span className="text-white text-xs font-bold">{initials}</span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <button
+                onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
+                className="text-sm font-semibold text-white hover:text-blue-300 transition-colors text-left leading-snug break-words"
+              >
+                {application.title}
+              </button>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                {application.company && (
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <Building2 className="w-3 h-3 shrink-0" />
                     {application.company}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {application.location || 'Remote'}
+                )}
+                {application.location && (
+                  <span className="flex items-center gap-1 text-xs text-gray-600">
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    {application.location}
                   </span>
-                  {application.match_score && (
-                    <Badge variant="outline" className="text-xs">
-                      {application.match_score}% Match
-                    </Badge>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <Badge className={`${status.color} border`}>
-                {status.label}
-              </Badge>
-              <span className="text-sm text-gray-500 flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                {format(new Date(application.created_date), 'MMM d, yyyy')}
-              </span>
-              {application.applied_date && (
-                <span className="text-sm text-gray-500">
-                  Applied: {format(new Date(application.applied_date), 'MMM d')}
-                </span>
-              )}
-            </div>
-
-            {application.notes && (
-              <p className="text-sm text-gray-400 mt-3 line-clamp-2">
-                {application.notes}
-              </p>
-            )}
+            {/* More menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-gray-600 hover:text-gray-300 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}>
+                  <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {Object.entries(STATUS).map(([key, val]) => (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => updateStatus.mutate({ id: application.id, status: key })}
+                    className={application.status === key ? 'opacity-50 pointer-events-none' : ''}
+                  >
+                    Mark as {val.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => deleteApp.mutate(application.id)}
+                  className="text-red-400 focus:text-red-400"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="w-5 h-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}>
-                View Job Details
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'saved' })}>
-                Mark as Saved
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'applied' })}>
-                Mark as Applied
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'interview' })}>
-                Mark as Interview
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'offer' })}>
-                Mark as Offer
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'rejected' })}>
-                Mark as Rejected
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => deleteApplicationMutation.mutate(application.id)}
-                className="text-red-600"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Application
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Footer row */}
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${status.style}`}>
+              {status.label}
+            </span>
+
+            {application.match_score > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border border-blue-500/20 bg-blue-500/10 text-blue-400">
+                {application.match_score}% match
+              </span>
+            )}
+
+            <span className="flex items-center gap-1 text-[11px] text-gray-600 ml-auto">
+              <Calendar className="w-3 h-3" />
+              {format(new Date(application.created_date), 'MMM d, yyyy')}
+            </span>
+          </div>
+
+          {application.notes && (
+            <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+              {application.notes}
+            </p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

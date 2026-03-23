@@ -101,20 +101,20 @@ export default function Jobs() {
   const viewsRemaining = null; // Daily limits disabled in standalone version
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+      <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-semibold text-white">
+          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
             {t('jobs.title')}
           </h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             {t('jobs.jobsSaved', { count: filteredJobs.length })}
           </p>
         </div>
         <Button
           onClick={() => setShowAddDialog(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 shrink-0"
         >
           <Plus className="w-4 h-4 mr-2" />
           {t('jobs.addJob')}
@@ -122,22 +122,20 @@ export default function Jobs() {
       </div>
 
       {/* Search & Filters */}
-      <Card className="border border-white/5 mb-8">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                placeholder={t('jobs.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <JobFilters filters={filters} setFilters={setFilters} />
+      <div className="bg-card border border-white/5 rounded-xl p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            <Input
+              placeholder={t('jobs.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-white/5 border-white/10 focus:border-blue-500/50 text-sm"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <JobFilters filters={filters} setFilters={setFilters} />
+        </div>
+      </div>
 
       {/* Jobs Grid */}
       {isLoading ? (

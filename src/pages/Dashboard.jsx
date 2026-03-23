@@ -80,10 +80,11 @@ export default function Dashboard() {
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="mb-8 md:mb-10">
-        <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">
-          {getGreeting(firstName)}
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          <span className="text-white">{getGreeting(firstName).split(',')[0]}</span>
+          {firstName && <span className="text-gradient">{`, ${firstName}`}</span>}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 mt-1.5">
           {user?.target_role
             ? t('dashboard.findingJobs', { role: user.target_role })
             : t('dashboard.commandCenter')}
