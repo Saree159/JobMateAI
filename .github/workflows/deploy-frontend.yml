@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  BACKEND_URL: hirematrix-backend.wittyplant-024eed5e.eastus2.azurecontainerapps.io
+  BACKEND_URL: hirematrix-backend.grayglacier-5d8fe2aa.eastus2.azurecontainerapps.io
 
 jobs:
   deploy-frontend:
