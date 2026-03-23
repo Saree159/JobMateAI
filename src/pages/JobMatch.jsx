@@ -522,64 +522,53 @@ export default function JobMatch() {
                 Tailor Resume for This Job
               </CardTitle>
               <p className="text-xs text-gray-500 mt-0.5">
-                Upload your resume — we'll identify gaps and ask you a few questions before rewriting.
+                We'll identify gaps and ask you a few questions before rewriting your resume for this job.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* ── Step 0: Resume picker ── */}
+              {/* ── Step 0: Resume source ── */}
               <div className="space-y-2">
-                {/* Saved resume option */}
-                {user?.resume_filename && !resumeFile && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-500/20">
-                    <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span className="text-xs text-gray-300 flex-1 truncate">{user.resume_filename}</span>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
-                      onClick={handleUseSavedResume}
-                      disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
-                    >
-                      Use saved resume
-                    </Button>
-                  </div>
-                )}
-
-                {/* Active resume + change option */}
-                {resumeFile && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-green-950/30 border border-green-500/20">
-                    <FileText className="w-4 h-4 text-green-400 shrink-0" />
-                    <span className="text-xs text-gray-300 flex-1 truncate">
-                      {usingSavedResume ? "Saved: " : ""}{resumeFile.name}
-                    </span>
-                    {flowStep === "idle" && (
-                      <button
-                        className="text-xs text-gray-400 hover:text-red-400"
-                        onClick={() => { setResumeFile(null); setUsingSavedResume(false); setDiffResult(null); setGapAnalysis(null); setFlowStep("idle"); }}
+                {user?.resume_filename ? (
+                  /* Has saved resume */
+                  resumeFile ? (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-950/30 border border-green-500/20">
+                      <FileText className="w-4 h-4 text-green-400 shrink-0" />
+                      <span className="text-xs text-gray-300 flex-1 truncate">{resumeFile.name}</span>
+                      {flowStep === "idle" && (
+                        <button
+                          className="text-xs text-gray-400 hover:text-red-400"
+                          onClick={() => { setResumeFile(null); setUsingSavedResume(false); setDiffResult(null); setGapAnalysis(null); setFlowStep("idle"); }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-500/20">
+                      <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="text-xs text-gray-300 flex-1 truncate">{user.resume_filename}</span>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                        onClick={handleUseSavedResume}
+                        disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
                       >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* File picker — always available to upload a different file */}
-                {!resumeFile && (
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="file"
-                      accept=".pdf,.docx"
-                      className="hidden"
-                      id="job-match-resume"
-                      onChange={handleFileChange}
-                    />
+                        Use this resume
+                      </Button>
+                    </div>
+                  )
+                ) : (
+                  /* No saved resume — prompt to upload via Profile */
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-950/30 border border-amber-500/20">
+                    <FileText className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="text-xs text-gray-300 flex-1">No resume saved yet.</span>
                     <Button
-                      variant="outline"
                       size="sm"
-                      onClick={() => document.getElementById("job-match-resume").click()}
-                      disabled={flowStep === "analyzing-gaps" || flowStep === "rewriting"}
+                      variant="outline"
+                      className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                      onClick={() => navigate(createPageUrl("Profile"))}
                     >
-                      <FileText className="w-3.5 h-3.5 mr-1.5" />
-                      {user?.resume_filename ? "Upload different resume" : "Choose Resume (PDF / DOCX)"}
+                      Upload on Profile
                     </Button>
                   </div>
                 )}
