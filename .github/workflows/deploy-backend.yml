@@ -10,7 +10,7 @@ on:
 
 env:
   RESOURCE_GROUP: hirematrix-rg
-  ACR_NAME: hirematrixacr2
+  ACR_NAME: hirematrixacrc4b90a
   BACKEND_APP: hirematrix-backend
 
 jobs:
