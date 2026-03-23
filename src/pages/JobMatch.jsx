@@ -345,11 +345,11 @@ export default function JobMatch() {
   const changedCount = processedDiff.filter(l => l.type !== "context").length;
 
   return (
-    <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-4 md:space-y-6">
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-100 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-100 transition-colors py-2 -ml-1"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
@@ -386,7 +386,7 @@ export default function JobMatch() {
         </CardContent>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
         {/* ── Left column ──────────────────────────────────────────── */}
         <div className="space-y-6">
           {/* Match Analysis */}

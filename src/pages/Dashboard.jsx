@@ -54,19 +54,19 @@ export default function Dashboard() {
   const topMatches = topMatchesData?.jobs || [];
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 md:p-10 max-w-7xl mx-auto">
       {/* Header with modern gradient */}
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent mb-2">
+      <div className="mb-6 md:mb-10">
+        <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent mb-1 md:mb-2">
           {t('dashboard.welcomeBack', { name: user?.full_name?.split(' ')[0] || 'there' })}
         </h1>
-        <p className="text-gray-400 text-lg">
+        <p className="text-gray-400 text-sm md:text-lg">
           {user?.target_role ? t('dashboard.findingJobs', { role: user.target_role }) : t('dashboard.commandCenter')}
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-10">
         <StatsCard
           title={t('dashboard.availableJobs')}
           value={stats.totalJobs}
@@ -98,7 +98,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
         {/* Top Matches */}
         <div className="lg:col-span-2">
           <TopMatchesList

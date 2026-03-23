@@ -110,12 +110,12 @@ export default function TopMatchesList({ jobs, isLoading }) {
 
             {/* Source + Score chips */}
             <div className="flex flex-wrap gap-2">
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 {SOURCE_FILTERS.map(s => (
                   <button
                     key={s}
                     onClick={() => setSource(s)}
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                       source === s
                         ? "bg-blue-600 border-blue-600 text-white"
                         : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
@@ -125,18 +125,18 @@ export default function TopMatchesList({ jobs, isLoading }) {
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1 ml-auto">
+              <div className="flex gap-1 flex-wrap">
                 {SCORE_FILTERS.map(f => (
                   <button
                     key={f.label}
                     onClick={() => setScore(f.label)}
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                       scoreFilter === f.label
                         ? "bg-blue-600 border-blue-600 text-white"
                         : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
                     }`}
                   >
-                    {f.label === "All" ? "Any score" : f.label === "High" ? "High ≥70%" : "Good ≥40%"}
+                    {f.label === "All" ? "Any score" : f.label === "High" ? "≥70%" : "≥40%"}
                   </button>
                 ))}
               </div>

@@ -266,7 +266,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-4xl mx-auto">
+    <div className="p-4 md:p-10 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-start mb-10">
         <div>

@@ -162,35 +162,35 @@ export default function JobDetails() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-5xl mx-auto">
+    <div className="p-4 md:p-10 max-w-5xl mx-auto">
       {/* Back Button */}
       <Button
         variant="ghost"
         onClick={() => navigate(createPageUrl("Jobs"))}
-        className="mb-6"
+        className="mb-4 md:mb-6 -ml-2"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Jobs
       </Button>
 
       {/* Job Header */}
-      <Card className="border border-white/5 mb-8">
-        <CardHeader>
+      <Card className="border border-white/5 mb-6 md:mb-8">
+        <CardHeader className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
             <div className="flex-1">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-16 h-16 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-8 h-8 text-gray-400" />
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{job.title}</h1>
-                  <div className="flex flex-wrap items-center gap-3 text-gray-400">
+                <div className="min-w-0">
+                  <h1 className="text-xl md:text-3xl font-bold text-white mb-1 md:mb-2 leading-snug">{job.title}</h1>
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-400 text-sm">
                     <span className="flex items-center gap-1">
-                      <Building2 className="w-4 h-4" />
+                      <Building2 className="w-3.5 h-3.5" />
                       {job.company}
                     </span>
                     <span className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-3.5 h-3.5" />
                       {job.location}
                     </span>
                   </div>
@@ -198,21 +198,21 @@ export default function JobDetails() {
               </div>
             </div>
 
-            {/* Match Details */}
-            <div className="bg-white/5 p-5 rounded-lg space-y-4 min-w-[180px]">
+            {/* Match Details — horizontal on mobile, vertical on md+ */}
+            <div className="w-full md:w-auto bg-white/5 p-4 md:p-5 rounded-lg md:space-y-4 flex md:block items-center gap-6 md:gap-0 md:min-w-[180px]">
               {/* Match Score */}
-              <div className="text-center">
-                <div className={`text-4xl font-semibold mb-1 ${
+              <div className="text-center shrink-0">
+                <div className={`text-3xl md:text-4xl font-semibold mb-0.5 ${
                   matchScore >= 70 ? 'text-green-500' :
                   matchScore >= 50 ? 'text-yellow-500' :
                   'text-gray-400'
                 }`}>
                   {matchScore}%
                 </div>
-                <p className="text-xs text-gray-500">Match Score</p>
+                <p className="text-xs text-gray-500">Match</p>
               </div>
 
-              <div className="border-t border-white/10 pt-3 space-y-2.5">
+              <div className="hidden md:block border-t border-white/10 pt-3 space-y-2.5">
                 {/* User's role */}
                 {user?.target_role && (
                   <div>
@@ -248,12 +248,29 @@ export default function JobDetails() {
                   </div>
                 )}
               </div>
+
+              {/* Mobile-only inline details */}
+              <div className="md:hidden flex flex-wrap gap-3 text-xs">
+                {user?.target_role && (
+                  <span className="text-gray-400">{user.target_role}</span>
+                )}
+                {user?.years_of_experience != null && (
+                  <span className="text-gray-400">{user.years_of_experience} yrs exp</span>
+                )}
+                {requiredYears && (
+                  <span className={user?.years_of_experience != null
+                    ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
+                    : 'text-gray-400'}>
+                    {requiredYears}+ yrs required
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
@@ -473,7 +490,7 @@ export default function JobDetails() {
                     <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                       💰 Estimated Range
                     </h4>
-                    <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
                         <p className="text-sm text-gray-400">Minimum</p>
                         <p className="text-xl font-bold text-green-700">
