@@ -108,38 +108,35 @@ export default function TopMatchesList({ jobs, isLoading }) {
               )}
             </div>
 
-            {/* Source + Score chips */}
-            <div className="flex flex-wrap gap-2">
-              <div className="flex gap-1 flex-wrap">
-                {SOURCE_FILTERS.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setSource(s)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                      source === s
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-1 flex-wrap">
-                {SCORE_FILTERS.map(f => (
-                  <button
-                    key={f.label}
-                    onClick={() => setScore(f.label)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                      scoreFilter === f.label
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
-                    }`}
-                  >
-                    {f.label === "All" ? "Any score" : f.label === "High" ? "≥70%" : "≥40%"}
-                  </button>
-                ))}
-              </div>
+            {/* Source + Score chips — single wrapping row */}
+            <div className="flex flex-wrap gap-1.5">
+              {SOURCE_FILTERS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => setSource(s)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    source === s
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+              <div className="w-px bg-white/10 self-stretch mx-0.5" />
+              {SCORE_FILTERS.map(f => (
+                <button
+                  key={f.label}
+                  onClick={() => setScore(f.label)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    scoreFilter === f.label
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-white/10 text-gray-400 hover:border-white/30 hover:text-white"
+                  }`}
+                >
+                  {f.label === "All" ? "Any score" : f.label === "High" ? "≥70%" : "≥40%"}
+                </button>
+              ))}
             </div>
 
             {hasActiveFilter && (
@@ -181,8 +178,8 @@ export default function TopMatchesList({ jobs, isLoading }) {
               <MatchBadge score={job.match_score ?? 0} />
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-white truncate">{job.title}</h3>
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <h3 className="font-semibold text-white truncate min-w-0">{job.title}</h3>
                   {job.source === "linkedin" ? (
                     <span className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
                       <Linkedin className="w-3 h-3" /> LinkedIn
@@ -207,7 +204,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
                 </div>
 
                 {job.description && (
-                  <p className="text-sm text-gray-400 line-clamp-2 mt-1.5 whitespace-pre-line">
+                  <p className="text-sm text-gray-400 line-clamp-2 mt-1.5 overflow-hidden break-words">
                     {job.description.split("\n").filter(Boolean).slice(0, 2).join(" ")}
                   </p>
                 )}
