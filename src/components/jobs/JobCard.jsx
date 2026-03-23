@@ -7,11 +7,11 @@ import { Building2, MapPin, Bookmark, ArrowRight, Sparkles } from "lucide-react"
 export default function JobCard({ job, onView }) {
   return (
     <Card className="border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all cursor-pointer group" onClick={onView}>
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-white group-hover:text-blue-600 transition-colors">
+              <h3 className="text-base font-semibold text-white group-hover:text-blue-600 transition-colors break-words">
                 {job.title}
               </h3>
               {job.isSaved && (
@@ -65,23 +65,21 @@ export default function JobCard({ job, onView }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-4 border-t border-white/5">
-          <div className="flex gap-2">
-            {job.job_type && (
-              <Badge variant="outline" className="text-xs capitalize">
-                {job.job_type}
-              </Badge>
-            )}
-            {job.experience_level && (
-              <Badge variant="outline" className="text-xs capitalize">
-                {job.experience_level}
-              </Badge>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-white/5">
+          {job.job_type && (
+            <Badge variant="outline" className="text-xs capitalize">
+              {job.job_type}
+            </Badge>
+          )}
+          {job.experience_level && (
+            <Badge variant="outline" className="text-xs capitalize">
+              {job.experience_level}
+            </Badge>
+          )}
           <Button
             size="sm"
             variant="ghost"
-            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 group-hover:translate-x-1 transition-transform"
+            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 group-hover:translate-x-1 transition-transform ml-auto"
           >
             View
             <ArrowRight className="w-4 h-4 ml-1" />

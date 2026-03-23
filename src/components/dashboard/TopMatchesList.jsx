@@ -242,12 +242,12 @@ export default function TopMatchesList({ jobs, isLoading }) {
                   );
                 })()}
 
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  {job.skills?.slice(0, 4).map((s, i) => (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {job.skills?.slice(0, 3).map((s, i) => (
                     <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
                   ))}
-                  {(job.skills?.length ?? 0) > 4 && (
-                    <Badge variant="secondary" className="text-xs">+{job.skills.length - 4}</Badge>
+                  {(job.skills?.length ?? 0) > 3 && (
+                    <Badge variant="secondary" className="text-xs">+{job.skills.length - 3}</Badge>
                   )}
                   {job.experience_level && (
                     <Badge variant="outline" className="text-xs">{job.experience_level}</Badge>
@@ -257,7 +257,7 @@ export default function TopMatchesList({ jobs, isLoading }) {
                       href={job.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto"
+                      className="ml-auto shrink-0"
                       onClick={e => e.stopPropagation()}
                     >
                       <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-7 px-2">
@@ -272,21 +272,23 @@ export default function TopMatchesList({ jobs, isLoading }) {
         )}
 
         {jobs.length > 0 && (
-          <div className="flex gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2 mt-2">
             <Button
               variant="outline"
-              className="flex-1"
+              size="sm"
+              className="w-full text-xs"
               onClick={() => navigate(createPageUrl("israeliJobs"))}
             >
-              <Globe className="w-4 h-4 mr-1.5" />
+              <Globe className="w-3.5 h-3.5 mr-1" />
               Israeli Jobs
             </Button>
             <Button
               variant="outline"
-              className="flex-1"
+              size="sm"
+              className="w-full text-xs"
               onClick={() => navigate(createPageUrl("linkedinJobs"))}
             >
-              <Linkedin className="w-4 h-4 mr-1.5" />
+              <Linkedin className="w-3.5 h-3.5 mr-1" />
               LinkedIn Jobs
             </Button>
           </div>

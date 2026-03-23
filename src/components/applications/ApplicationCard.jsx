@@ -53,16 +53,16 @@ export default function ApplicationCard({ application }) {
 
   return (
     <Card className="border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-1 min-w-0">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-6 h-6 text-gray-400" />
+              <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-5 h-5 text-gray-400" />
               </div>
-              <div className="flex-1">
-                <h3 
-                  className="text-lg font-semibold text-white hover:text-blue-600 cursor-pointer"
+              <div className="flex-1 min-w-0">
+                <h3
+                  className="text-base font-semibold text-white hover:text-blue-600 cursor-pointer break-words"
                   onClick={() => navigate(createPageUrl("JobDetails") + `?id=${application.id}`)}
                 >
                   {application.title}
