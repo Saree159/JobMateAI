@@ -87,7 +87,7 @@ export default function Pricing() {
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-10 bg-background">
+    <div className="p-4 md:p-10 overflow-x-hidden">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}

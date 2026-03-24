@@ -34,9 +34,8 @@ export default function Layout({ children, currentPageName }) {
   const initials = user?.full_name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full max-w-full bg-background overflow-x-hidden"
-           style={{ maxWidth: '100vw' }}>
+    <SidebarProvider className="overflow-x-hidden" style={{ maxWidth: '100vw' }}>
+      <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
 
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-gray-200">
           {/* Brand */}

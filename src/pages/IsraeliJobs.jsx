@@ -86,8 +86,8 @@ export default function IsraeliJobs() {
   const jobs = data?.jobs || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -276,7 +276,7 @@ export default function IsraeliJobs() {
                   {/* Description */}
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4">תיאור המשרה</h3>
-                    <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
+                    <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap break-words overflow-hidden">
                       {selectedJob.description}
                     </div>
                   </div>

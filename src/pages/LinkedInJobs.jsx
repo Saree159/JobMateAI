@@ -16,7 +16,7 @@ function DescriptionPreview({ text }) {
   const hasMore = lines.length > 4;
   return (
     <div className="text-xs text-gray-400 leading-relaxed">
-      <p className="whitespace-pre-line">{expanded ? text : preview}</p>
+      <p className="whitespace-pre-line break-words overflow-hidden">{expanded ? text : preview}</p>
       {hasMore && (
         <button
           className="text-blue-600 hover:text-blue-700 mt-1 font-medium"
@@ -74,8 +74,8 @@ export default function LinkedInJobs() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

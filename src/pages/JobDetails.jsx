@@ -279,7 +279,7 @@ export default function JobDetails() {
               <CardTitle className="font-semibold">Job Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+              <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{job.description}</p>
             </CardContent>
           </Card>
 
@@ -343,7 +343,7 @@ export default function JobDetails() {
               ) : (
                 <div>
                   {notes ? (
-                    <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{notes}</p>
                   ) : (
                     <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
                   )}
