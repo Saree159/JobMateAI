@@ -67,9 +67,9 @@ export default function Applications() {
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-10 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-1">
             {t('applications.title')}
           </h1>
           <p className="text-gray-500">
@@ -105,16 +105,18 @@ export default function Applications() {
 
       {/* Filter Tabs */}
       <Card className="border border-gray-100 mb-8">
-        <CardContent className="p-6">
+        <CardContent className="p-3 sm:p-6">
           <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-            <TabsList className="bg-gray-100">
-              <TabsTrigger value="all">{t('jobs.all')} ({stats.total})</TabsTrigger>
-              <TabsTrigger value="saved">{t('jobs.saved_status')} ({stats.saved})</TabsTrigger>
-              <TabsTrigger value="applied">{t('jobs.applied_status')} ({stats.applied})</TabsTrigger>
-              <TabsTrigger value="interview">{t('jobs.interview_status')} ({stats.interview})</TabsTrigger>
-              <TabsTrigger value="offer">{t('jobs.offer_status')} ({stats.offer})</TabsTrigger>
-              <TabsTrigger value="rejected">{t('jobs.rejected_status')} ({stats.rejected})</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList className="bg-gray-100 flex-nowrap w-max min-w-full">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">{t('jobs.all')} ({stats.total})</TabsTrigger>
+                <TabsTrigger value="saved" className="text-xs sm:text-sm">{t('jobs.saved_status')} ({stats.saved})</TabsTrigger>
+                <TabsTrigger value="applied" className="text-xs sm:text-sm">{t('jobs.applied_status')} ({stats.applied})</TabsTrigger>
+                <TabsTrigger value="interview" className="text-xs sm:text-sm">{t('jobs.interview_status')} ({stats.interview})</TabsTrigger>
+                <TabsTrigger value="offer" className="text-xs sm:text-sm">{t('jobs.offer_status')} ({stats.offer})</TabsTrigger>
+                <TabsTrigger value="rejected" className="text-xs sm:text-sm">{t('jobs.rejected_status')} ({stats.rejected})</TabsTrigger>
+              </TabsList>
+            </div>
           </Tabs>
         </CardContent>
       </Card>

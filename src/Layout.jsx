@@ -2,7 +2,6 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Briefcase, LayoutDashboard, FileText, User, LogOut, CreditCard, BarChart3, Globe, Linkedin } from "lucide-react";
-import logo from "@/assets/logo.png";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader,
@@ -36,12 +35,13 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
+      <div className="min-h-screen flex w-full max-w-full bg-background overflow-x-hidden"
+           style={{ maxWidth: '100vw' }}>
 
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-gray-200">
-          {/* Logo */}
+          {/* Brand */}
           <SidebarHeader className="px-5 py-4 border-b border-gray-100">
-            <img src={logo} alt="HireMatrix" className="w-full max-w-[148px] h-auto object-contain" />
+            <span className="text-base font-bold text-gray-900 tracking-tight">HireMatrix</span>
           </SidebarHeader>
 
           {/* Nav */}
@@ -112,7 +112,7 @@ export default function Layout({ children, currentPageName }) {
           <header className="bg-white border-b border-gray-200 px-4 py-3 md:hidden sticky top-0 z-20 shadow-sm">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors" />
-              <img src={logo} alt="HireMatrix" className="max-w-[110px] h-auto object-contain" />
+              <span className="text-sm font-bold text-gray-900 tracking-tight">HireMatrix</span>
             </div>
           </header>
 
