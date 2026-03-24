@@ -19,7 +19,7 @@ function DescriptionPreview({ text }) {
       <p className="whitespace-pre-line">{expanded ? text : preview}</p>
       {hasMore && (
         <button
-          className="text-blue-400 hover:text-blue-300 mt-1 font-medium"
+          className="text-blue-600 hover:text-blue-700 mt-1 font-medium"
           onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
         >
           {expanded ? "Show less" : "Show more"}
@@ -80,7 +80,7 @@ export default function LinkedInJobs() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Linkedin className="w-8 h-8 text-blue-500" />
-            <h1 className="text-2xl md:text-3xl font-bold text-white">LinkedIn Jobs</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">LinkedIn Jobs</h1>
           </div>
           <p className="text-gray-400">
             Search LinkedIn's public job listings by role and location
@@ -169,11 +169,11 @@ export default function LinkedInJobs() {
               {jobs.map((job, idx) => (
                 <Card
                   key={idx}
-                  className="border border-white/5 hover:border-white/10 transition-colors"
+                  className="border border-gray-100 hover:border-gray-200 transition-colors"
                 >
                   <CardContent className="p-5 flex flex-col gap-3">
                     <div>
-                      <h3 className="font-semibold text-white text-base leading-snug">
+                      <h3 className="font-semibold text-gray-900 text-base leading-snug">
                         {job.title || "Untitled"}
                       </h3>
                       {job.company && (
@@ -212,7 +212,7 @@ export default function LinkedInJobs() {
                         {job.skills.slice(0, 5).map((skill) => (
                           <span
                             key={skill}
-                            className="text-xs px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            className="text-xs px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200"
                           >
                             {skill}
                           </span>
@@ -230,7 +230,7 @@ export default function LinkedInJobs() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                          className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
                           View on LinkedIn

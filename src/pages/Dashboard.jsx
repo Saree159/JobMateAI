@@ -81,8 +81,8 @@ export default function Dashboard() {
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="mb-8 md:mb-10">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          <span className="text-white">{getGreeting(firstName).split(',')[0]}</span>
-          {firstName && <span className="text-gradient">{`, ${firstName}`}</span>}
+          <span className="text-gray-900">{getGreeting(firstName).split(',')[0]}</span>
+          {firstName && <span className="text-blue-600">{`, ${firstName}`}</span>}
         </h1>
         <p className="text-sm text-gray-500 mt-1.5">
           {user?.target_role
@@ -141,25 +141,25 @@ export default function Dashboard() {
 
           {/* Profile card */}
           {user && (
-            <Card className="border border-white/5">
+            <Card className="border border-gray-100 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Target className="w-4 h-4 text-blue-400" />
+                  <Target className="w-4 h-4 text-blue-600" />
                   {t('dashboard.yourProfile')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {user.target_role && (
                   <div>
-                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-medium mb-1">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-400 font-medium mb-1">
                       {t('dashboard.targetRole')}
                     </p>
-                    <p className="text-sm font-medium text-white">{user.target_role}</p>
+                    <p className="text-sm font-medium text-gray-900">{user.target_role}</p>
                   </div>
                 )}
                 {user.skills && user.skills.length > 0 && (
                   <div>
-                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-medium mb-2">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-400 font-medium mb-2">
                       {t('dashboard.skills')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">

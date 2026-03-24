@@ -5,11 +5,11 @@ import { Clock, Send, Calendar, CheckCircle2, XCircle, Bookmark } from "lucide-r
 import { format } from "date-fns";
 
 const STATUS_CONFIG = {
-  saved:     { label: 'Saved',     Icon: Bookmark,     dot: 'bg-gray-500',   text: 'text-gray-400'   },
-  applied:   { label: 'Applied',   Icon: Send,         dot: 'bg-blue-500',   text: 'text-blue-400'   },
-  interview: { label: 'Interview', Icon: Calendar,     dot: 'bg-purple-500', text: 'text-purple-400' },
-  offer:     { label: 'Offer',     Icon: CheckCircle2, dot: 'bg-green-500',  text: 'text-green-400'  },
-  rejected:  { label: 'Rejected',  Icon: XCircle,      dot: 'bg-red-500',    text: 'text-red-400'    },
+  saved:     { label: 'Saved',     Icon: Bookmark,     dot: 'bg-gray-500',   text: 'text-gray-500'   },
+  applied:   { label: 'Applied',   Icon: Send,         dot: 'bg-blue-500',   text: 'text-blue-600'   },
+  interview: { label: 'Interview', Icon: Calendar,     dot: 'bg-purple-500', text: 'text-purple-600' },
+  offer:     { label: 'Offer',     Icon: CheckCircle2, dot: 'bg-green-500',  text: 'text-green-600'  },
+  rejected:  { label: 'Rejected',  Icon: XCircle,      dot: 'bg-red-500',    text: 'text-red-600'    },
 };
 
 export default function RecentActivity({ applications, isLoading }) {
@@ -19,7 +19,7 @@ export default function RecentActivity({ applications, isLoading }) {
 
   if (isLoading) {
     return (
-      <Card className="border border-white/5">
+      <Card className="border border-gray-100 shadow-sm">
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-32" />
         </CardHeader>
@@ -39,9 +39,9 @@ export default function RecentActivity({ applications, isLoading }) {
   }
 
   return (
-    <Card className="border border-white/5">
+    <Card className="border border-gray-100 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-white">
+        <CardTitle className="text-base font-semibold text-gray-900">
           Recent Activity
         </CardTitle>
       </CardHeader>
@@ -49,16 +49,16 @@ export default function RecentActivity({ applications, isLoading }) {
       <CardContent className="pt-1">
         {recentApps.length === 0 ? (
           <div className="flex flex-col items-center py-8 text-center">
-            <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center mb-3">
               <Clock className="w-4 h-4 text-gray-500" />
             </div>
-            <p className="text-sm text-gray-400 font-medium">No activity yet</p>
-            <p className="text-xs text-gray-600 mt-1">Jobs you track will appear here</p>
+            <p className="text-sm text-gray-500 font-medium">No activity yet</p>
+            <p className="text-xs text-gray-400 mt-1">Jobs you track will appear here</p>
           </div>
         ) : (
           <div className="relative">
             {/* Vertical timeline line */}
-            <div className="absolute left-[7px] top-2 bottom-2 w-px bg-white/5" />
+            <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-100" />
 
             <div className="space-y-4">
               {recentApps.map((app, idx) => {
@@ -68,11 +68,11 @@ export default function RecentActivity({ applications, isLoading }) {
                 return (
                   <div key={app.id ?? idx} className="flex gap-3 items-start group">
                     {/* Timeline dot */}
-                    <div className={`relative z-10 mt-1 w-3.5 h-3.5 rounded-full border-2 border-[hsl(var(--card))] shrink-0 ${cfg.dot}`} />
+                    <div className={`relative z-10 mt-1 w-3.5 h-3.5 rounded-full border-2 border-white shrink-0 ${cfg.dot}`} />
 
                     {/* Content */}
                     <div className="flex-1 min-w-0 pb-0.5">
-                      <p className="text-sm font-medium text-white truncate leading-snug">
+                      <p className="text-sm font-medium text-gray-900 truncate leading-snug">
                         {app.title ?? 'Untitled position'}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -81,12 +81,12 @@ export default function RecentActivity({ applications, isLoading }) {
                         </span>
                         {app.company && (
                           <>
-                            <span className="text-gray-700 text-xs">·</span>
+                            <span className="text-gray-300 text-xs">·</span>
                             <span className="text-xs text-gray-500 truncate">{app.company}</span>
                           </>
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-600 mt-0.5">
+                      <p className="text-[11px] text-gray-400 mt-0.5">
                         {format(new Date(app.created_date), 'MMM d')}
                       </p>
                     </div>

@@ -92,7 +92,7 @@ export default function Pricing() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-semibold text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4">
             {t('pricing.title')}
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
@@ -111,7 +111,7 @@ export default function Pricing() {
 
         {/* Billing Period Toggle */}
         <div className="flex items-center justify-center gap-4 mb-10">
-          <span className={`font-medium ${billingPeriod === "monthly" ? "text-white" : "text-gray-400"}`}>
+          <span className={`font-medium ${billingPeriod === "monthly" ? "text-gray-900" : "text-gray-400"}`}>
             {t('pricing.monthly')}
           </span>
           <button
@@ -124,11 +124,11 @@ export default function Pricing() {
               billingPeriod === "annual" ? "translate-x-7" : ""
             }`} />
           </button>
-          <span className={`font-medium ${billingPeriod === "annual" ? "text-white" : "text-gray-400"}`}>
+          <span className={`font-medium ${billingPeriod === "annual" ? "text-gray-900" : "text-gray-400"}`}>
             {t('pricing.annual')}
           </span>
           {billingPeriod === "annual" && (
-            <Badge className="bg-green-900/40 text-green-700 border-green-500/30">{t('pricing.save')}</Badge>
+            <Badge className="bg-green-100 text-green-700 border-green-200">{t('pricing.save')}</Badge>
           )}
         </div>
 
@@ -148,7 +148,7 @@ export default function Pricing() {
               <Card
                 key={key}
                 className={`border transition-all ${
-                  plan.popular ? "border-blue-600" : "border-white/5"
+                  plan.popular ? "border-blue-600" : "border-gray-100"
                 } ${isCurrentPlan ? "ring-2 ring-blue-200" : ""}`}
               >
                 <CardHeader className="text-center pb-8 pt-8">
@@ -162,12 +162,12 @@ export default function Pricing() {
                   <div className={`w-16 h-16 mx-auto mb-4 rounded-lg ${
                     key === "pro" ? "bg-blue-600" : "bg-gray-600"
                   } flex items-center justify-center`}>
-                    <PlanIcon className="w-8 h-8 text-white" />
+                    <PlanIcon className="w-8 h-8 text-gray-900" />
                   </div>
 
                   <CardTitle className="text-3xl mb-2">{plan.name}</CardTitle>
                   <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl font-bold text-white">{priceDisplay.main}</span>
+                    <span className="text-5xl font-bold text-gray-900">{priceDisplay.main}</span>
                     <span className="text-gray-400 text-sm">/ {priceDisplay.sub}</span>
                   </div>
 
@@ -184,7 +184,7 @@ export default function Pricing() {
                   <div className="space-y-3">
                     {plan.features.map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-green-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <Check className="w-3 h-3 text-green-600" />
                         </div>
                         <span className="text-gray-300">{feature}</span>
@@ -225,7 +225,7 @@ export default function Pricing() {
                         </Button>
                       ) : (
                         <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 text-lg"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-gray-900 font-medium py-6 text-lg"
                           onClick={handleUpgradeToPro}
                           disabled={loadingCheckout}
                         >
@@ -245,7 +245,7 @@ export default function Pricing() {
         </div>
 
         {/* Feature Comparison Table */}
-        <Card className="border border-white/5 mb-12">
+        <Card className="border border-gray-100 mb-12">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center">{t('pricing.featureComparison')}</CardTitle>
             <CardDescription className="text-center">{t('pricing.featureComparisonSubtitle')}</CardDescription>

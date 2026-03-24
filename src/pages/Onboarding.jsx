@@ -142,7 +142,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Card className="w-full max-w-2xl border border-white/5 shadow-xl">
+      <Card className="w-full max-w-2xl border border-gray-200 shadow-xl">
         {/* ── Header ── */}
         <CardHeader className="text-center pb-6 pt-10">
           <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
@@ -171,7 +171,7 @@ export default function Onboarding() {
                           ? "bg-blue-600 text-white"
                           : active
                           ? "bg-blue-600 text-white ring-4 ring-indigo-100"
-                          : "bg-white/10 text-gray-400"
+                          : "bg-gray-100 text-gray-400"
                       )}
                     >
                       {done ? <Check className="w-4 h-4" /> : s}
@@ -181,7 +181,7 @@ export default function Onboarding() {
                     </span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={cn("w-16 h-0.5 mb-4 transition-all", done ? "bg-blue-600" : "bg-white/20")} />
+                    <div className={cn("w-16 h-0.5 mb-4 transition-all", done ? "bg-blue-600" : "bg-gray-200")} />
                   )}
                 </React.Fragment>
               );
@@ -217,7 +217,7 @@ export default function Onboarding() {
                         "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.target_role === opt.value
                           ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-white/10 text-gray-400"
+                          : "border-gray-200 text-gray-400"
                       )}
                     >
                       <span className="text-2xl">{opt.icon}</span>
@@ -251,7 +251,7 @@ export default function Onboarding() {
                         "flex flex-col items-center gap-0.5 py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.experience_level === lvl.value
                           ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-white/10 text-gray-400"
+                          : "border-gray-200 text-gray-400"
                       )}
                     >
                       <span className="font-semibold text-sm">{lvl.label}</span>
@@ -273,7 +273,7 @@ export default function Onboarding() {
                         "flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
                         formData.work_mode_preference === mode.value
                           ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-white/10 text-gray-400"
+                          : "border-gray-200 text-gray-400"
                       )}
                     >
                       {mode.icon}
@@ -381,7 +381,7 @@ export default function Onboarding() {
                   <Button onClick={handleAddSkill} variant="outline">Add</Button>
                 </div>
                 {formData.skills.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded-lg min-h-[64px]">
+                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[64px]">
                     {formData.skills.map((skill, i) => (
                       <Badge key={i} variant="secondary" className="py-1 px-3 text-sm">
                         {skill}
@@ -419,7 +419,7 @@ export default function Onboarding() {
                 <p className="text-sm text-gray-500 mt-0.5">Everything look good? You can always edit later.</p>
               </div>
 
-              <div className="space-y-0 bg-white/5 rounded-xl overflow-hidden divide-y divide-gray-200">
+              <div className="space-y-0 bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
                 <ReviewRow label="Target Role" value={resolvedRole || "—"} />
                 <ReviewRow
                   label="Experience"

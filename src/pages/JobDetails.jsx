@@ -174,16 +174,16 @@ export default function JobDetails() {
       </Button>
 
       {/* Job Header */}
-      <Card className="border border-white/5 mb-6 md:mb-8">
+      <Card className="border border-gray-100 mb-6 md:mb-8">
         <CardHeader className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
             <div className="flex-1">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Building2 className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl md:text-3xl font-bold text-white mb-1 md:mb-2 leading-snug">{job.title}</h1>
+                  <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2 leading-snug">{job.title}</h1>
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-400 text-sm">
                     <span className="flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
@@ -199,7 +199,7 @@ export default function JobDetails() {
             </div>
 
             {/* Match Details — horizontal on mobile, vertical on md+ */}
-            <div className="w-full md:w-auto bg-white/5 p-4 md:p-5 rounded-lg md:space-y-4 flex md:block items-center gap-6 md:gap-0 md:min-w-[180px]">
+            <div className="w-full md:w-auto bg-gray-50 p-4 md:p-5 rounded-lg md:space-y-4 flex md:block items-center gap-6 md:gap-0 md:min-w-[180px]">
               {/* Match Score */}
               <div className="text-center shrink-0">
                 <div className={`text-3xl md:text-4xl font-semibold mb-0.5 ${
@@ -212,12 +212,12 @@ export default function JobDetails() {
                 <p className="text-xs text-gray-500">Match</p>
               </div>
 
-              <div className="hidden md:block border-t border-white/10 pt-3 space-y-2.5">
+              <div className="hidden md:block border-t border-gray-200 pt-3 space-y-2.5">
                 {/* User's role */}
                 {user?.target_role && (
                   <div>
                     <p className="text-xs text-gray-500">Your Role</p>
-                    <p className="text-sm text-white font-medium truncate">{user.target_role}</p>
+                    <p className="text-sm text-gray-900 font-medium truncate">{user.target_role}</p>
                   </div>
                 )}
 
@@ -225,7 +225,7 @@ export default function JobDetails() {
                 {user?.years_of_experience != null && (
                   <div>
                     <p className="text-xs text-gray-500">Your Experience</p>
-                    <p className="text-sm text-white font-medium">{user.years_of_experience} yrs</p>
+                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} yrs</p>
                   </div>
                 )}
 
@@ -236,7 +236,7 @@ export default function JobDetails() {
                     <p className={`text-sm font-medium ${
                       user?.years_of_experience != null
                         ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
-                        : 'text-white'
+                        : 'text-gray-900'
                     }`}>
                       {requiredYears}+ yrs
                       {user?.years_of_experience != null && (
@@ -274,12 +274,12 @@ export default function JobDetails() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100">
             <CardHeader>
               <CardTitle className="font-semibold">Job Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-300 whitespace-pre-wrap">{job.description}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
             </CardContent>
           </Card>
 
@@ -289,7 +289,7 @@ export default function JobDetails() {
           />
 
           {/* Interview Notes */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -343,7 +343,7 @@ export default function JobDetails() {
               ) : (
                 <div>
                   {notes ? (
-                    <p className="text-gray-300 whitespace-pre-wrap">{notes}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
                   ) : (
                     <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
                   )}
@@ -353,7 +353,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Interview Preparation */}
-          <Card className="border border-blue-500/20 bg-blue-900/30/30">
+          <Card className="border border-blue-200 bg-blue-50/50">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -389,12 +389,12 @@ export default function JobDetails() {
                   {/* Behavioral Questions */}
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         💼 Behavioral Questions
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -405,12 +405,12 @@ export default function JobDetails() {
                   {/* Technical Questions */}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         ⚙️ Technical Questions
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -421,12 +421,12 @@ export default function JobDetails() {
                   {/* Company-Specific Questions */}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         🏢 Questions to Ask Them
                       </h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-indigo-300 py-1">
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
                             {q}
                           </li>
                         ))}
@@ -452,7 +452,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Salary Insights */}
-          <Card className="border border-green-500/20 bg-green-900/30/30">
+          <Card className="border border-green-200 bg-green-50/50">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
@@ -486,8 +486,8 @@ export default function JobDetails() {
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   {/* Salary Range */}
-                  <div className="bg-card p-4 rounded-lg border border-green-500/30">
-                    <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                  <div className="bg-white p-4 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                       💰 Estimated Range
                     </h4>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
@@ -515,12 +515,12 @@ export default function JobDetails() {
                   {/* Insights */}
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         💡 Key Insights
                       </h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
-                          <li key={idx} className="text-sm text-gray-300 pl-4 border-l-2 border-green-300 py-1">
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">
                             {insight}
                           </li>
                         ))}
@@ -531,14 +531,14 @@ export default function JobDetails() {
                   {/* Factors */}
                   {salaryEstimate.factors && (
                     <div>
-                      <h4 className="font-semibold text-white mb-3">📊 Salary Factors</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">📊 Salary Factors</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium text-white capitalize">
+                            <span className="font-medium text-gray-900 capitalize">
                               {key.replace('_', ' ')}:
                             </span>
-                            <span className="text-gray-300 ml-2">{value}</span>
+                            <span className="text-gray-600 ml-2">{value}</span>
                           </div>
                         ))}
                       </div>
@@ -572,7 +572,7 @@ export default function JobDetails() {
           />
 
           {/* Application Status */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100">
             <CardHeader>
               <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
             </CardHeader>
@@ -595,7 +595,7 @@ export default function JobDetails() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100">
             <CardHeader>
               <CardTitle className="font-semibold text-sm">Actions</CardTitle>
             </CardHeader>

@@ -74,21 +74,21 @@ function collapseContext(diffLines) {
 // Diff renderers
 // ---------------------------------------------------------------------------
 function DiffLine({ type, text }) {
-  if (type === "added")   return <div className="flex gap-2 bg-green-900/20 border-l-2 border-green-500 px-3 py-0.5"><span className="select-none text-green-600 font-bold font-mono text-xs w-3 shrink-0">+</span><span className="font-mono text-xs text-green-300 break-all">{text}</span></div>;
-  if (type === "removed") return <div className="flex gap-2 bg-red-900/20 border-l-2 border-red-500 px-3 py-0.5 opacity-80"><span className="select-none text-red-500 font-bold font-mono text-xs w-3 shrink-0">−</span><span className="font-mono text-xs text-red-300 line-through break-all">{text}</span></div>;
-  return <div className="flex gap-2 px-3 py-0.5"><span className="w-3 shrink-0" /><span className="font-mono text-xs text-gray-600 break-all">{text}</span></div>;
+  if (type === "added")   return <div className="flex gap-2 bg-green-50 border-l-2 border-green-500 px-3 py-0.5"><span className="select-none text-green-600 font-bold font-mono text-xs w-3 shrink-0">+</span><span className="font-mono text-xs text-green-700 break-all">{text}</span></div>;
+  if (type === "removed") return <div className="flex gap-2 bg-red-50 border-l-2 border-red-500 px-3 py-0.5 opacity-80"><span className="select-none text-red-500 font-bold font-mono text-xs w-3 shrink-0">−</span><span className="font-mono text-xs text-red-600 line-through break-all">{text}</span></div>;
+  return <div className="flex gap-2 px-3 py-0.5"><span className="w-3 shrink-0" /><span className="font-mono text-xs text-gray-500 break-all">{text}</span></div>;
 }
 
 function ModifiedLine({ oldText, newText }) {
   const { prefix, removed, added, suffix } = charDiff(oldText, newText);
   return (
-    <div className="flex gap-2 bg-yellow-900/20 border-l-2 border-yellow-500 px-3 py-0.5">
+    <div className="flex gap-2 bg-yellow-50 border-l-2 border-yellow-500 px-3 py-0.5">
       <span className="select-none text-yellow-600 font-bold font-mono text-xs w-3 shrink-0">~</span>
       <span className="font-mono text-xs break-all">
-        <span className="text-gray-300">{prefix}</span>
-        {removed && <span className="bg-red-900/40 text-red-300 line-through">{removed}</span>}
-        {added   && <span className="bg-green-900/40 text-green-300">{added}</span>}
-        <span className="text-gray-300">{suffix}</span>
+        <span className="text-gray-600">{prefix}</span>
+        {removed && <span className="bg-red-100 text-red-600 line-through">{removed}</span>}
+        {added   && <span className="bg-green-100 text-green-700">{added}</span>}
+        <span className="text-gray-600">{suffix}</span>
       </span>
     </div>
   );
@@ -99,9 +99,9 @@ function ModifiedLine({ oldText, newText }) {
 // ---------------------------------------------------------------------------
 function ScoreBadge({ score }) {
   const color =
-    score >= 70 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" :
-    score >= 40 ? "text-amber-400  bg-amber-500/10  border-amber-500/30"  :
-                  "text-gray-400   bg-white/5        border-white/10";
+    score >= 70 ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+    score >= 40 ? "text-amber-700   bg-amber-50   border-amber-200"   :
+                  "text-gray-500    bg-gray-50     border-gray-200";
   return (
     <div className={`flex flex-col items-center justify-center w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl border-2 shrink-0 ${color}`}>
       <span className="text-lg md:text-2xl font-bold leading-none tabular-nums">{score}%</span>
@@ -217,17 +217,17 @@ export default function JobMatch() {
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-100 transition-colors py-1 -ml-1"
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors py-1 -ml-1"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
       {/* ── Job Header ─────────────────────────────────────────────────── */}
-      <div className="bg-card border border-white/5 rounded-xl p-4 md:p-5">
+      <div className="bg-white border border-gray-100 rounded-xl p-4 md:p-5 shadow-sm">
         <div className="flex gap-3 md:gap-5 items-center">
           <ScoreBadge score={job.match_score ?? 0} />
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg md:text-2xl font-bold text-white leading-tight break-words">
+            <h1 className="text-lg md:text-2xl font-bold text-gray-900 leading-tight break-words">
               {job.title}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs md:text-sm text-gray-500 mt-1">
@@ -242,7 +242,7 @@ export default function JobMatch() {
                 </span>
               )}
               {job.experience_level && (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-white/10 text-gray-500">
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-gray-200 text-gray-500">
                   {job.experience_level}
                 </Badge>
               )}
@@ -263,10 +263,10 @@ export default function JobMatch() {
 
         {/* ── RIGHT (Resume) — comes first on mobile via order ─────────── */}
         <div className="order-first lg:order-last">
-          <Card className="border border-blue-500/20 bg-blue-950/10">
+          <Card className="border border-blue-200 bg-blue-50/50 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-400" />
+                <FileText className="w-4 h-4 text-blue-600" />
                 Tailor Resume for This Job
               </CardTitle>
               <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
@@ -279,17 +279,17 @@ export default function JobMatch() {
               <div>
                 {user?.resume_filename ? (
                   resumeFile ? (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/20">
-                      <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-xs text-gray-300 flex-1 truncate">{resumeFile.name}</span>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="text-xs text-gray-700 flex-1 truncate">{resumeFile.name}</span>
                       {flowStep === "idle" && (
                         <button className="text-xs text-gray-500 hover:text-red-400 transition-colors shrink-0" onClick={resetFlow}>✕</button>
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-950/40 border border-blue-500/20">
-                      <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="text-xs text-gray-300 flex-1 truncate min-w-0">{user.resume_filename}</span>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="text-xs text-gray-700 flex-1 truncate min-w-0">{user.resume_filename}</span>
                       <Button
                         size="sm"
                         className="h-7 text-xs bg-blue-600 hover:bg-blue-700 shrink-0"
@@ -301,15 +301,15 @@ export default function JobMatch() {
                     </div>
                   )
                 ) : (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-amber-950/30 border border-amber-500/20">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="text-xs text-gray-300">No resume saved yet</span>
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="text-xs text-gray-700">No resume saved yet</span>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10 shrink-0 w-full sm:w-auto"
+                      className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 shrink-0 w-full sm:w-auto"
                       onClick={() => navigate(createPageUrl("Profile"))}
                     >
                       Upload on Profile
@@ -333,7 +333,7 @@ export default function JobMatch() {
 
               {/* Loading: gap analysis */}
               {flowStep === "analyzing-gaps" && (
-                <div className="flex items-center gap-2.5 text-sm text-blue-400 py-2">
+                <div className="flex items-center gap-2.5 text-sm text-blue-600 py-2">
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span className="text-xs">Analysing your resume against job requirements…</span>
                 </div>
@@ -343,9 +343,9 @@ export default function JobMatch() {
               {flowStep === "gap-qa" && gapAnalysis && (
                 <div className="space-y-4">
                   {/* Summary — dark-safe */}
-                  <div className="flex gap-2.5 p-3 bg-amber-950/40 border border-amber-500/20 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-200/80 leading-relaxed">{gapAnalysis.summary}</p>
+                  <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 leading-relaxed">{gapAnalysis.summary}</p>
                   </div>
 
                   {gapAnalysis.gaps.length === 0 ? (
@@ -361,14 +361,14 @@ export default function JobMatch() {
                       <div className="space-y-4">
                         {gapAnalysis.gaps.map((gap, i) => (
                           <div key={i} className="space-y-1.5">
-                            <span className="inline-block text-[10px] font-semibold uppercase tracking-wide text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">
+                            <span className="inline-block text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
                               {gap.requirement}
                             </span>
                             <p className="text-xs text-gray-400">{gap.question}</p>
                             <Textarea
                               rows={2}
                               placeholder="Your answer (optional)…"
-                              className="text-xs resize-none bg-white/5 border-white/10 focus:border-blue-500/50"
+                              className="text-xs resize-none bg-gray-50 border-gray-200 focus:border-blue-500/50"
                               value={gapAnswers[i] || ""}
                               onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
                             />
@@ -393,7 +393,7 @@ export default function JobMatch() {
 
               {/* Loading: rewriting */}
               {flowStep === "rewriting" && (
-                <div className="flex items-center gap-2.5 text-sm text-blue-400 py-2">
+                <div className="flex items-center gap-2.5 text-sm text-blue-600 py-2">
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span className="text-xs">Rewriting resume (~20s)…</span>
                 </div>
@@ -414,10 +414,10 @@ export default function JobMatch() {
                     </button>
                   </div>
 
-                  <div className="border border-white/10 rounded-lg overflow-hidden max-h-[280px] md:max-h-[400px] overflow-y-auto bg-[hsl(222_47%_6%)]">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[280px] md:max-h-[400px] overflow-y-auto bg-gray-50">
                     {displayDiff.map(line =>
                       line.type === "ellipsis" ? (
-                        <div key={line.key} className="px-4 py-1 text-xs text-gray-600 italic bg-white/[0.02] border-y border-dashed border-white/5">
+                        <div key={line.key} className="px-4 py-1 text-xs text-gray-400 italic bg-gray-100/50 border-y border-dashed border-gray-200">
                           {line.text}
                         </div>
                       ) : line.type === "modified" ? (
@@ -435,7 +435,7 @@ export default function JobMatch() {
                   </Button>
 
                   <button
-                    className="block w-full text-center text-xs text-gray-600 hover:text-blue-400 transition-colors"
+                    className="block w-full text-center text-xs text-gray-500 hover:text-blue-600 transition-colors"
                     onClick={() => { setFlowStep("gap-qa"); setDiffResult(null); }}
                   >
                     ← Edit answers &amp; regenerate
@@ -450,10 +450,10 @@ export default function JobMatch() {
         <div className="order-last lg:order-first space-y-4 md:space-y-6">
 
           {/* Match Analysis */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-400" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 Match Analysis
               </CardTitle>
             </CardHeader>
@@ -464,7 +464,7 @@ export default function JobMatch() {
                   <span>Overall match</span>
                   <span className="font-semibold tabular-nums">{job.match_score ?? 0}%</span>
                 </div>
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       (job.match_score ?? 0) >= 70 ? "bg-emerald-500" :
@@ -477,12 +477,12 @@ export default function JobMatch() {
 
               {matchAnalysis.matched.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-emerald-400 mb-1.5">
+                  <p className="text-xs font-medium text-emerald-600 mb-1.5">
                     ✓ Your skills matched ({matchAnalysis.matched.length})
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {matchAnalysis.matched.map((s, i) => (
-                      <Badge key={i} className="text-[10px] h-5 px-1.5 font-normal bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/10">
+                      <Badge key={i} className="text-[10px] h-5 px-1.5 font-normal bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50">
                         {s}
                       </Badge>
                     ))}
@@ -497,7 +497,7 @@ export default function JobMatch() {
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {matchAnalysis.missing.map((s, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] h-5 px-1.5 font-normal border-white/10 text-gray-500">
+                      <Badge key={i} variant="outline" className="text-[10px] h-5 px-1.5 font-normal border-gray-200 text-gray-500">
                         {s}
                       </Badge>
                     ))}
@@ -512,14 +512,14 @@ export default function JobMatch() {
           </Card>
 
           {/* Job Description */}
-          <Card className="border border-white/5">
+          <Card className="border border-gray-100 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Job Description</CardTitle>
                 {!isFetchingDesc && (() => {
                   const desc = fullDescription || job.description || "";
                   return desc.length > 600 ? (
-                    <button className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-normal" onClick={() => setShowFullDesc(v => !v)}>
+                    <button className="text-xs text-blue-600 hover:text-blue-700 transition-colors font-normal" onClick={() => setShowFullDesc(v => !v)}>
                       {showFullDesc ? "Show less" : "Show full"}
                     </button>
                   ) : null;
@@ -529,12 +529,12 @@ export default function JobMatch() {
             <CardContent>
               {isFetchingDesc ? (
                 <div className="space-y-2 animate-pulse">
-                  {[1,2,3,4,5].map(i => <div key={i} className={`h-3 bg-white/10 rounded ${i === 5 ? "w-2/3" : "w-full"}`} />)}
+                  {[1,2,3,4,5].map(i => <div key={i} className={`h-3 bg-gray-200 rounded ${i === 5 ? "w-2/3" : "w-full"}`} />)}
                 </div>
               ) : descBlocked ? (
                 <div className="text-xs text-gray-400 py-2 space-y-3">
                   <p>LinkedIn requires login to view the full description.{" "}
-                    {job.url && <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">View on LinkedIn</a>}
+                    {job.url && <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View on LinkedIn</a>}
                   </p>
                   {job.description && <p className="whitespace-pre-line text-gray-500">{job.description}</p>}
                 </div>
@@ -543,8 +543,8 @@ export default function JobMatch() {
                 const PREVIEW = 600;
                 const displayed = desc.length > PREVIEW && !showFullDesc ? desc.slice(0, PREVIEW) + "…" : desc;
                 return desc
-                  ? <p className="text-sm text-gray-400 whitespace-pre-line leading-relaxed break-words">{displayed}</p>
-                  : <p className="text-sm text-gray-500 italic">No description available.</p>;
+                  ? <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed break-words">{displayed}</p>
+                  : <p className="text-sm text-gray-400 italic">No description available.</p>;
               })()}
             </CardContent>
           </Card>

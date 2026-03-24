@@ -105,7 +105,7 @@ export default function Jobs() {
       {/* Header */}
       <div className="flex flex-wrap justify-between items-start gap-4 mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
             {t('jobs.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -122,15 +122,15 @@ export default function Jobs() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-card border border-white/5 rounded-xl p-4 mb-6">
+      <div className="bg-white border border-gray-100 rounded-xl p-4 mb-6 shadow-sm">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <Input
               placeholder={t('jobs.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-white/5 border-white/10 focus:border-blue-500/50 text-sm"
+              className="pl-9 h-9 bg-gray-50 border-gray-200 focus:border-blue-500/50 text-sm"
             />
           </div>
           <JobFilters filters={filters} setFilters={setFilters} />
@@ -141,7 +141,7 @@ export default function Jobs() {
       {isLoading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="border border-white/5">
+            <Card key={i} className="border border-gray-100">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start gap-3">
                   <Skeleton className="w-12 h-12 rounded-lg" />
@@ -165,10 +165,10 @@ export default function Jobs() {
           ))}
         </div>
       ) : filteredJobs.length === 0 ? (
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardContent className="text-center py-20">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">{t('jobs.noJobsYet')}</h3>
+            <h3 className="text-xl font-semibold text-gray-500 mb-2">{t('jobs.noJobsYet')}</h3>
             <p className="text-gray-500 mb-6">
               {searchQuery || filters.location ? t('jobs.adjustFilters') : t('jobs.startAdding')}
             </p>

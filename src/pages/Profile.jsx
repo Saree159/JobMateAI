@@ -270,7 +270,7 @@ export default function Profile() {
       {/* Header */}
       <div className="flex flex-wrap justify-between items-start gap-3 mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-white mb-1">
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-1">
             {t('profile.title')}
           </h1>
           <p className="text-gray-500 text-sm md:text-base">{t('profile.subtitle')}</p>
@@ -293,7 +293,7 @@ export default function Profile() {
 
       <div className="space-y-6">
         {/* Language Toggle Card */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Languages className="w-5 h-5 text-blue-600" />
@@ -307,8 +307,8 @@ export default function Profile() {
                 onClick={() => changeLang('en')}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'en'
-                    ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    ? 'bg-blue-600 text-gray-900 shadow-md shadow-indigo-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 English
@@ -317,8 +317,8 @@ export default function Profile() {
                 onClick={() => changeLang('he')}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   currentLang === 'he'
-                    ? 'bg-blue-600 text-white shadow-md shadow-indigo-200'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    ? 'bg-blue-600 text-gray-900 shadow-md shadow-indigo-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 עברית
@@ -328,7 +328,7 @@ export default function Profile() {
         </Card>
 
         {/* Subscription Card */}
-        <Card className={`border ${isPro ? 'border-blue-500/30 bg-blue-900/30' : 'border-white/5'}`}>
+        <Card className={`border ${isPro ? 'border-blue-200 bg-blue-50' : 'border-gray-100'}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -341,7 +341,7 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-medium text-white">{isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}</p>
+                <p className="font-medium text-gray-900">{isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}</p>
                 <p className="text-sm text-gray-400">
                   {isPro ? 'Unlimited access to all features' : 'Limited to 5 job views per day'}
                 </p>
@@ -363,7 +363,7 @@ export default function Profile() {
         </Card>
 
         {/* Basic Info */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold">
               {t('profile.careerInfo')}
@@ -379,7 +379,7 @@ export default function Profile() {
                   placeholder={t('profile.targetRolePlaceholder')}
                 />
               ) : (
-                <p className="text-white font-medium">{user.target_role || t('common.notSet')}</p>
+                <p className="text-gray-900 font-medium">{user.target_role || t('common.notSet')}</p>
               )}
             </div>
 
@@ -395,7 +395,7 @@ export default function Profile() {
                   placeholder="5"
                 />
               ) : (
-                <p className="text-white font-medium">{user.years_of_experience != null ? `${user.years_of_experience} years` : t('common.notSet')}</p>
+                <p className="text-gray-900 font-medium">{user.years_of_experience != null ? `${user.years_of_experience} years` : t('common.notSet')}</p>
               )}
             </div>
 
@@ -409,14 +409,14 @@ export default function Profile() {
                   rows={4}
                 />
               ) : (
-                <p className="text-gray-300">{user.bio || t('common.notSet')}</p>
+                <p className="text-gray-600">{user.bio || t('common.notSet')}</p>
               )}
             </div>
           </CardContent>
         </Card>
 
         {/* Resume Upload */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -483,9 +483,9 @@ export default function Profile() {
             {/* Saved resume indicator */}
             {user?.resume_filename && !rewriteFile && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-500/20">
-                <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-                <span className="text-xs text-gray-300 flex-1 truncate">{user.resume_filename}</span>
-                <span className="text-xs text-blue-400">Will be used</span>
+                <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="text-xs text-gray-600 flex-1 truncate">{user.resume_filename}</span>
+                <span className="text-xs text-blue-600">Will be used</span>
               </div>
             )}
 
@@ -493,7 +493,7 @@ export default function Profile() {
             {rewriteFile && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-green-950/30 border border-green-500/20">
                 <FileText className="w-4 h-4 text-green-400 shrink-0" />
-                <span className="text-xs text-gray-300 flex-1 truncate">{rewriteFile.name}</span>
+                <span className="text-xs text-gray-600 flex-1 truncate">{rewriteFile.name}</span>
                 <button className="text-xs text-gray-400 hover:text-red-400" onClick={() => setRewriteFile(null)}>✕</button>
               </div>
             )}
@@ -528,7 +528,7 @@ export default function Profile() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-300">{t('profile.jobDescription')}</label>
+              <label className="text-sm font-medium text-gray-600">{t('profile.jobDescription')}</label>
               <Textarea
                 placeholder={t('profile.jobDescPlaceholder')}
                 rows={6}
@@ -559,7 +559,7 @@ export default function Profile() {
         </Card>
 
         {/* Skills */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold">{t('profile.skills')}</CardTitle>
           </CardHeader>
@@ -598,7 +598,7 @@ export default function Profile() {
         </Card>
 
         {/* Preferences */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold">
               {t('profile.preferences')}
@@ -614,7 +614,7 @@ export default function Profile() {
                   placeholder={t('profile.locationPlaceholder')}
                 />
               ) : (
-                <p className="text-white font-medium">{user.location_preference || t('common.notSet')}</p>
+                <p className="text-gray-900 font-medium">{user.location_preference || t('common.notSet')}</p>
               )}
             </div>
 
@@ -629,7 +629,7 @@ export default function Profile() {
                     placeholder="10000"
                   />
                 ) : (
-                  <p className="text-white font-medium">
+                  <p className="text-gray-900 font-medium">
                     {user.salary_min ? `₪${user.salary_min.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
@@ -644,7 +644,7 @@ export default function Profile() {
                     placeholder="20000"
                   />
                 ) : (
-                  <p className="text-white font-medium">
+                  <p className="text-gray-900 font-medium">
                     {user.salary_max ? `₪${user.salary_max.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
@@ -654,7 +654,7 @@ export default function Profile() {
         </Card>
 
         {/* LinkedIn Integration */}
-        <Card className={`border ${user.linkedin_connected ? 'border-blue-500/30 bg-blue-950/20' : 'border-white/5'}`}>
+        <Card className={`border ${user.linkedin_connected ? 'border-blue-200 bg-blue-50' : 'border-gray-100'}`}>
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Linkedin className="w-5 h-5 text-blue-500" />
@@ -724,7 +724,7 @@ export default function Profile() {
                   </summary>
                   <div className="mt-3 space-y-2">
                     <p className="text-xs text-gray-500">
-                      Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-400">li_at</code> value
+                      Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-600">li_at</code> value
                     </p>
                     <div className="flex gap-2">
                       <Input
@@ -752,7 +752,7 @@ export default function Profile() {
         </Card>
 
         {/* Email Notifications */}
-        <Card className="border border-white/5">
+        <Card className="border border-gray-100">
           <CardHeader>
             <CardTitle className="font-semibold flex items-center gap-2">
               <Bell className="w-5 h-5 text-blue-600" />
@@ -763,9 +763,9 @@ export default function Profile() {
             <p className="text-sm text-gray-400 mb-4">{t('profile.notificationsSubtitle')}</p>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-white">{t('profile.interviewReminders')}</p>
+                  <p className="font-medium text-gray-900">{t('profile.interviewReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.interviewRemindersDesc')}</p>
                 </div>
                 <div className="text-blue-600">
@@ -773,9 +773,9 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-white">{t('profile.followUpReminders')}</p>
+                  <p className="font-medium text-gray-900">{t('profile.followUpReminders')}</p>
                   <p className="text-sm text-gray-500">{t('profile.followUpRemindersDesc')}</p>
                 </div>
                 <div className="text-blue-600">
@@ -783,9 +783,9 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-white">{t('profile.deadlineAlerts')}</p>
+                  <p className="font-medium text-gray-900">{t('profile.deadlineAlerts')}</p>
                   <p className="text-sm text-gray-500">{t('profile.deadlineAlertsDesc')}</p>
                 </div>
                 <div className="text-blue-600">
