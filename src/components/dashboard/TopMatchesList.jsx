@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import JobSearchLoader from "./JobSearchLoader";
 import {
   Sparkles, MapPin, Building2, ExternalLink,
   Linkedin, Globe, Search, X, Briefcase, Clock, RefreshCw,
@@ -81,16 +81,14 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
   if (isLoading) {
     return (
       <Card className="border border-gray-100 shadow-sm overflow-hidden w-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-5 w-48" />
-          </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            Top Matches for You
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Skeleton key={i} className="h-[88px] w-full rounded-xl" />
-          ))}
+        <CardContent className="p-0">
+          <JobSearchLoader />
         </CardContent>
       </Card>
     );
