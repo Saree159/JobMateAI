@@ -80,7 +80,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
 
   if (isLoading) {
     return (
-      <Card className="border border-gray-100 shadow-sm">
+      <Card className="border border-gray-100 shadow-sm overflow-hidden w-full">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Skeleton className="h-4 w-4 rounded" />
@@ -97,9 +97,9 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
   }
 
   return (
-    <Card className="border border-gray-100 shadow-sm">
+    <Card className="border border-gray-100 shadow-sm overflow-hidden w-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-w-0">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-600" />
             Top Matches for You
@@ -146,7 +146,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             </div>
 
             {/* Source + score chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 w-full">
               {SOURCE_FILTERS.map(s => (
                 <FilterChip key={s} active={source === s} onClick={() => setSource(s)}>
                   {s}
@@ -211,13 +211,13 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             return (
               <div
                 key={idx}
-                className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer group"
+                className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer group overflow-hidden"
                 onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
               >
                 {/* Row 1: title + score + source */}
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{job.title}</h3>
+                <div className="flex items-start justify-between gap-2 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate min-w-0">{job.title}</h3>
                     <ScorePill score={job.match_score ?? 0} />
                   </div>
 
