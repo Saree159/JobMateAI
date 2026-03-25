@@ -34,8 +34,7 @@ export default function Layout({ children, currentPageName }) {
   const initials = user?.full_name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'U';
 
   return (
-    <SidebarProvider className="overflow-x-hidden" style={{ maxWidth: '100vw' }}>
-      <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
+    <SidebarProvider style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
 
         <Sidebar side={isRTL ? "right" : "left"} className="ltr:border-r rtl:border-l border-gray-200">
           {/* Brand */}
@@ -106,7 +105,7 @@ export default function Layout({ children, currentPageName }) {
         </Sidebar>
 
         {/* Main */}
-        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <main className="flex-1 flex flex-col overflow-hidden min-w-0 max-w-full bg-background">
           {/* Mobile header */}
           <header className="bg-white border-b border-gray-200 px-4 py-3 md:hidden sticky top-0 z-20 shadow-sm">
             <div className="flex items-center gap-3">
@@ -115,11 +114,10 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', maxWidth: '100%' }}>
             {children}
           </div>
         </main>
-      </div>
     </SidebarProvider>
   );
 }
