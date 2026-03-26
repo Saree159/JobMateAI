@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input";
 import JobSearchLoader from "./JobSearchLoader";
 import {
   Sparkles, MapPin, Building2, ExternalLink,
-  Linkedin, Globe, Search, X, Briefcase, Clock, RefreshCw,
+  Linkedin, Globe, Search, X, Clock, RefreshCw,
+  CheckCircle2, Phone,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { jobsApi } from "@/api/jobmate";
+import { toast } from "sonner";
 
 const SOURCE_FILTERS = ["All", "LinkedIn", "Drushim"];
 const SCORE_FILTERS  = [
@@ -63,6 +66,25 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
   const [search, setSearch]     = useState("");
   const [source, setSource]     = useState("All");
   const [scoreFilter, setScore] = useState("All");
+  const [appliedIds, setAppliedIds] = useState(() => new Set(
+    jobs.filter(j => j.status === 'applied').map(j => j.id)
+  ));
+  const [pendingId, setPendingId] = useState(null);
+
+  const markApplied = async (e, job) => {
+    e.stopPropagation();
+    if (appliedIds.has(job.id)) return;
+    setPendingId(job.id);
+    try {
+      await jobsApi.updateFeedStatus(job.id, 'applied');
+      setAppliedIds(prev => new Set([...prev, job.id]));
+      toast.success(`Marked "${job.title}" as applied`);
+    } catch {
+      toast.error('Failed to update status');
+    } finally {
+      setPendingId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const minScore = SCORE_FILTERS.find(f => f.label === scoreFilter)?.min ?? 0;
@@ -267,14 +289,10 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                   </p>
                 )}
 
-                {/* Row 4: skill tags + apply button */}
+                {/* Row 4: skill tags + actions */}
                 <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                   {job.skills?.slice(0, 4).map((s, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="text-[10px] h-5 px-1.5 font-normal"
-                    >
+                    <Badge key={i} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
                       {s}
                     </Badge>
                   ))}
@@ -288,24 +306,44 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                       {job.experience_level}
                     </Badge>
                   )}
-                  {job.url && (
-                    <a
-                      href={job.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto shrink-0"
-                      onClick={e => e.stopPropagation()}
-                    >
+                  <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                    {appliedIds.has(job.id) ? (
+                      <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+                        <CheckCircle2 className="w-3 h-3" /> Applied
+                      </span>
+                    ) : (
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px] border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                        disabled={pendingId === job.id}
+                        onClick={(e) => markApplied(e, job)}
                       >
-                        Apply <ExternalLink className="w-3 h-3 ml-1" />
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Applied
                       </Button>
-                    </a>
-                  )}
+                    )}
+                    {job.url && (
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          Apply <ExternalLink className="w-3 h-3 ml-1" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
+
+                {/* Recruiter tip — shown when applied */}
+                {appliedIds.has(job.id) && (
+                  <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+                    <Phone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                    <div className="text-[11px] leading-relaxed text-blue-700">
+                      <span className="font-semibold">Keep your phone nearby</span> — recruiters typically call within 3–7 business days.
+                      <span className="mx-1 text-blue-400">·</span>
+                      <span dir="rtl" className="font-medium">שמור על הטלפון קרוב — מגייסים בדרך כלל מתקשרים תוך 3–7 ימי עסקים</span>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })

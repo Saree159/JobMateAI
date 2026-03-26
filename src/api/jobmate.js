@@ -223,6 +223,17 @@ export const jobsApi = {
     if (userId) params.set("user_id", userId);
     return apiRequest(`/api/jobs/description?${params}`);
   },
+
+  /**
+   * Update per-user status of a feed/ingest job (dashboard top matches).
+   * @param {number} jobId - IngestJob ID
+   * @param {'new'|'saved'|'applied'|'ignored'} status
+   */
+  updateFeedStatus: (jobId, status) =>
+    apiRequest(`/api/jobs/${jobId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
 };
 
 export const resumeApi = {
