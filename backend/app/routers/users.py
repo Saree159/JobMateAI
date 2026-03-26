@@ -140,6 +140,51 @@ def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, db: Se
     return response
 
 
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """
+    Verify user email using the token from the verification link.
+    Marks the user as verified and clears the token.
+    """
+    user = db.query(User).filter(User.verification_token == token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+    user.is_verified = True
+    user.verification_token = None
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification")
+def resend_verification(
+    body: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Resend the verification email.
+    Always returns 200 to avoid leaking whether the email is registered.
+    """
+    user = db.query(User).filter(User.email == body.email).first()
+    if user and not user.is_verified:
+        token = secrets.token_urlsafe(32)
+        user.verification_token = token
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        background_tasks.add_task(
+            send_verification_email,
+            user.email,
+            user.full_name or "",
+            token,
+        )
+    return {"message": "If the email exists, a verification link was sent"}
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: int,
@@ -225,51 +270,6 @@ def delete_user(
     db.delete(current_user)
     db.commit()
     return None
-
-
-class ResendVerificationRequest(BaseModel):
-    email: str
-
-
-@router.get("/verify-email")
-def verify_email(token: str, db: Session = Depends(get_db)):
-    """
-    Verify user email using the token from the verification link.
-    Marks the user as verified and clears the token.
-    """
-    user = db.query(User).filter(User.verification_token == token).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
-    user.is_verified = True
-    user.verification_token = None
-    user.updated_at = datetime.utcnow()
-    db.commit()
-    return {"message": "Email verified successfully"}
-
-
-@router.post("/resend-verification")
-def resend_verification(
-    body: ResendVerificationRequest,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-):
-    """
-    Resend the verification email.
-    Always returns 200 to avoid leaking whether the email is registered.
-    """
-    user = db.query(User).filter(User.email == body.email).first()
-    if user and not user.is_verified:
-        token = secrets.token_urlsafe(32)
-        user.verification_token = token
-        user.updated_at = datetime.utcnow()
-        db.commit()
-        background_tasks.add_task(
-            send_verification_email,
-            user.email,
-            user.full_name or "",
-            token,
-        )
-    return {"message": "If the email exists, a verification link was sent"}
 
 
 class LinkedInLoginRequest(BaseModel):
