@@ -231,7 +231,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             return (
               <div
                 key={idx}
-                className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer group overflow-hidden"
+                className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer group overflow-hidden w-full min-w-0"
                 onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
               >
                 {/* Row 1: title + score + source */}
@@ -289,48 +289,52 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                   </p>
                 )}
 
-                {/* Row 4: skill tags + actions */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                  {job.skills?.slice(0, 4).map((s, i) => (
-                    <Badge key={i} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                      {s}
-                    </Badge>
-                  ))}
-                  {(job.skills?.length ?? 0) > 4 && (
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal text-gray-500">
-                      +{job.skills.length - 4}
-                    </Badge>
-                  )}
-                  {job.experience_level && (
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
-                      {job.experience_level}
-                    </Badge>
-                  )}
-                  <div className="ml-auto flex items-center gap-1.5 shrink-0">
-                    {appliedIds.has(job.id) ? (
-                      <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-                        <CheckCircle2 className="w-3 h-3" /> Applied
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-2 text-[11px] border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                        disabled={pendingId === job.id}
-                        onClick={(e) => markApplied(e, job)}
-                      >
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Applied
-                      </Button>
+                {/* Row 4: skill tags */}
+                {((job.skills?.length ?? 0) > 0 || job.experience_level) && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    {job.skills?.slice(0, 4).map((s, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                        {s}
+                      </Badge>
+                    ))}
+                    {(job.skills?.length ?? 0) > 4 && (
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal text-gray-500">
+                        +{job.skills.length - 4}
+                      </Badge>
                     )}
-                    {job.url && (
-                      <a href={job.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                          Apply <ExternalLink className="w-3 h-3 ml-1" />
-                        </Button>
-                      </a>
+                    {job.experience_level && (
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                        {job.experience_level}
+                      </Badge>
                     )}
                   </div>
+                )}
+
+                {/* Row 5: actions — own row so they never overflow on mobile */}
+                <div className="flex items-center gap-2 mt-2.5 w-full">
+                  {appliedIds.has(job.id) ? (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+                      <CheckCircle2 className="w-3 h-3" /> Applied
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px] border-emerald-200 text-emerald-600 hover:bg-emerald-50 shrink-0"
+                      disabled={pendingId === job.id}
+                      onClick={(e) => markApplied(e, job)}
+                    >
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Applied
+                    </Button>
+                  )}
+                  {job.url && (
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0" onClick={e => e.stopPropagation()}>
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                        Apply <ExternalLink className="w-3 h-3 ml-1" />
+                      </Button>
+                    </a>
+                  )}
                 </div>
 
                 {/* Recruiter tip — shown when applied */}
