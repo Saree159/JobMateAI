@@ -212,7 +212,7 @@ export default function JobMatch() {
   const changedCount    = processedDiff.filter(l => l.type !== "context").length;
 
   return (
-    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-4 md:space-y-6">
+    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-4 md:space-y-6 overflow-x-hidden w-full">
 
       {/* Back */}
       <button
@@ -414,7 +414,7 @@ export default function JobMatch() {
                     </button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[280px] md:max-h-[400px] overflow-y-auto bg-gray-50">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[280px] md:max-h-[400px] overflow-y-auto overflow-x-hidden bg-gray-50 w-full">
                     {displayDiff.map(line =>
                       line.type === "ellipsis" ? (
                         <div key={line.key} className="px-4 py-1 text-xs text-gray-400 italic bg-gray-100/50 border-y border-dashed border-gray-200">
