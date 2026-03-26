@@ -262,7 +262,7 @@ export default function JobMatch() {
       <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
 
         {/* ── RIGHT (Resume) — comes first on mobile via order ─────────── */}
-        <div className="order-first lg:order-last">
+        <div className="order-first lg:order-last min-w-0">
           <Card className="border border-blue-200 bg-blue-50/50 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -447,7 +447,7 @@ export default function JobMatch() {
         </div>
 
         {/* ── LEFT (Analysis + Description) — second on mobile ──────────── */}
-        <div className="order-last lg:order-first space-y-4 md:space-y-6">
+        <div className="order-last lg:order-first space-y-4 md:space-y-6 min-w-0">
 
           {/* Match Analysis */}
           <Card className="border border-gray-100 shadow-sm">
