@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Simple shared secret for ingestion from n8n
     ingestion_api_key: str = "changeme"
 
+    # Admin dashboard API key (set a strong value in production)
+    admin_api_key: str = "changeme-admin"
+
     # PayPal billing
     paypal_client_id: str = ""
     paypal_client_secret: str = ""

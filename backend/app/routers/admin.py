@@ -1,18 +1,29 @@
 """
 Admin statistics router.
 Returns aggregated real data for the HireMatrix admin dashboard.
-No auth required (internal/private use — add IP restriction or secret header in production).
+All endpoints require the X-Admin-Key header to match settings.admin_api_key.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from datetime import datetime, timedelta
 from collections import defaultdict
+from typing import Optional
 
 from app.database import get_db
 from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession
+from app.config import settings
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def verify_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")):
+    """Dependency: reject requests that don't carry the correct admin key."""
+    if not x_admin_key or x_admin_key != settings.admin_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing admin key",
+        )
 
 
 def month_label(dt: datetime) -> str:
@@ -20,7 +31,7 @@ def month_label(dt: datetime) -> str:
 
 
 @router.get("/stats")
-def admin_stats(db: Session = Depends(get_db)):
+def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Return all aggregated stats for the admin dashboard."""
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -362,7 +373,8 @@ def admin_stats(db: Session = Depends(get_db)):
 def admin_users_list(
     limit: int = 50,
     offset: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
 ):
     """Return paginated user list for admin."""
     users = (

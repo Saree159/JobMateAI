@@ -1,7 +1,9 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Bookmark, ArrowRight } from "lucide-react";
+import { Building2, MapPin, Bookmark, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { jobApi } from "@/api/jobmate";
 
 const COMPANY_COLORS = [
   "from-blue-500 to-indigo-600",
@@ -27,8 +29,18 @@ function MatchPill({ score }) {
 }
 
 export default function JobCard({ job, onView }) {
+  const queryClient = useQueryClient();
   const gradient = companyGradient(job.company);
   const initials = companyInitials(job.company);
+  const isApplied = job.status === 'applied';
+
+  const markApplied = useMutation({
+    mutationFn: () => jobApi.update(job.id, { status: 'applied' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+    },
+  });
 
   return (
     <div
@@ -84,6 +96,21 @@ export default function JobCard({ job, onView }) {
         )}
         {job.job_type && (
           <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal border-gray-200 text-gray-400">{job.job_type}</Badge>
+        )}
+        {!isApplied ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-[11px] border-blue-200 text-blue-600 hover:bg-blue-50 shrink-0"
+            onClick={(e) => { e.stopPropagation(); markApplied.mutate(); }}
+            disabled={markApplied.isPending}
+          >
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Applied
+          </Button>
+        ) : (
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium shrink-0">
+            <CheckCircle2 className="w-3 h-3" /> Applied
+          </span>
         )}
         <Button
           size="sm"

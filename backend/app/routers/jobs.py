@@ -5,20 +5,51 @@ Handles job CRUD operations, match scoring, and cover letter generation.
 import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.database import get_db
 from app.models import User, Job, JobStatus
-from app.models import IngestJob
+from app.models import IngestJob, UserJobFeedStatus
 from app.schemas import JobCreate, JobUpdate, JobResponse, MatchScoreResponse, CoverLetterResponse
 from app.schemas import FeedJobResponse, StatusUpdateRequest
 from app.services.ai import calculate_match_score, generate_cover_letter
+from app.routers.users import get_current_user
 
 logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api", tags=["jobs"])
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """Return the authenticated user when a Bearer token is present; otherwise None."""
+    if not credentials:
+        return None
+    from app.config import settings
+    from jose import JWTError, jwt
+    try:
+        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=[settings.algorithm])
+        email: str = payload.get("sub")
+        if not email:
+            return None
+        return db.query(User).filter(User.email == email).first()
+    except JWTError:
+        return None
+
+
+def _require_job_ownership(job: Job, current_user: User) -> None:
+    """Raise 403 if current_user does not own the job."""
+    if job.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this job",
+        )
 
 
 @router.get("/jobs", response_model=List[FeedJobResponse])
@@ -27,19 +58,21 @@ def list_feed_jobs(
     q: Optional[str] = None,
     days: int = 0,
     sort: str = "recent",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
-    """List ingested jobs for the UI feed."""
-    query = db.query(IngestJob)
+    """
+    List ingested jobs for the UI feed.
+    When authenticated, status reflects the calling user's personal status
+    (new / saved / applied / ignored) rather than a global value.
+    """
+    from datetime import datetime, timedelta
 
-    if status:
-        query = query.filter(IngestJob.status == status)
+    query = db.query(IngestJob)
 
     if q:
         like_q = f"%{q}%"
         query = query.filter((IngestJob.title.ilike(like_q)) | (IngestJob.company.ilike(like_q)))
-
-    from datetime import datetime, timedelta
 
     if days and days > 0:
         cutoff = datetime.utcnow() - timedelta(days=days)
@@ -49,18 +82,68 @@ def list_feed_jobs(
         query = query.order_by(IngestJob.last_seen_at.desc())
 
     results = query.limit(100).all()
+
+    if current_user:
+        # Build a lookup of this user's personal statuses
+        job_ids = [j.id for j in results]
+        user_statuses = {
+            row.ingest_job_id: row.status
+            for row in db.query(UserJobFeedStatus).filter(
+                UserJobFeedStatus.user_id == current_user.id,
+                UserJobFeedStatus.ingest_job_id.in_(job_ids),
+            ).all()
+        }
+        # Inject per-user status (transient override)
+        for job in results:
+            if job.id in user_statuses:
+                job.status = user_statuses[job.id]
+            else:
+                job.status = "new"
+
+        # If caller filtered by status, apply that filter post-hydration
+        if status:
+            results = [j for j in results if j.status == status]
+
     return results
 
 
 @router.patch("/jobs/{job_id}/status", response_model=FeedJobResponse)
-def update_feed_job_status(job_id: int, body: StatusUpdateRequest, db: Session = Depends(get_db)):
+def update_feed_job_status(
+    job_id: int,
+    body: StatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update the per-user status of a feed job (new → saved / applied / ignored).
+    Each user has their own status for every feed job — changes do not affect other users.
+    """
     job = db.query(IngestJob).filter(IngestJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    job.status = body.status
-    db.add(job)
+
+    # Upsert per-user status
+    user_status = (
+        db.query(UserJobFeedStatus)
+        .filter(
+            UserJobFeedStatus.user_id == current_user.id,
+            UserJobFeedStatus.ingest_job_id == job_id,
+        )
+        .first()
+    )
+    if user_status:
+        user_status.status = body.status
+    else:
+        user_status = UserJobFeedStatus(
+            user_id=current_user.id,
+            ingest_job_id=job_id,
+            status=body.status,
+        )
+        db.add(user_status)
     db.commit()
-    db.refresh(job)
+
+    # Return the job with the user's personal status injected
+    job.status = body.status  # transient override for serialization
     return job
 
 
@@ -73,7 +156,12 @@ def jobs_today_count(db: Session = Depends(get_db)):
 
 
 @router.post("/users/{user_id}/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
-def create_job(user_id: int, job_data: JobCreate, db: Session = Depends(get_db)):
+def create_job(
+    user_id: int,
+    job_data: JobCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Create a new job posting for a user.
     
@@ -84,23 +172,22 @@ def create_job(user_id: int, job_data: JobCreate, db: Session = Depends(get_db))
     - **description**: Job description
     - **apply_url**: Application URL (optional)
     """
-    # Verify user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create jobs for this user",
         )
-    
-    # Create job
+
+    # Create job — optionally linked back to its IngestJob source
     db_job = Job(
         user_id=user_id,
+        ingest_job_id=job_data.ingest_job_id,  # may be None for manually-added jobs
         title=job_data.title,
         company=job_data.company,
         location=job_data.location,
         description=job_data.description,
         apply_url=job_data.apply_url,
-        status=JobStatus.SAVED
+        status=JobStatus.SAVED,
     )
     
     db.add(db_job)
@@ -114,23 +201,22 @@ def create_job(user_id: int, job_data: JobCreate, db: Session = Depends(get_db))
 def list_user_jobs(
     user_id: int,
     status_filter: Optional[JobStatus] = Query(None, alias="status"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List all jobs for a user.
-    
+
     - **user_id**: ID of the user
     - **status**: Optional filter by job status (saved, applied, interview, offer, rejected)
     """
-    # Verify user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to list jobs for this user",
         )
-    
-    # Build query
+
+    # Build query — user is already verified via JWT
     query = db.query(Job).filter(Job.user_id == user_id)
     
     if status_filter:
@@ -147,6 +233,7 @@ async def get_top_matching_jobs(
     limit: int = Query(10, description="Number of top matches to return"),
     force_refresh: bool = Query(False, description="Bypass cache and re-scrape"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Return top job matches for a user based on their profile.
@@ -156,12 +243,16 @@ async def get_top_matching_jobs(
     A background scheduler also refreshes the cache every 30 minutes
     (at :00 and :30 of each hour) when it detects a stale entry.
     """
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view top matches for this user",
+        )
+
     from app.services.cache import get_cache
     from app.services.scrape_scheduler import fetch_and_cache_top_matches, user_cache_key
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user = current_user
 
     cache = get_cache()
     key = user_cache_key(user_id)
@@ -381,93 +472,76 @@ async def fetch_job_full_description(
 
 
 @router.get("/jobs/{job_id}", response_model=JobResponse)
-def get_job(job_id: int, db: Session = Depends(get_db)):
-    """
-    Get a single job by ID.
-    """
+def get_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a single tracked job by ID (owner only)."""
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
     return job
 
 
 @router.put("/jobs/{job_id}", response_model=JobResponse)
-def update_job(job_id: int, job_data: JobUpdate, db: Session = Depends(get_db)):
-    """
-    Update a job's details or status.
-    
-    Only provided fields will be updated.
-    """
+def update_job(
+    job_id: int,
+    job_data: JobUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a job's details or status (owner only)."""
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
-    # Update fields
-    update_data = job_data.model_dump(exclude_unset=True)
-    
-    for field, value in update_data.items():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
+
+    for field, value in job_data.model_dump(exclude_unset=True).items():
         setattr(job, field, value)
-    
+
     db.commit()
     db.refresh(job)
-    
     return job
 
 
 @router.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_job(job_id: int, db: Session = Depends(get_db)):
-    """
-    Delete a job posting.
-    """
+def delete_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a tracked job (owner only)."""
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
     db.delete(job)
     db.commit()
-    
     return None
 
 
 @router.post("/jobs/{job_id}/match", response_model=MatchScoreResponse)
-def compute_match_score(job_id: int, db: Session = Depends(get_db)):
+def compute_match_score(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Calculate and store a match score for a job based on the user's profile.
     
     The score is based on:
     - Skills overlap between user and job description
     - Semantic similarity using TF-IDF
-    
+
     Returns a score from 0-100 and lists of matched/missing skills.
     """
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
-    user = db.query(User).filter(User.id == job.user_id).first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
+    user = current_user
     
     # Calculate match score
     score, matched_skills, missing_skills = calculate_match_score(
@@ -491,7 +565,11 @@ def compute_match_score(job_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/jobs/{job_id}/cover-letter", response_model=CoverLetterResponse)
-async def generate_job_cover_letter(job_id: int, db: Session = Depends(get_db)):
+async def generate_job_cover_letter(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Generate an AI-powered cover letter for a job.
     
@@ -502,21 +580,11 @@ async def generate_job_cover_letter(job_id: int, db: Session = Depends(get_db)):
     The cover letter is stored in the database and returned.
     """
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
-    user = db.query(User).filter(User.id == job.user_id).first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
+    user = current_user
+
     # Generate cover letter
     try:
         cover_letter = await generate_cover_letter(
@@ -545,7 +613,11 @@ async def generate_job_cover_letter(job_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/jobs/{job_id}/interview-questions")
-async def generate_interview_questions(job_id: int, db: Session = Depends(get_db)):
+async def generate_interview_questions(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Generate AI-powered interview preparation questions for a job.
     
@@ -555,24 +627,18 @@ async def generate_interview_questions(job_id: int, db: Session = Depends(get_db
     - Company information
     """
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
-    user = db.query(User).filter(User.id == job.user_id).first()
-    
-    # Generate questions using AI
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
+
     try:
         from app.services.ai import generate_interview_questions
-        
+
         questions = await generate_interview_questions(
             job_title=job.title,
             company=job.company,
             job_description=job.description,
-            user_skills=user.skills_list if user else []
+            user_skills=current_user.skills_list,
         )
         
         return {
@@ -590,7 +656,11 @@ async def generate_interview_questions(job_id: int, db: Session = Depends(get_db
 
 
 @router.get("/jobs/{job_id}/salary-estimate")
-async def estimate_job_salary(job_id: int, db: Session = Depends(get_db)):
+async def estimate_job_salary(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Generate AI-powered salary estimation for a job.
     
@@ -600,31 +670,19 @@ async def estimate_job_salary(job_id: int, db: Session = Depends(get_db)):
     - Market conditions
     """
     job = db.query(Job).filter(Job.id == job_id).first()
-    
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with id {job_id} not found"
-        )
-    
-    user = db.query(User).filter(User.id == job.user_id).first()
-    
-    # Generate salary estimate using AI
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    _require_job_ownership(job, current_user)
+
     try:
         from app.services.ai import estimate_salary
-        
-        # Extract experience years from job description if available
-        experience_years = None
-        if user:
-            # Could add experience_years field to User model
-            experience_years = 5  # Default mid-level
-        
+
         salary_data = await estimate_salary(
             job_title=job.title,
             location=job.location or "Remote",
-            experience_years=experience_years,
-            skills=user.skills_list if user else [],
-            company_size="medium"
+            experience_years=current_user.years_of_experience or 5,
+            skills=current_user.skills_list,
+            company_size="medium",
         )
         
         return {
@@ -646,7 +704,8 @@ async def estimate_job_salary(job_id: int, db: Session = Depends(get_db)):
 async def scrape_job_from_url(
     url: str = Query(..., description="URL of the job posting to scrape"),
     user_id: int = Query(..., description="User ID to associate with the scraped job"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Scrape job details from a URL and optionally save it.
@@ -660,12 +719,10 @@ async def scrape_job_from_url(
     
     Returns the extracted job data which can be reviewed before saving.
     """
-    # Verify user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to scrape on behalf of this user",
         )
     
     try:
@@ -933,15 +990,16 @@ def get_cache_stats():
 
 
 @router.delete("/jobs/cache/clear")
-def clear_cache():
-    """Clear all cached jobs (admin endpoint)."""
+def clear_cache(current_user: User = Depends(get_current_user)):
+    """Clear the calling user's cached job matches (authenticated users only)."""
     try:
         from app.services.cache import get_cache
+        from app.services.scrape_scheduler import user_cache_key
         cache = get_cache()
-        cache.clear()
-        return {"success": True, "message": "Cache cleared"}
+        cache.delete(user_cache_key(current_user.id))
+        return {"success": True, "message": "Your job match cache has been cleared"}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error clearing cache: {str(e)}"
+            detail=f"Error clearing cache: {str(e)}",
         )

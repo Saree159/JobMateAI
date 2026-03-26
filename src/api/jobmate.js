@@ -399,6 +399,11 @@ export const billingApi = {
     apiRequest('/api/billing/cancel', { method: 'POST' }),
 };
 
+export const analyticsApi = {
+  getDashboard: () => apiRequest('/api/analytics/dashboard'),
+  getInsights:  () => apiRequest('/api/analytics/insights'),
+};
+
 // Default export with all APIs
 export default {
   user: userApi,

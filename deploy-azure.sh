@@ -15,10 +15,10 @@ set -euo pipefail
 # ─── VARIABLES ────────────────────────────────────────────────────────────────
 RESOURCE_GROUP="${RESOURCE_GROUP:-hirematrix-rg}"
 LOCATION="${LOCATION:-eastus}"
-ACR_NAME="${ACR_NAME:-hirematrixacr}"
-CONTAINER_ENV="${CONTAINER_ENV:-hirematrix-env}"
-POSTGRES_SERVER="${POSTGRES_SERVER:-hirematrix-db}"
-REDIS_NAME="${REDIS_NAME:-hirematrix-redis}"
+ACR_NAME="${ACR_NAME:-hirematrixacr2}"
+CONTAINER_ENV="${CONTAINER_ENV:-hirematrix-env2}"
+POSTGRES_SERVER="${POSTGRES_SERVER:-hirematrix-db2}"
+REDIS_NAME="${REDIS_NAME:-hirematrix-redis2}"
 BACKEND_APP="${BACKEND_APP:-hirematrix-backend}"
 SWA_NAME="${SWA_NAME:-hirematrix-frontend}"
 POSTGRES_USER="hirematrix"
@@ -81,11 +81,17 @@ provision_infra() {
     --location "$LOCATION" \
     --admin-user "$POSTGRES_USER" \
     --admin-password "$DB_PASSWORD" \
-    --database-name "$POSTGRES_DB" \
+    --tier Burstable \
     --sku-name Standard_B1ms \
     --storage-size 32 \
     --version 15 \
     --public-access 0.0.0.0 \
+    --output none
+
+  az postgres flexible-server db create \
+    --resource-group "$RESOURCE_GROUP" \
+    --server-name "$POSTGRES_SERVER" \
+    --database-name "$POSTGRES_DB" \
     --output none
 
   # Allow all Azure services (Container Apps VNet)

@@ -2,25 +2,24 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Target, Clock, Award, Briefcase } from "lucide-react";
-import jobMateAPI from "@/api/jobmate";
+import { TrendingUp, Target, Clock, Award, Briefcase } from "lucide-react";
+import { analyticsApi } from "@/api/jobmate";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function AnalyticsDashboard() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ["analytics", "dashboard"],
-    queryFn: async () => {
-      const response = await jobMateAPI.get("/api/analytics/dashboard");
-      return response.data;
-    },
+    queryKey: ["analytics", "dashboard", user?.id],
+    queryFn: () => analyticsApi.getDashboard(),
+    enabled: !!user?.id,
   });
 
   const { data: insights } = useQuery({
-    queryKey: ["analytics", "insights"],
-    queryFn: async () => {
-      const response = await jobMateAPI.get("/api/analytics/insights");
-      return response.data;
-    },
+    queryKey: ["analytics", "insights", user?.id],
+    queryFn: () => analyticsApi.getInsights(),
+    enabled: !!user?.id,
   });
 
   if (isLoading) {

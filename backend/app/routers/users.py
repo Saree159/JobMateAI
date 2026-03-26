@@ -128,38 +128,41 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Get a user's profile by ID.
+    Get a user's profile by ID.  Callers may only fetch their own profile.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this profile",
         )
-    
-    response = UserResponse.model_validate(user)
-    response.skills = user.skills_list
-    
+
+    response = UserResponse.model_validate(current_user)
+    response.skills = current_user.skills_list
     return response
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Update a user's profile.
-    
-    Only provided fields will be updated.
+    Update a user's profile.  Callers may only update their own profile.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this profile",
         )
+    user = current_user
     
     # Update fields if provided
     update_data = user_data.model_dump(exclude_unset=True)
@@ -191,23 +194,23 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Delete a user account.
-    
+    Delete a user account.  Callers may only delete their own account.
     This will also delete all associated jobs (cascade delete).
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this account",
         )
-    
-    db.delete(user)
-    db.commit()
 
+    db.delete(current_user)
+    db.commit()
     return None
 
 
@@ -217,14 +220,22 @@ class LinkedInLoginRequest(BaseModel):
 
 
 @router.post("/{user_id}/linkedin/connect")
-async def linkedin_connect_headless(user_id: int, creds: LinkedInLoginRequest, db: Session = Depends(get_db)):
+async def linkedin_connect_headless(
+    user_id: int,
+    creds: LinkedInLoginRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Headless Playwright login: fills LinkedIn email/password, waits for li_at cookie,
     saves it to the user profile. Credentials are never stored.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to connect LinkedIn for this user",
+        )
+    user = current_user
 
     try:
         from playwright.async_api import async_playwright, TimeoutError as PWTimeout

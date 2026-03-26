@@ -6,12 +6,24 @@ checks whether their per-user top-matches cache has expired; if so,
 re-scrapes and refreshes it.
 
 The per-user cache key is:  jobs:top_matches:u{user_id}
+
+Reliability improvements
+------------------------
+* A semaphore (MAX_CONCURRENT_SCRAPES) prevents thundering-herd scraping.
+* Random jitter is added between users to spread load.
+* Scraped jobs are persisted to the ingest_jobs table so the global feed
+  benefits from scheduler runs even when n8n is not active.
 """
 import asyncio
 import logging
+import random
 import re as _re
 from datetime import datetime
 from typing import Optional
+
+# Maximum number of users whose scrapes can run concurrently
+MAX_CONCURRENT_SCRAPES = 3
+_scrape_semaphore = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +60,77 @@ def user_cache_key(user_id: int) -> str:
     return f"jobs:top_matches:u{user_id}"
 
 
+async def _persist_scraped_jobs(jobs: list, source: str) -> int:
+    """
+    Upsert a batch of scraped job dicts into the ingest_jobs table.
+    Returns the number of newly inserted rows.
+    """
+    from app.database import SessionLocal
+    from app.models import IngestJob
+    from app.routers.ingest import normalize_url
+    import json
+
+    if not jobs:
+        return 0
+
+    db = SessionLocal()
+    inserted = 0
+    now = datetime.utcnow()
+    try:
+        for item in jobs:
+            url = item.get("url") or item.get("apply_url") or ""
+            canonical = normalize_url(url) if url else ""
+            if not canonical:
+                title = item.get("title") or ""
+                company = item.get("company") or ""
+                if not title and not company:
+                    continue
+                canonical = f"{title}|{company}"
+
+            existing = db.query(IngestJob).filter(IngestJob.canonical_key == canonical).first()
+            if existing:
+                existing.last_seen_at = now
+                existing.source = source
+                db.add(existing)
+            else:
+                new_job = IngestJob(
+                    canonical_key=canonical,
+                    title=item.get("title") or "",
+                    company=item.get("company") or "",
+                    location=item.get("location") or "",
+                    url=canonical if url else None,
+                    raw=json.dumps(item),
+                    source=source,
+                    status="new",
+                    first_seen_at=now,
+                    last_seen_at=now,
+                )
+                db.add(new_job)
+                inserted += 1
+
+        db.commit()
+    except Exception as e:
+        logger.error(f"[scheduler] _persist_scraped_jobs error ({source}): {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+    return inserted
+
+
 async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
     """
     Run the full scrape + score pipeline for a user and store the result
     in the per-user cache.  Returns the result dict or None on failure.
+
+    Uses _scrape_semaphore to limit concurrent scrapes across all callers.
     """
+    async with _scrape_semaphore:
+        return await _fetch_and_cache_top_matches_inner(user_id)
+
+
+async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
+    """Inner implementation — called under the semaphore."""
     from app.database import SessionLocal
     from app.models import User
     from app.services.cache import get_cache, make_jobs_cache_key
@@ -82,6 +160,7 @@ async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
         drushim_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{category}").lower().strip('_')
         cache_key_drushim = make_jobs_cache_key("drushim", drushim_role_key)
         drushim_jobs = cache.get(cache_key_drushim)
+        fresh_drushim = False
         if not drushim_jobs:
             logger.info(f"[scheduler] drushim scrape for user {user_id} role={user.target_role} category={category}")
             try:
@@ -89,6 +168,7 @@ async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
                 drushim_jobs = await scraper.scrape_listing_async(drushim_url)
                 if drushim_jobs:
                     cache.set(cache_key_drushim, drushim_jobs, ttl=1800)
+                    fresh_drushim = True
             except Exception as e:
                 logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
                 drushim_jobs = []
@@ -96,8 +176,14 @@ async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
         for j in drushim_jobs:
             j.setdefault("source", "drushim")
 
+        # Persist fresh Drushim results to the ingest_jobs DB so the global feed stays up-to-date
+        if fresh_drushim and drushim_jobs:
+            n = await _persist_scraped_jobs(drushim_jobs, source="drushim")
+            logger.info(f"[scheduler] persisted {n} new drushim jobs to ingest_jobs table")
+
         # ── LinkedIn ─────────────────────────────────────────────────────────
         linkedin_jobs = []
+        fresh_linkedin = False
         if user.target_role:
             li_at = user.linkedin_li_at
             li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
@@ -110,12 +196,18 @@ async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
                     linkedin_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at)
                     if linkedin_jobs:
                         cache.set(cache_key_li, linkedin_jobs, ttl=1800)
+                        fresh_linkedin = True
                 except Exception as e:
                     logger.warning(f"[scheduler] linkedin scrape failed for user {user_id}: {e}")
                     linkedin_jobs = []
         linkedin_jobs = linkedin_jobs or []
         for j in linkedin_jobs:
             j.setdefault("source", "linkedin")
+
+        # Persist fresh LinkedIn results to ingest_jobs
+        if fresh_linkedin and linkedin_jobs:
+            n = await _persist_scraped_jobs(linkedin_jobs, source="linkedin")
+            logger.info(f"[scheduler] persisted {n} new linkedin jobs to ingest_jobs table")
 
         jobs = drushim_jobs + linkedin_jobs
         if not jobs:
@@ -205,6 +297,9 @@ async def run_scheduler():
 
         for uid in stale:
             try:
+                # Small random jitter (0–15 s) between users to spread scraping load
+                jitter = random.uniform(0, 15)
+                await asyncio.sleep(jitter)
                 await fetch_and_cache_top_matches(uid)
             except Exception as e:
                 logger.error(f"[scheduler] error refreshing user {uid}: {e}")
