@@ -2,7 +2,7 @@
 SQLAlchemy database models for JobMate AI.
 Defines User and Job tables with relationships.
 """
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum, LargeBinary, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
