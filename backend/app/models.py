@@ -50,6 +50,10 @@ class User(Base):
     skills = Column(Text, nullable=True)  # e.g., "Python,React,SQL"
     
     location_preference = Column(String(255), nullable=True)
+    min_salary_preference = Column(Integer, nullable=True)   # monthly ILS
+    industry_preference = Column(String(255), nullable=True)
+    job_type_preference = Column(String(100), nullable=True)  # full-time/part-time/contract/freelance
+    availability = Column(String(100), nullable=True)         # immediately/2-weeks/1-month/3-months
     work_mode_preference = Column(
         Enum(WorkModePreference),
         default=WorkModePreference.REMOTE,
@@ -110,10 +114,14 @@ class User(Base):
 class Job(Base):
     """Job model - represents a job posting tracked by a user."""
     __tablename__ = "jobs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    
+
+    # Optional link back to the IngestJob that this tracked job originated from.
+    # When set, the frontend can show "discovered via email / Drushim / LinkedIn".
+    ingest_job_id = Column(Integer, ForeignKey("ingest_jobs.id"), nullable=True, index=True)
+
     title = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     location = Column(String(255), nullable=True)
@@ -139,9 +147,10 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationship to user
+    # Relationships
     user = relationship("User", back_populates="jobs")
-    
+    ingest_job = relationship("IngestJob", foreign_keys=[ingest_job_id])
+
     def __repr__(self):
         return f"<Job(id={self.id}, title='{self.title}', company='{self.company}', status='{self.status}')>"
 
@@ -303,4 +312,37 @@ class IngestJob(Base):
 
     def __repr__(self):
         return f"<IngestJob(id={self.id}, title='{self.title}', company='{self.company}', status='{self.status}')>"
+
+
+class UserJobFeedStatus(Base):
+    """
+    Per-user status for feed jobs (IngestJob).
+
+    Replaces the global IngestJob.status for user-facing operations.
+    Each user tracks their own new / saved / applied / ignored state
+    independently — one user saving a job does not affect other users.
+    """
+    __tablename__ = "user_job_feed_status"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    ingest_job_id = Column(Integer, ForeignKey("ingest_jobs.id"), nullable=False, index=True)
+    status = Column(
+        Enum(FeedJobStatus),
+        default=FeedJobStatus.NEW,
+        nullable=False,
+    )
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Enforce one row per (user, job) pair
+    __table_args__ = (
+        __import__("sqlalchemy").UniqueConstraint("user_id", "ingest_job_id", name="uq_user_feed_status"),
+    )
+
+    # Relationships
+    user = relationship("User")
+    ingest_job = relationship("IngestJob")
+
+    def __repr__(self):
+        return f"<UserJobFeedStatus(user={self.user_id}, job={self.ingest_job_id}, status='{self.status}')>"
 

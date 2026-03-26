@@ -4,45 +4,121 @@ import { userApi, resumeApi } from "@/api/jobmate";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Sparkles, Upload, X, Check,
-  ChevronRight, ChevronLeft, Loader2, Globe, Building2, Laptop2, MapPin,
+  Upload, X, Check, ChevronRight, ChevronLeft, Loader2,
+  Globe, Building2, Laptop2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_OPTIONS = [
-  { label: "Frontend Dev",       icon: "🖥️",  value: "Frontend Developer" },
-  { label: "Backend Dev",        icon: "⚙️",  value: "Backend Developer" },
-  { label: "Full Stack Dev",     icon: "🔄",  value: "Full Stack Developer" },
-  { label: "Data Science / ML",  icon: "📊",  value: "Data Scientist" },
-  { label: "Product Manager",    icon: "📦",  value: "Product Manager" },
-  { label: "DevOps / Cloud",     icon: "☁️",  value: "DevOps Engineer" },
-  { label: "UI/UX Designer",     icon: "🎨",  value: "UI/UX Designer" },
-  { label: "QA Engineer",        icon: "🔍",  value: "QA Engineer" },
-  { label: "Other",              icon: "✏️",  value: "other" },
+  { label: "Frontend Dev",      icon: "🖥️",  value: "Frontend Developer" },
+  { label: "Backend Dev",       icon: "⚙️",  value: "Backend Developer" },
+  { label: "Full Stack Dev",    icon: "🔄",  value: "Full Stack Developer" },
+  { label: "Data Science / ML", icon: "📊",  value: "Data Scientist" },
+  { label: "Product Manager",   icon: "📦",  value: "Product Manager" },
+  { label: "DevOps / Cloud",    icon: "☁️",  value: "DevOps Engineer" },
+  { label: "UI/UX Designer",    icon: "🎨",  value: "UI/UX Designer" },
+  { label: "QA Engineer",       icon: "🔍",  value: "QA Engineer" },
+  { label: "Other",             icon: "✏️",  value: "other" },
 ];
 
 const EXPERIENCE_LEVELS = [
-  { label: "Entry",     sub: "0–1 yr",  value: "entry" },
-  { label: "Junior",    sub: "1–3 yrs", value: "junior" },
-  { label: "Mid-Level", sub: "3–5 yrs", value: "mid" },
-  { label: "Senior",    sub: "5+ yrs",  value: "senior" },
+  { label: "Entry Level", icon: "🌱", sub: "0–1 yr",   value: "entry" },
+  { label: "Junior",      icon: "🚀", sub: "1–3 yrs",  value: "junior" },
+  { label: "Mid-Level",   icon: "💼", sub: "3–5 yrs",  value: "mid" },
+  { label: "Senior",      icon: "🏆", sub: "5+ yrs",   value: "senior" },
+];
+
+const SALARY_OPTIONS = [
+  { label: "Under ₪8,000",       value: 0 },
+  { label: "₪8,000–₪12,000",    value: 8000 },
+  { label: "₪12,000–₪18,000",   value: 12000 },
+  { label: "₪18,000–₪25,000",   value: 18000 },
+  { label: "₪25,000–₪35,000",   value: 25000 },
+  { label: "₪35,000+",           value: 35000 },
+];
+
+const INDUSTRY_OPTIONS = [
+  { label: "Tech & Software",        icon: "💻" },
+  { label: "Finance & Fintech",      icon: "🏦" },
+  { label: "Healthcare & MedTech",   icon: "🏥" },
+  { label: "Education & EdTech",     icon: "🎓" },
+  { label: "E-commerce & Retail",    icon: "🛒" },
+  { label: "Manufacturing & Industry", icon: "🏭" },
+  { label: "Media & Marketing",      icon: "📱" },
+  { label: "Other",                  icon: "🌐" },
+];
+
+const JOB_TYPE_OPTIONS = [
+  { label: "Full-Time",   icon: "💼", value: "full-time" },
+  { label: "Part-Time",   icon: "⏰", value: "part-time" },
+  { label: "Contract",    icon: "📋", value: "contract" },
+  { label: "Freelance",   icon: "💻", value: "freelance" },
+  { label: "Internship",  icon: "🎓", value: "internship" },
+  { label: "Any",         icon: "🔄", value: "any" },
+];
+
+const AVAILABILITY_OPTIONS = [
+  { label: "Immediately",     icon: "⚡", value: "immediately" },
+  { label: "Within 2 weeks",  icon: "📅", value: "2-weeks" },
+  { label: "Within 1 month",  icon: "🗓️", value: "1-month" },
+  { label: "3+ months",       icon: "⏳", value: "3-months" },
 ];
 
 const WORK_MODES = [
-  { label: "Remote",   icon: <Globe className="w-5 h-5" />,    value: "remote" },
-  { label: "Hybrid",   icon: <Laptop2 className="w-5 h-5" />,  value: "hybrid" },
-  { label: "On-site",  icon: <Building2 className="w-5 h-5" />, value: "onsite" },
+  { label: "Remote",   icon: <Globe className="w-4 h-4" />,    value: "remote" },
+  { label: "Hybrid",   icon: <Laptop2 className="w-4 h-4" />,  value: "hybrid" },
+  { label: "On-site",  icon: <Building2 className="w-4 h-4" />, value: "onsite" },
 ];
 
-const STEPS = ["Career Goals", "Resume & Skills", "Review"];
+const TOTAL_STEPS = 8;
+
+// ─── Animation variants ───────────────────────────────────────────────────────
+
+const variants = {
+  enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function expLevelToYears(level) {
+  return { entry: 0, junior: 1, mid: 3, senior: 5 }[level] ?? 0;
+}
+
+// ─── Shared UI pieces ─────────────────────────────────────────────────────────
+
+function SelectCard({ selected, onClick, children, className }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all text-left",
+        selected
+          ? "border-blue-600 bg-blue-50 text-blue-700"
+          : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50",
+        className
+      )}
+    >
+      {selected && (
+        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+          <Check className="w-2.5 h-2.5 text-white" />
+        </span>
+      )}
+      {children}
+    </button>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -50,12 +126,16 @@ export default function Onboarding() {
   const { user, updateUser, getToken } = useAuth();
   const fileInputRef = useRef(null);
 
-  const { t } = useTranslation();
   const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(1);
   const [formData, setFormData] = useState({
     target_role: "",
     custom_role: "",
     experience_level: "",
+    min_salary_preference: null,
+    industry_preference: "",
+    job_type_preference: [],   // array → joined on save
+    availability: "",
     work_mode_preference: "remote",
     location_preference: "",
     skills: [],
@@ -76,6 +156,27 @@ export default function Onboarding() {
     onError: () => setError("Failed to save profile. Please try again."),
   });
 
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
+  const goNext = () => {
+    setDirection(1);
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setError("");
+  };
+
+  const goBack = () => {
+    setDirection(-1);
+    setStep((s) => Math.max(s - 1, 1));
+    setError("");
+  };
+
+  const autoAdvance = (nextFormData) => {
+    setFormData(nextFormData);
+    setTimeout(() => goNext(), 280);
+  };
+
+  // ── Skills helpers ──────────────────────────────────────────────────────────
+
   const handleAddSkill = () => {
     const skill = skillInput.trim();
     if (skill && !formData.skills.includes(skill)) {
@@ -86,6 +187,8 @@ export default function Onboarding() {
 
   const handleRemoveSkill = (skill) =>
     setFormData((prev) => ({ ...prev, skills: prev.skills.filter((s) => s !== skill) }));
+
+  // ── Resume upload ────────────────────────────────────────────────────────────
 
   const handleFileUpload = async (file) => {
     if (!file) return;
@@ -117,15 +220,21 @@ export default function Onboarding() {
     }
   };
 
-  const handleNext = () => {
-    if (step === 1) {
-      const role = formData.target_role === "other" ? formData.custom_role : formData.target_role;
-      if (!role) { setError("Please select your target role."); return; }
-      if (!formData.experience_level) { setError("Please select your experience level."); return; }
-    }
-    setError("");
-    setStep((s) => s + 1);
+  // ── Job type toggle ─────────────────────────────────────────────────────────
+
+  const toggleJobType = (value) => {
+    setFormData((prev) => {
+      const current = prev.job_type_preference;
+      return {
+        ...prev,
+        job_type_preference: current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value],
+      };
+    });
   };
+
+  // ── Complete ─────────────────────────────────────────────────────────────────
 
   const handleComplete = () => {
     const role = formData.target_role === "other" ? formData.custom_role : formData.target_role;
@@ -134,343 +243,433 @@ export default function Onboarding() {
       skills: formData.skills,
       work_mode_preference: formData.work_mode_preference,
       location_preference: formData.location_preference,
+      min_salary_preference: formData.min_salary_preference,
+      industry_preference: formData.industry_preference,
+      job_type_preference: formData.job_type_preference.join(","),
+      availability: formData.availability,
+      years_of_experience: expLevelToYears(formData.experience_level),
     });
   };
 
-  const resolvedRole =
-    formData.target_role === "other" ? formData.custom_role : formData.target_role;
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <Card className="w-full max-w-2xl border border-gray-200 shadow-xl">
-        {/* ── Header ── */}
-        <CardHeader className="text-center pb-6 pt-10">
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
-            <Sparkles className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-500 bg-clip-text text-transparent">
-            {t('onboarding.title')}
-          </CardTitle>
-          <CardDescription className="text-base mt-1">
-            {t('onboarding.subtitle')}
-          </CardDescription>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Floating step counter */}
+      <div className="fixed top-5 right-6 text-sm font-semibold text-gray-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+        {step} / {TOTAL_STEPS}
+      </div>
 
-          {/* Step indicator */}
-          <div className="flex items-center justify-center gap-0 mt-6">
-            {STEPS.map((label, i) => {
-              const s = i + 1;
-              const active = s === step;
-              const done = s < step;
-              return (
-                <React.Fragment key={s}>
-                  <div className="flex flex-col items-center gap-1">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
-                        done
-                          ? "bg-blue-600 text-white"
-                          : active
-                          ? "bg-blue-600 text-white ring-4 ring-indigo-100"
-                          : "bg-gray-100 text-gray-400"
-                      )}
-                    >
-                      {done ? <Check className="w-4 h-4" /> : s}
-                    </div>
-                    <span className={cn("text-xs font-medium", active ? "text-blue-600" : "text-gray-400")}>
-                      {label}
-                    </span>
-                  </div>
-                  {i < STEPS.length - 1 && (
-                    <div className={cn("w-16 h-0.5 mb-4 transition-all", done ? "bg-blue-600" : "bg-gray-200")} />
-                  )}
-                </React.Fragment>
-              );
-            })}
+      <div className="w-full max-w-xl">
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden min-h-[520px] flex flex-col">
+          {/* Progress bar */}
+          <div className="h-1 bg-gray-100">
+            <div
+              className="h-full bg-blue-600 transition-all duration-500 ease-out"
+              style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+            />
           </div>
-        </CardHeader>
 
-        <CardContent className="pb-10 px-8 sm:px-10">
           {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* ══════════════════════════════════════════
-              STEP 1 — Career Goals
-          ══════════════════════════════════════════ */}
-          {step === 1 && (
-            <div className="space-y-8 animate-in fade-in duration-300">
-
-              {/* Role selection */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">What kind of role are you looking for?</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {ROLE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        setFormData((prev) => ({ ...prev, target_role: opt.value, custom_role: "" }));
-                        setError("");
-                      }}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
-                        formData.target_role === opt.value
-                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-gray-200 text-gray-400"
-                      )}
-                    >
-                      <span className="text-2xl">{opt.icon}</span>
-                      <span className="text-center leading-tight text-xs">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {formData.target_role === "other" && (
-                  <Input
-                    placeholder="Enter your role title..."
-                    value={formData.custom_role}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, custom_role: e.target.value }))}
-                    className="mt-2"
-                    autoFocus
-                  />
-                )}
-              </div>
-
-              {/* Experience level */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">What's your experience level?</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {EXPERIENCE_LEVELS.map((lvl) => (
-                    <button
-                      key={lvl.value}
-                      onClick={() => {
-                        setFormData((prev) => ({ ...prev, experience_level: lvl.value }));
-                        setError("");
-                      }}
-                      className={cn(
-                        "flex flex-col items-center gap-0.5 py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
-                        formData.experience_level === lvl.value
-                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-gray-200 text-gray-400"
-                      )}
-                    >
-                      <span className="font-semibold text-sm">{lvl.label}</span>
-                      <span className="text-xs text-gray-400">{lvl.sub}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Work mode */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Work mode preference</Label>
-                <div className="flex gap-3">
-                  {WORK_MODES.map((mode) => (
-                    <button
-                      key={mode.value}
-                      onClick={() => setFormData((prev) => ({ ...prev, work_mode_preference: mode.value }))}
-                      className={cn(
-                        "flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all hover:border-indigo-400",
-                        formData.work_mode_preference === mode.value
-                          ? "border-blue-600 bg-blue-900/30 text-blue-300"
-                          : "border-gray-200 text-gray-400"
-                      )}
-                    >
-                      {mode.icon}
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preferred location */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-base font-semibold">
-                  <MapPin className="w-4 h-4" /> Preferred Location
-                </Label>
-                <Input
-                  placeholder="e.g. Tel Aviv, Remote, New York"
-                  value={formData.location_preference}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, location_preference: e.target.value }))}
-                />
-              </div>
-
-              <Button onClick={handleNext} className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-base" size="lg">
-                Continue <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+            <div className="mx-6 mt-5">
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             </div>
           )}
 
-          {/* ══════════════════════════════════════════
-              STEP 2 — Resume & Skills
-          ══════════════════════════════════════════ */}
-          {step === 2 && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-
-              <div>
-                <Label className="text-base font-semibold">Upload your resume</Label>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  We'll automatically extract your skills — PDF or DOCX, up to 5 MB
-                </p>
-              </div>
-
-              {/* Drop zone */}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e.dataTransfer.files[0]); }}
-                onClick={() => !isUploading && fileInputRef.current?.click()}
-                className={cn(
-                  "border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all",
-                  isDragging ? "border-blue-600 bg-blue-900/30" :
-                  resumeUploaded ? "border-green-400 bg-green-900/30 cursor-default" :
-                  "border-gray-300 hover:border-indigo-400 hover:bg-blue-900/30/30"
-                )}
+          {/* Animated step content */}
+          <div className="flex-1 overflow-hidden px-8 py-8">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: "easeInOut" }}
+                className="h-full"
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx"
-                  className="hidden"
-                  onChange={(e) => handleFileUpload(e.target.files?.[0])}
-                />
-                {isUploading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                    <p className="font-medium text-blue-300">Analyzing your resume...</p>
-                    <p className="text-sm text-gray-500">Extracting skills and experience</p>
-                  </div>
-                ) : resumeUploaded ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-green-900/40 flex items-center justify-center">
-                      <Check className="w-6 h-6 text-green-600" />
+
+                {/* ── Step 1: Role ───────────────────────────────────────────── */}
+                {step === 1 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="What role are you targeting?"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      {ROLE_OPTIONS.map((opt) => (
+                        <SelectCard
+                          key={opt.value}
+                          selected={formData.target_role === opt.value}
+                          onClick={() => {
+                            if (opt.value !== "other") {
+                              autoAdvance({ ...formData, target_role: opt.value, custom_role: "" });
+                            } else {
+                              setFormData((prev) => ({ ...prev, target_role: "other" }));
+                            }
+                          }}
+                        >
+                          <span className="text-2xl">{opt.icon}</span>
+                          <span className="text-center leading-tight text-xs">{opt.label}</span>
+                        </SelectCard>
+                      ))}
                     </div>
-                    <p className="font-medium text-green-700">Resume analyzed!</p>
-                    <p className="text-sm text-gray-500">Skills extracted and added below</p>
+
+                    {formData.target_role === "other" && (
+                      <div className="space-y-3 pt-1">
+                        <Input
+                          placeholder="Enter your role title..."
+                          value={formData.custom_role}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, custom_role: e.target.value }))}
+                          autoFocus
+                        />
+                        <Button
+                          onClick={() => {
+                            if (!formData.custom_role.trim()) { setError("Please enter your role."); return; }
+                            goNext();
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          Continue <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <Upload className="w-6 h-6 text-blue-600" />
+                )}
+
+                {/* ── Step 2: Experience ─────────────────────────────────────── */}
+                {step === 2 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="What's your target experience level in this role?"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      {EXPERIENCE_LEVELS.map((lvl) => (
+                        <SelectCard
+                          key={lvl.value}
+                          selected={formData.experience_level === lvl.value}
+                          onClick={() =>
+                            autoAdvance({ ...formData, experience_level: lvl.value })
+                          }
+                          className="py-5 gap-2"
+                        >
+                          <span className="text-3xl">{lvl.icon}</span>
+                          <span className="font-semibold text-sm">{lvl.label}</span>
+                          <span className="text-xs text-gray-500">{lvl.sub}</span>
+                        </SelectCard>
+                      ))}
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-300">Drop your resume here or click to browse</p>
-                      <p className="text-sm text-gray-400 mt-0.5">PDF or DOCX · Max 5 MB</p>
+                    <BackButton onClick={goBack} />
+                  </div>
+                )}
+
+                {/* ── Step 3: Salary ─────────────────────────────────────────── */}
+                {step === 3 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="What's your minimum preferred salary?"
+                      subtitle="Monthly, in ₪ (ILS)"
+                    />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {SALARY_OPTIONS.map((opt) => (
+                        <SelectCard
+                          key={opt.value}
+                          selected={formData.min_salary_preference === opt.value}
+                          onClick={() =>
+                            autoAdvance({ ...formData, min_salary_preference: opt.value })
+                          }
+                          className="py-4 text-center"
+                        >
+                          <span className="text-sm font-medium text-center">{opt.label}</span>
+                        </SelectCard>
+                      ))}
+                    </div>
+                    <BackButton onClick={goBack} />
+                  </div>
+                )}
+
+                {/* ── Step 4: Industry ───────────────────────────────────────── */}
+                {step === 4 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="Which industry excites you most?"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      {INDUSTRY_OPTIONS.map((opt) => (
+                        <SelectCard
+                          key={opt.label}
+                          selected={formData.industry_preference === opt.label}
+                          onClick={() =>
+                            autoAdvance({ ...formData, industry_preference: opt.label })
+                          }
+                          className="flex-row justify-start gap-3 px-4 py-3"
+                        >
+                          <span className="text-xl flex-shrink-0">{opt.icon}</span>
+                          <span className="text-sm font-medium text-left leading-tight">{opt.label}</span>
+                        </SelectCard>
+                      ))}
+                    </div>
+                    <BackButton onClick={goBack} />
+                  </div>
+                )}
+
+                {/* ── Step 5: Work Type ──────────────────────────────────────── */}
+                {step === 5 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="What type of work are you open to?"
+                      subtitle="Select all that apply"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {JOB_TYPE_OPTIONS.map((opt) => {
+                        const selected = formData.job_type_preference.includes(opt.value);
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => toggleJobType(opt.value)}
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-sm font-medium transition-all",
+                              selected
+                                ? "border-blue-600 bg-blue-50 text-blue-700"
+                                : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50"
+                            )}
+                          >
+                            <span>{opt.icon}</span>
+                            {opt.label}
+                            {selected && <Check className="w-3 h-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <BackButton onClick={goBack} />
+                      <Button
+                        onClick={() => {
+                          if (formData.job_type_preference.length === 0) {
+                            setError("Please select at least one work type.");
+                            return;
+                          }
+                          goNext();
+                        }}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      >
+                        Continue <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Skills */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">
-                  Your Skills
-                  {formData.skills.length > 0 && (
-                    <span className="ml-2 text-sm font-normal text-gray-400">
-                      ({formData.skills.length} added)
-                    </span>
-                  )}
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type a skill and press Enter (e.g. Python, React)"
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSkill())}
-                  />
-                  <Button onClick={handleAddSkill} variant="outline">Add</Button>
-                </div>
-                {formData.skills.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[64px]">
-                    {formData.skills.map((skill, i) => (
-                      <Badge key={i} variant="secondary" className="py-1 px-3 text-sm">
-                        {skill}
-                        <button onClick={() => handleRemoveSkill(skill)} className="ml-2 hover:text-red-500">
-                          <X className="w-3 h-3" />
+                {/* ── Step 6: Availability ───────────────────────────────────── */}
+                {step === 6 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="When are you available to start?"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      {AVAILABILITY_OPTIONS.map((opt) => (
+                        <SelectCard
+                          key={opt.value}
+                          selected={formData.availability === opt.value}
+                          onClick={() =>
+                            autoAdvance({ ...formData, availability: opt.value })
+                          }
+                          className="py-5 gap-2"
+                        >
+                          <span className="text-3xl">{opt.icon}</span>
+                          <span className="font-medium text-sm text-center">{opt.label}</span>
+                        </SelectCard>
+                      ))}
+                    </div>
+                    <BackButton onClick={goBack} />
+                  </div>
+                )}
+
+                {/* ── Step 7: Location ───────────────────────────────────────── */}
+                {step === 7 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="Where would you like to work?"
+                    />
+
+                    {/* Work mode */}
+                    <div className="flex gap-2">
+                      {WORK_MODES.map((mode) => (
+                        <button
+                          key={mode.value}
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, work_mode_preference: mode.value }))
+                          }
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-medium transition-all",
+                            formData.work_mode_preference === mode.value
+                              ? "border-blue-600 bg-blue-50 text-blue-700"
+                              : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50/50"
+                          )}
+                        >
+                          {mode.icon}
+                          {mode.label}
                         </button>
-                      </Badge>
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* City input */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm text-gray-600 font-medium">
+                        Preferred city or region
+                      </label>
+                      <Input
+                        placeholder="e.g. Tel Aviv, Berlin, Remote"
+                        value={formData.location_preference}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, location_preference: e.target.value }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                      <BackButton onClick={goBack} />
+                      <Button
+                        onClick={goNext}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      >
+                        Continue <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-400 text-center py-4">
-                    No skills yet — upload your resume or add them manually above.
-                  </p>
                 )}
-              </div>
 
-              <div className="flex gap-3">
-                <Button onClick={() => setStep(1)} variant="outline" className="flex-1 py-5" size="lg">
-                  <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
-                <Button onClick={handleNext} className="flex-1 bg-blue-600 hover:bg-blue-700 py-5" size="lg">
-                  Continue <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
+                {/* ── Step 8: Skills & Resume ────────────────────────────────── */}
+                {step === 8 && (
+                  <div className="space-y-5">
+                    <StepHeader
+                      title="What are your top skills?"
+                      subtitle="Upload your resume to auto-extract, or add manually"
+                    />
 
-          {/* ══════════════════════════════════════════
-              STEP 3 — Review
-          ══════════════════════════════════════════ */}
-          {step === 3 && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div>
-                <Label className="text-base font-semibold">Review your profile</Label>
-                <p className="text-sm text-gray-500 mt-0.5">Everything look good? You can always edit later.</p>
-              </div>
+                    {/* Drop zone */}
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        handleFileUpload(e.dataTransfer.files[0]);
+                      }}
+                      onClick={() => !isUploading && fileInputRef.current?.click()}
+                      className={cn(
+                        "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
+                        isDragging
+                          ? "border-blue-600 bg-blue-50"
+                          : resumeUploaded
+                          ? "border-green-400 bg-green-50 cursor-default"
+                          : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/40"
+                      )}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.docx"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e.target.files?.[0])}
+                      />
+                      {isUploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          <p className="text-sm font-medium text-blue-600">Analyzing your resume...</p>
+                        </div>
+                      ) : resumeUploaded ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-green-600" />
+                          </div>
+                          <p className="text-sm font-medium text-green-700">Resume analyzed — skills extracted!</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Drop your resume or click to browse</p>
+                            <p className="text-xs text-gray-400 mt-0.5">PDF or DOCX · Max 5 MB</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-              <div className="space-y-0 bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
-                <ReviewRow label="Target Role" value={resolvedRole || "—"} />
-                <ReviewRow
-                  label="Experience"
-                  value={EXPERIENCE_LEVELS.find((l) => l.value === formData.experience_level)?.label || "—"}
-                />
-                <ReviewRow label="Work Mode" value={
-                  WORK_MODES.find((m) => m.value === formData.work_mode_preference)?.label || "—"
-                } />
-                <div className="flex justify-between items-start px-5 py-4">
-                  <span className="text-sm text-gray-500 mt-0.5">Skills</span>
-                  <div className="flex flex-wrap gap-1.5 justify-end max-w-[65%]">
-                    {formData.skills.length > 0
-                      ? formData.skills.map((s, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
-                        ))
-                      : <span className="text-gray-400 text-sm">None added</span>
-                    }
+                    {/* Skill input */}
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Type a skill and press Enter (e.g. Python, React)"
+                          value={skillInput}
+                          onChange={(e) => setSkillInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddSkill())}
+                        />
+                        <Button onClick={handleAddSkill} variant="outline">Add</Button>
+                      </div>
+                      {formData.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg min-h-[52px]">
+                          {formData.skills.map((skill, i) => (
+                            <Badge key={i} variant="secondary" className="py-1 px-2.5 text-sm">
+                              {skill}
+                              <button onClick={() => handleRemoveSkill(skill)} className="ml-1.5 hover:text-red-500">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center py-2">
+                          No skills yet — upload your resume or add them above.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                      <BackButton onClick={goBack} />
+                      <Button
+                        onClick={handleComplete}
+                        disabled={updateUserMutation.isPending}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 font-semibold"
+                      >
+                        {updateUserMutation.isPending ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                        ) : (
+                          "Find My Matches →"
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </div>
+                )}
 
-              <div className="flex gap-3">
-                <Button onClick={() => setStep(2)} variant="outline" className="flex-1 py-5" size="lg">
-                  <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
-                <Button
-                  onClick={handleComplete}
-                  disabled={updateUserMutation.isPending}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-5"
-                  size="lg"
-                >
-                  {updateUserMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4 mr-2" /> Complete Setup</>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function ReviewRow({ label, value }) {
+// ─── Small sub-components ─────────────────────────────────────────────────────
+
+function StepHeader({ title, subtitle }) {
   return (
-    <div className="flex justify-between items-center px-5 py-4">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="font-medium text-gray-100">{value}</span>
+    <div className="space-y-1 mb-2">
+      <h2 className="text-2xl font-bold text-gray-900 leading-snug">{title}</h2>
+      {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
     </div>
+  );
+}
+
+function BackButton({ onClick }) {
+  return (
+    <Button onClick={onClick} variant="outline" className="flex-1">
+      <ChevronLeft className="w-4 h-4 mr-1" /> Back
+    </Button>
   );
 }

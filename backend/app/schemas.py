@@ -35,6 +35,10 @@ class UserBase(BaseModel):
     skills: Optional[List[str]] = []
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = WorkModePreference.REMOTE
+    min_salary_preference: Optional[int] = None
+    industry_preference: Optional[str] = None
+    job_type_preference: Optional[str] = None
+    availability: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -50,6 +54,10 @@ class UserUpdate(BaseModel):
     skills: Optional[List[str]] = None
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = None
+    min_salary_preference: Optional[int] = None
+    industry_preference: Optional[str] = None
+    job_type_preference: Optional[str] = None
+    availability: Optional[str] = None
     subscription_tier: Optional[str] = None
     subscription_status: Optional[str] = None
     subscription_end_date: Optional[datetime] = None
@@ -92,7 +100,8 @@ class JobBase(BaseModel):
 
 class JobCreate(JobBase):
     """Schema for creating a new job."""
-    pass
+    # Optional link to the IngestJob this was saved from
+    ingest_job_id: Optional[int] = None
 
 
 class JobUpdate(BaseModel):
@@ -112,6 +121,7 @@ class JobResponse(JobBase):
     """Schema for job responses."""
     id: int
     user_id: int
+    ingest_job_id: Optional[int] = None  # Source feed job, if any
     match_score: Optional[float] = None
     cover_letter: Optional[str] = None
     notes: Optional[str] = None
@@ -120,7 +130,7 @@ class JobResponse(JobBase):
     status: JobStatus
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 

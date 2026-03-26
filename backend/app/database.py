@@ -30,20 +30,70 @@ def init_db():
 
 
 def _run_migrations():
-    """Add new columns to existing tables without full alembic setup."""
+    """
+    Add new columns / tables to existing databases without a full Alembic setup.
+    Each ALTER TABLE / CREATE TABLE is wrapped in its own transaction so a
+    'column already exists' error never rolls back unrelated changes.
+    """
     is_sqlite = "sqlite" in settings.database_url
+
     with engine.connect() as conn:
+        # ── users table ───────────────────────────────────────────────────────
         for col, col_type in [
             ("resume_filename", "VARCHAR(255)"),
             ("resume_content", "BYTEA" if not is_sqlite else "BLOB"),
             ("years_of_experience", "INTEGER"),
+            ("min_salary_preference", "INTEGER"),
+            ("industry_preference", "VARCHAR(255)"),
+            ("job_type_preference", "VARCHAR(100)"),
+            ("availability", "VARCHAR(100)"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
                 conn.commit()
                 print(f"✓ Migration: added users.{col}")
             except Exception:
-                conn.rollback()  # Column already exists — safe to ignore
+                conn.rollback()
+
+        # ── jobs table: ingest_job_id FK ──────────────────────────────────────
+        try:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN ingest_job_id INTEGER REFERENCES ingest_jobs(id)"))
+            conn.commit()
+            print("✓ Migration: added jobs.ingest_job_id")
+        except Exception:
+            conn.rollback()
+
+        # ── user_job_feed_status table ────────────────────────────────────────
+        # SQLAlchemy's create_all already handles this for fresh DBs via models.py,
+        # but we guard here for pre-existing databases that pre-date this table.
+        try:
+            if is_sqlite:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS user_job_feed_status (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        ingest_job_id INTEGER NOT NULL REFERENCES ingest_jobs(id),
+                        status VARCHAR(20) NOT NULL DEFAULT 'new',
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (user_id, ingest_job_id)
+                    )
+                """))
+            else:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS user_job_feed_status (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        ingest_job_id INTEGER NOT NULL REFERENCES ingest_jobs(id),
+                        status VARCHAR(20) NOT NULL DEFAULT 'new',
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        UNIQUE (user_id, ingest_job_id)
+                    )
+                """))
+            conn.commit()
+            print("✓ Migration: ensured user_job_feed_status table exists")
+        except Exception as e:
+            conn.rollback()
+            print(f"  (user_job_feed_status migration skipped: {e})")
 
 
 def get_db():
