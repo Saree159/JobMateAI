@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Loader2, Search, Linkedin, AlertCircle, MapPin, Building2, ExternalLink, Briefcase } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Search, Linkedin, AlertCircle, MapPin, Building2, ExternalLink, Briefcase, Bookmark, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { jobApi } from "@/api/jobmate";
 
 function DescriptionPreview({ text }) {
   const [expanded, setExpanded] = useState(false);
@@ -32,6 +35,7 @@ function DescriptionPreview({ text }) {
 export default function LinkedInJobs() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const [role, setRole] = useState(user?.target_role || "");
   const [location, setLocation] = useState(user?.location_preference || "");
@@ -40,6 +44,26 @@ export default function LinkedInJobs() {
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
   const [cached, setCached] = useState(false);
+  const [savedUrls, setSavedUrls] = useState(new Set());
+
+  const saveJobMutation = useMutation({
+    mutationFn: (job) => jobApi.create(user.id, {
+      title: job.title,
+      company: job.company || 'Unknown',
+      location: job.location || '',
+      description: job.description || '',
+      url: job.url || '',
+      job_type: job.job_type || '',
+      status: 'saved',
+      source: 'linkedin',
+    }),
+    onSuccess: (saved, job) => {
+      setSavedUrls(prev => new Set([...prev, job.url]));
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      toast.success(`"${saved.title}" saved to your jobs`);
+    },
+    onError: () => toast.error('Failed to save job'),
+  });
 
   const handleSearch = async () => {
     if (!role.trim()) {
@@ -220,23 +244,40 @@ export default function LinkedInJobs() {
                       </div>
                     )}
 
-                    {job.url && (
-                      <a
-                        href={job.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-auto"
-                      >
+                    <div className="mt-auto flex gap-2">
+                      {savedUrls.has(job.url) ? (
+                        <Button variant="outline" size="sm" disabled className="flex-1 text-emerald-600 border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Saved
+                        </Button>
+                      ) : (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                          className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50"
+                          onClick={() => saveJobMutation.mutate(job)}
+                          disabled={saveJobMutation.isPending}
                         >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          View on LinkedIn
+                          {saveJobMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5 mr-1.5" />
+                          )}
+                          Save
                         </Button>
-                      </a>
-                    )}
+                      )}
+                      {job.url && (
+                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View
+                          </Button>
+                        </a>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}

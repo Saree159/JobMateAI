@@ -38,7 +38,6 @@ export default function JobCard({ job, onView }) {
     mutationFn: () => jobApi.update(job.id, { status: 'applied' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
     },
   });
 

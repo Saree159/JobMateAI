@@ -32,11 +32,11 @@ export default function ApplicationCard({ application }) {
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }) => jobApi.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applications'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
   });
   const deleteApp = useMutation({
     mutationFn: (id) => jobApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['applications'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
   });
 
   const status   = STATUS[application.status] ?? STATUS.saved;

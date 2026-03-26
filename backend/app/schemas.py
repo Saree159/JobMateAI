@@ -36,6 +36,7 @@ class UserBase(BaseModel):
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = WorkModePreference.REMOTE
     min_salary_preference: Optional[int] = None
+    max_salary_preference: Optional[int] = None
     industry_preference: Optional[str] = None
     job_type_preference: Optional[str] = None
     availability: Optional[str] = None
@@ -55,6 +56,7 @@ class UserUpdate(BaseModel):
     location_preference: Optional[str] = None
     work_mode_preference: Optional[WorkModePreference] = None
     min_salary_preference: Optional[int] = None
+    max_salary_preference: Optional[int] = None
     industry_preference: Optional[str] = None
     job_type_preference: Optional[str] = None
     availability: Optional[str] = None

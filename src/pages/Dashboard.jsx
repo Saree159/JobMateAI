@@ -49,7 +49,7 @@ export default function Dashboard() {
   };
 
   const { data: applications = [], isLoading: appsLoading } = useQuery({
-    queryKey: ['applications', user?.id],
+    queryKey: ['jobs', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       return await jobApi.listByUser(user.id);

@@ -44,6 +44,7 @@ def _run_migrations():
             ("resume_content", "BYTEA" if not is_sqlite else "BLOB"),
             ("years_of_experience", "INTEGER"),
             ("min_salary_preference", "INTEGER"),
+            ("max_salary_preference", "INTEGER"),
             ("industry_preference", "VARCHAR(255)"),
             ("job_type_preference", "VARCHAR(100)"),
             ("availability", "VARCHAR(100)"),

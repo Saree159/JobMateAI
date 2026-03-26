@@ -51,6 +51,7 @@ class User(Base):
     
     location_preference = Column(String(255), nullable=True)
     min_salary_preference = Column(Integer, nullable=True)   # monthly ILS
+    max_salary_preference = Column(Integer, nullable=True)   # monthly ILS
     industry_preference = Column(String(255), nullable=True)
     job_type_preference = Column(String(100), nullable=True)  # full-time/part-time/contract/freelance
     availability = Column(String(100), nullable=True)         # immediately/2-weeks/1-month/3-months

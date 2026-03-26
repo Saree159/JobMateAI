@@ -227,6 +227,11 @@ export default function Profile() {
       location_preference: user?.location_preference || '',
       work_mode_preference: user?.work_mode_preference || '',
       bio: user?.bio || '',
+      min_salary_preference: user?.min_salary_preference ?? '',
+      max_salary_preference: user?.max_salary_preference ?? '',
+      industry_preference: user?.industry_preference || '',
+      job_type_preference: user?.job_type_preference || '',
+      availability: user?.availability || '',
     });
     setIsEditing(true);
   };
@@ -238,6 +243,11 @@ export default function Profile() {
       skills: formData.skills,
       location_preference: formData.location_preference || undefined,
       work_mode_preference: formData.work_mode_preference || undefined,
+      min_salary_preference: formData.min_salary_preference !== '' ? parseInt(formData.min_salary_preference) : undefined,
+      max_salary_preference: formData.max_salary_preference !== '' ? parseInt(formData.max_salary_preference) : undefined,
+      industry_preference: formData.industry_preference || undefined,
+      job_type_preference: formData.job_type_preference || undefined,
+      availability: formData.availability || undefined,
     });
   };
 
@@ -624,13 +634,13 @@ export default function Profile() {
                 {isEditing ? (
                   <Input
                     type="number"
-                    value={formData.salary_min}
-                    onChange={(e) => setFormData({ ...formData, salary_min: e.target.value })}
+                    value={formData.min_salary_preference}
+                    onChange={(e) => setFormData({ ...formData, min_salary_preference: e.target.value })}
                     placeholder="10000"
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {user.salary_min ? `₪${user.salary_min.toLocaleString()}` : t('common.notSet')}
+                    {user.min_salary_preference ? `₪${user.min_salary_preference.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
               </div>
@@ -639,13 +649,13 @@ export default function Profile() {
                 {isEditing ? (
                   <Input
                     type="number"
-                    value={formData.salary_max}
-                    onChange={(e) => setFormData({ ...formData, salary_max: e.target.value })}
+                    value={formData.max_salary_preference}
+                    onChange={(e) => setFormData({ ...formData, max_salary_preference: e.target.value })}
                     placeholder="20000"
                   />
                 ) : (
                   <p className="text-gray-900 font-medium">
-                    {user.salary_max ? `₪${user.salary_max.toLocaleString()}` : t('common.notSet')}
+                    {user.max_salary_preference ? `₪${user.max_salary_preference.toLocaleString()}` : t('common.notSet')}
                   </p>
                 )}
               </div>

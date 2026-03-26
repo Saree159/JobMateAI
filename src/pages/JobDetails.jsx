@@ -1,13 +1,13 @@
 import React from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { jobApi } from "@/api/jobmate";
+import { jobApi, resumeApi } from "@/api/jobmate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { 
-  ArrowLeft, 
-  Building2, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Building2,
+  MapPin,
   Loader2,
   StickyNote,
   Save,
@@ -15,18 +15,22 @@ import {
   Lightbulb,
   DollarSign,
   TrendingUp,
+  ScanSearch,
+  Calendar,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import CoverLetterGenerator from "../components/jobdetails/CoverLetterGenerator";
 import SaveJobButton from "../components/jobdetails/SaveJobButton";
 import { toast } from 'sonner';
 
 export default function JobDetails() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
@@ -36,6 +40,24 @@ export default function JobDetails() {
   const [showInterviewQuestions, setShowInterviewQuestions] = React.useState(false);
   const [salaryEstimate, setSalaryEstimate] = React.useState(null);
   const [showSalaryEstimate, setShowSalaryEstimate] = React.useState(false);
+  const [gapAnalysis, setGapAnalysis] = React.useState(null);
+  const [showGapAnalysis, setShowGapAnalysis] = React.useState(false);
+
+  const analyzeGapsMutation = useMutation({
+    mutationFn: async () => {
+      const token = getToken();
+      const resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      return resumeApi.analyzeGaps(resumeFile, job.description, token);
+    },
+    onSuccess: (data) => {
+      setGapAnalysis(data);
+      setShowGapAnalysis(true);
+      toast.success('Gap analysis complete!');
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to analyze resume gaps');
+    },
+  });
 
   const generateSalaryMutation = useMutation({
     mutationFn: async () => {
@@ -284,9 +306,66 @@ export default function JobDetails() {
           </Card>
 
           {/* Cover Letter Generator */}
-          <CoverLetterGenerator 
+          <CoverLetterGenerator
             job={job}
           />
+
+          {/* Resume Gap Analysis */}
+          {user?.resume_filename && (
+            <Card className="border border-purple-200 bg-purple-50/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-semibold flex items-center gap-2">
+                    <ScanSearch className="w-5 h-5 text-purple-600" />
+                    Resume Gap Analysis
+                  </CardTitle>
+                  {!showGapAnalysis && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => analyzeGapsMutation.mutate()}
+                      disabled={analyzeGapsMutation.isPending}
+                      className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                    >
+                      {analyzeGapsMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analyzing…</>
+                      ) : (
+                        <><ScanSearch className="w-4 h-4 mr-2" />Analyze Gaps</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {showGapAnalysis && gapAnalysis ? (
+                  <div className="space-y-4">
+                    {gapAnalysis.summary && (
+                      <p className="text-sm text-gray-700 bg-white rounded-lg border border-purple-100 p-3">
+                        {gapAnalysis.summary}
+                      </p>
+                    )}
+                    {gapAnalysis.gaps?.length > 0 && (
+                      <div className="space-y-3">
+                        {gapAnalysis.gaps.map((gap, i) => (
+                          <div key={i} className="bg-white rounded-lg border border-purple-100 p-3 space-y-1">
+                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Missing: {gap.requirement}</p>
+                            <p className="text-sm text-gray-600">💬 {gap.question}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => analyzeGapsMutation.mutate()} className="w-full">
+                      🔄 Re-analyze
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    Click "Analyze Gaps" to compare your resume against this job and find what's missing.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Interview Notes */}
           <Card className="border border-gray-100">
@@ -576,20 +655,44 @@ export default function JobDetails() {
             <CardHeader>
               <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Status</p>
+                <p className="font-medium capitalize">{job.status || 'saved'}</p>
+              </div>
+              {job.created_at && (
                 <div>
-                  <p className="text-sm text-gray-400">Status</p>
-                  <p className="font-medium capitalize">{job.status || 'saved'}</p>
+                  <p className="text-xs text-gray-400 mb-1">Added</p>
+                  <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
                 </div>
-                {job.created_at && (
-                  <div>
-                    <p className="text-sm text-gray-400">Added</p>
-                    <p className="font-medium">
-                      {new Date(job.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
+              )}
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Calendar className="w-3.5 h-3.5" /> Applied Date
+                </Label>
+                <Input
+                  type="date"
+                  defaultValue={job.applied_date ? new Date(job.applied_date).toISOString().split('T')[0] : ''}
+                  className="h-8 text-sm"
+                  onChange={(e) => {
+                    jobApi.update(parseInt(jobId), { applied_date: e.target.value || null })
+                      .then(() => queryClient.invalidateQueries({ queryKey: ['job', jobId] }));
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Calendar className="w-3.5 h-3.5" /> Interview Date
+                </Label>
+                <Input
+                  type="date"
+                  defaultValue={job.interview_date ? new Date(job.interview_date).toISOString().split('T')[0] : ''}
+                  className="h-8 text-sm"
+                  onChange={(e) => {
+                    jobApi.update(parseInt(jobId), { interview_date: e.target.value || null })
+                      .then(() => queryClient.invalidateQueries({ queryKey: ['job', jobId] }));
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
