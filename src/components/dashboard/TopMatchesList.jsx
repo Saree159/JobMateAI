@@ -213,9 +213,9 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                 onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
               >
                 {/* Row 1: title + score + source */}
-                <div className="flex items-start justify-between gap-2 min-w-0 overflow-hidden">
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate min-w-0">{job.title}</h3>
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900 leading-snug break-words min-w-0 flex-1">{job.title}</h3>
                     <ScorePill score={job.match_score ?? 0} />
                   </div>
 
