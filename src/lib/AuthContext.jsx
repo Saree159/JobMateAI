@@ -87,15 +87,11 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setAuthError(null);
-      
-      // Create user
-      const newUser = await userApi.create(userData);
-      toast.success('Account created successfully!');
-      
-      // Auto-login after registration
-      const loginResult = await login(userData.email, userData.password);
-      
-      return loginResult;
+
+      // Create user — returns immediately; verification email sent in background
+      await userApi.create(userData);
+
+      return { success: true, requiresVerification: true, email: userData.email };
     } catch (error) {
       console.error('Registration failed:', error);
       toast.error(error.message || 'Registration failed');

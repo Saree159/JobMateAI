@@ -111,6 +111,17 @@ export const userApi = {
       body: JSON.stringify({ email, password }),
     });
   },
+
+  verifyEmail: async (token) => {
+    return apiRequest(`/api/users/verify-email?token=${encodeURIComponent(token)}`);
+  },
+
+  resendVerification: async (email) => {
+    return apiRequest('/api/users/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
 };
 
 // ============================================================================

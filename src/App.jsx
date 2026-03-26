@@ -12,6 +12,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import VerifyEmail from './pages/VerifyEmail';
+import VerifyEmailConfirm from './pages/VerifyEmailConfirm';
 import AdminLayout from './admin/AdminLayout';
 import AdminOverview from './admin/pages/Overview';
 import AdminRevenue from './admin/pages/Revenue';
@@ -52,6 +54,8 @@ const AuthenticatedApp = () => {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
       

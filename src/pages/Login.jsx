@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { userApi } from '@/api/jobmate';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -20,6 +21,8 @@ export default function Login() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendSent, setResendSent] = useState(false);
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -49,9 +52,12 @@ export default function Login() {
 
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.success) {
         navigate('/dashboard');
+      } else if (result.error === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(formData.email);
+        setError('');
       } else {
         setError(result.error || 'Login failed');
       }
@@ -60,6 +66,12 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    setResendSent(false);
+    await userApi.resendVerification(unverifiedEmail);
+    setResendSent(true);
   };
 
   const handleChange = (e) => {
@@ -84,6 +96,21 @@ export default function Login() {
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {unverifiedEmail && (
+              <Alert className="border-amber-400 bg-amber-950/40 text-amber-200">
+                <AlertDescription className="space-y-2">
+                  <p>Please verify your email before signing in. Check your inbox at <strong>{unverifiedEmail}</strong>.</p>
+                  {resendSent ? (
+                    <p className="text-emerald-400 text-sm">Verification email resent! Check your inbox.</p>
+                  ) : (
+                    <button type="button" onClick={handleResend} className="text-amber-300 underline text-sm hover:text-amber-100">
+                      Resend verification email
+                    </button>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
 

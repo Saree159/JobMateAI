@@ -71,6 +71,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     """Schema for user responses."""
     id: int
+    is_verified: bool = False
     subscription_tier: str = "free"
     subscription_status: Optional[str] = None
     subscription_end_date: Optional[datetime] = None

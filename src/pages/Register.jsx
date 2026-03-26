@@ -26,7 +26,7 @@ export default function Register() {
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/onboarding');
+      navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
@@ -84,8 +84,7 @@ export default function Register() {
       });
       
       if (result.success) {
-        // Redirect to onboarding to complete profile
-        navigate('/onboarding');
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       } else {
         setError(result.error || 'Registration failed');
       }

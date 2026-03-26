@@ -46,6 +46,8 @@ def _run_migrations():
             ("min_salary_preference", "INTEGER"),
             ("max_salary_preference", "INTEGER"),
             ("industry_preference", "VARCHAR(255)"),
+            ("is_verified", "BOOLEAN DEFAULT FALSE"),
+            ("verification_token", "VARCHAR(64)"),
             ("job_type_preference", "VARCHAR(100)"),
             ("availability", "VARCHAR(100)"),
         ]:

@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     paypal_webhook_id: str = ""          # Webhook ID for signature verification
     frontend_url: str = "http://localhost:5173"
 
+    # Gmail SMTP (for email verification)
+    gmail_user: str = ""            # e.g. hirematrix.ai@gmail.com
+    gmail_app_password: str = ""    # Gmail App Password (not your regular password)
+
     class Config:
         env_file = ".env"
         case_sensitive = False

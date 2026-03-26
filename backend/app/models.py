@@ -65,6 +65,10 @@ class User(Base):
     resume_filename = Column(String(255), nullable=True)
     resume_content = Column(LargeBinary, nullable=True)
 
+    # Email verification
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_token = Column(String(64), nullable=True, unique=True, index=True)
+
     # LinkedIn integration
     linkedin_li_at = Column(Text, nullable=True)  # li_at session cookie for authenticated scraping
 

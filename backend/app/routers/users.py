@@ -3,7 +3,8 @@ User API router.
 Handles user registration, profile management, and authentication.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+import secrets
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ from app.database import get_db
 from app.models import User, UserSession
 from app.schemas import UserCreate, UserUpdate, UserResponse, Token, LoginRequest
 from app.config import settings
+from app.services.email import send_verification_email
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -85,7 +87,7 @@ async def get_current_user(
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
+def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Create a new user account.
     
@@ -105,7 +107,10 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
     
-    # Create new user
+    # Generate verification token
+    verification_token = secrets.token_urlsafe(32)
+
+    # Create new user (unverified)
     db_user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password),
@@ -113,17 +118,25 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
         target_role=user_data.target_role,
         skills=",".join(user_data.skills) if user_data.skills else None,
         location_preference=user_data.location_preference,
-        work_mode_preference=user_data.work_mode_preference
+        work_mode_preference=user_data.work_mode_preference,
+        is_verified=False,
+        verification_token=verification_token,
     )
-    
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    
-    # Convert skills back to list for response
+
+    # Send verification email in the background so registration returns immediately
+    background_tasks.add_task(
+        send_verification_email,
+        db_user.email,
+        db_user.full_name or "",
+        verification_token,
+    )
+
     response = UserResponse.model_validate(db_user)
     response.skills = db_user.skills_list
-    
     return response
 
 
@@ -212,6 +225,51 @@ def delete_user(
     db.delete(current_user)
     db.commit()
     return None
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """
+    Verify user email using the token from the verification link.
+    Marks the user as verified and clears the token.
+    """
+    user = db.query(User).filter(User.verification_token == token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+    user.is_verified = True
+    user.verification_token = None
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification")
+def resend_verification(
+    body: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Resend the verification email.
+    Always returns 200 to avoid leaking whether the email is registered.
+    """
+    user = db.query(User).filter(User.email == body.email).first()
+    if user and not user.is_verified:
+        token = secrets.token_urlsafe(32)
+        user.verification_token = token
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        background_tasks.add_task(
+            send_verification_email,
+            user.email,
+            user.full_name or "",
+            token,
+        )
+    return {"message": "If the email exists, a verification link was sent"}
 
 
 class LinkedInLoginRequest(BaseModel):
@@ -307,6 +365,12 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="EMAIL_NOT_VERIFIED",
         )
     
     access_token = create_access_token(data={"sub": user.email, "user_id": user.id})
