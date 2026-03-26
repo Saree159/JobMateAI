@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobApi } from "@/api/jobmate";
-import { Building2, MapPin, Calendar, MoreHorizontal, ExternalLink, Trash2 } from "lucide-react";
+import { Building2, MapPin, Calendar, MoreHorizontal, ExternalLink, Trash2, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -118,6 +118,17 @@ export default function ApplicationCard({ application }) {
 
           {application.notes && (
             <p className="text-xs text-gray-400 mt-2 line-clamp-2 leading-relaxed">{application.notes}</p>
+          )}
+
+          {application.status === 'applied' && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+              <Phone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed text-blue-700">
+                <span className="font-semibold">Keep your phone nearby</span> — recruiters typically call within 3–7 business days.
+                <span className="mx-1 text-blue-400">·</span>
+                <span dir="rtl" className="font-medium">שמור על הטלפון קרוב — מגייסים בדרך כלל מתקשרים תוך 3–7 ימי עסקים</span>
+              </div>
+            </div>
           )}
         </div>
       </div>
