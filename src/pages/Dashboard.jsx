@@ -127,7 +127,7 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
 
         {/* Top Matches — takes 2/3 width */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0">
           <TopMatchesList
             jobs={topMatches}
             isLoading={matchesLoading}
@@ -137,7 +137,7 @@ export default function Dashboard() {
         </div>
 
         {/* Sidebar — takes 1/3 width */}
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
 
           {/* Profile card */}
           {user && (
