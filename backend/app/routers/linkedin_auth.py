@@ -12,6 +12,7 @@ What we get: name, email, profile picture, LinkedIn sub (ID)
 """
 import secrets
 import time
+from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
@@ -45,7 +46,7 @@ def _store_state(user_id: int) -> str:
     return state
 
 
-def _consume_state(state: str) -> int | None:
+def _consume_state(state: str) -> "Optional[int]":
     entry = _state_store.pop(state, None)
     if entry is None:
         return None

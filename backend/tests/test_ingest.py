@@ -143,6 +143,10 @@ def test_feed_jobs_search_filter(client):
 
 
 def test_feed_job_status_update(client):
+    from tests.conftest import make_user, login, auth_headers
+    make_user(client)
+    token = login(client)
+
     payload = _email_payload(jobs=[
         {"title": "QA Engineer", "company": "Corp", "url": "https://li.com/jobs/33"}
     ])
@@ -151,12 +155,16 @@ def test_feed_job_status_update(client):
     jobs = client.get("/api/jobs").json()
     job_id = jobs[0]["id"]
 
-    resp = client.patch(f"/api/jobs/{job_id}/status", json={"status": "saved"})
+    resp = client.patch(f"/api/jobs/{job_id}/status", json={"status": "saved"}, headers=auth_headers(token))
     assert resp.status_code == 200
     assert resp.json()["status"] == "saved"
 
 
 def test_feed_job_status_invalid(client):
+    from tests.conftest import make_user, login, auth_headers
+    make_user(client)
+    token = login(client)
+
     payload = _email_payload(jobs=[
         {"title": "PM", "company": "Co", "url": "https://li.com/jobs/44"}
     ])
@@ -164,5 +172,5 @@ def test_feed_job_status_invalid(client):
     jobs = client.get("/api/jobs").json()
     job_id = jobs[0]["id"]
 
-    resp = client.patch(f"/api/jobs/{job_id}/status", json={"status": "flying"})
+    resp = client.patch(f"/api/jobs/{job_id}/status", json={"status": "flying"}, headers=auth_headers(token))
     assert resp.status_code == 422

@@ -50,11 +50,30 @@ def client():
 # ---------------------------------------------------------------------------
 
 def make_user(client, email="user@test.com", password="pass1234", **kwargs):
-    """Create a user and return the response JSON."""
+    """Create a user, auto-verify it, and return the response JSON."""
     payload = {"email": email, "password": password, **kwargs}
     resp = client.post("/api/users", json=payload)
     assert resp.status_code == 201, resp.text
-    return resp.json()
+    user = resp.json()
+
+    # Auto-verify by calling the overridden test DB session
+    from app.main import app as _app
+    from app.database import get_db
+    from app.models import User as UserModel
+    override = _app.dependency_overrides.get(get_db)
+    if override:
+        gen = override()
+        db = next(gen)
+        try:
+            db_user = db.query(UserModel).filter(UserModel.id == user["id"]).first()
+            if db_user and db_user.verification_token:
+                token = db_user.verification_token
+                verify_resp = client.get(f"/api/users/verify-email?token={token}")
+                assert verify_resp.status_code == 200, verify_resp.text
+        finally:
+            db.close()
+
+    return user
 
 
 def login(client, email="user@test.com", password="pass1234"):
@@ -67,3 +86,15 @@ def login(client, email="user@test.com", password="pass1234"):
 def auth_headers(token):
     """Return Authorization headers dict for a token."""
     return {"Authorization": f"Bearer {token}"}
+
+
+def make_job(client, user_id, token, title="Dev", company="Corp", description="Desc", **kwargs):
+    """Create a job (authenticated) and return the response JSON."""
+    payload = {"title": title, "company": company, "description": description, **kwargs}
+    resp = client.post(
+        f"/api/users/{user_id}/jobs",
+        json=payload,
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
