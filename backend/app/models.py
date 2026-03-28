@@ -70,7 +70,8 @@ class User(Base):
     verification_token = Column(String(64), nullable=True, unique=True, index=True)
 
     # LinkedIn integration
-    linkedin_li_at = Column(Text, nullable=True)  # li_at session cookie for authenticated scraping
+    linkedin_li_at = Column(Text, nullable=True)        # li_at session cookie for authenticated scraping
+    linkedin_oauth_token = Column(Text, nullable=True)  # OAuth 2.0 access token (profile import)
 
     # Subscription / billing
     subscription_tier = Column(String(20), default="free", nullable=False)
@@ -97,8 +98,8 @@ class User(Base):
     
     @property
     def linkedin_connected(self) -> bool:
-        """True when the user has stored a LinkedIn li_at session cookie."""
-        return bool(self.linkedin_li_at)
+        """True when the user has a LinkedIn li_at cookie or OAuth token."""
+        return bool(self.linkedin_li_at or self.linkedin_oauth_token)
 
     @property
     def skills_list(self):
@@ -137,6 +138,9 @@ class Job(Base):
     match_score = Column(Float, nullable=True)  # 0-100 score
     cover_letter = Column(Text, nullable=True)
     
+    # AI-generated opening sentence (bilingual EN + HE)
+    opening_sentence = Column(Text, nullable=True)
+
     # User notes and tracking
     notes = Column(Text, nullable=True)  # Interview notes, follow-ups, etc.
     applied_date = Column(DateTime, nullable=True)  # When application was submitted

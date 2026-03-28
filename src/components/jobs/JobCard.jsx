@@ -34,6 +34,8 @@ export default function JobCard({ job, onView }) {
   const initials = companyInitials(job.company);
   const isApplied = job.status === 'applied';
 
+  const isDbJob = typeof job.id === 'number';
+
   const markApplied = useMutation({
     mutationFn: () => jobApi.update(job.id, { status: 'applied' }),
     onSuccess: () => {
@@ -96,7 +98,7 @@ export default function JobCard({ job, onView }) {
         {job.job_type && (
           <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal border-gray-200 text-gray-400">{job.job_type}</Badge>
         )}
-        {!isApplied ? (
+        {isDbJob && (!isApplied ? (
           <Button
             size="sm"
             variant="outline"
@@ -110,7 +112,7 @@ export default function JobCard({ job, onView }) {
           <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium shrink-0">
             <CheckCircle2 className="w-3 h-3" /> Applied
           </span>
-        )}
+        ))}
         <Button
           size="sm"
           variant="ghost"

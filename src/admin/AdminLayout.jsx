@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Overview',       path: '/admin',              icon: LayoutDashboard },
   { label: 'Revenue',        path: '/admin/revenue',      icon: DollarSign },
   { label: 'Users',          path: '/admin/users',        icon: Users },
+  { label: 'User Logs',      path: '/admin/user-logs',    icon: Activity },
   { label: 'AI Usage',       path: '/admin/ai-usage',     icon: Cpu },
   { label: 'Token Costs',    path: '/admin/token-costs',  icon: Zap },
   { label: 'Product',        path: '/admin/product',      icon: Activity },

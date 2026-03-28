@@ -27,6 +27,7 @@ import AdminMarketing from './admin/pages/Marketing';
 import AdminInfra from './admin/pages/Infrastructure';
 import AdminAlerts from './admin/pages/Alerts';
 import AdminSettings from './admin/pages/Settings';
+import AdminUserLogs from './admin/pages/UserLogs';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
       <Route path="/admin" element={<AdminLayout><AdminOverview /></AdminLayout>} />
       <Route path="/admin/revenue" element={<AdminLayout><AdminRevenue /></AdminLayout>} />
       <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
+      <Route path="/admin/user-logs" element={<AdminLayout><AdminUserLogs /></AdminLayout>} />
       <Route path="/admin/ai-usage" element={<AdminLayout><AdminAIUsage /></AdminLayout>} />
       <Route path="/admin/token-costs" element={<AdminLayout><AdminTokenCosts /></AdminLayout>} />
       <Route path="/admin/product" element={<AdminLayout><AdminProduct /></AdminLayout>} />

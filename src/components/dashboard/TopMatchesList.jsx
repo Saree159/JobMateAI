@@ -7,15 +7,15 @@ import JobSearchLoader from "./JobSearchLoader";
 import {
   Sparkles, MapPin, Building2, ExternalLink,
   Linkedin, Globe, Search, X, Clock, RefreshCw,
-  CheckCircle2, Phone,
+  CheckCircle2, Phone, Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { jobsApi } from "@/api/jobmate";
+import { jobsApi, jobApi } from "@/api/jobmate";
 import { toast } from "sonner";
 
-const SOURCE_FILTERS = ["All", "LinkedIn", "Drushim"];
+const SOURCE_FILTERS = ["All", "LinkedIn", "Drushim", "TechMap"];
 const SCORE_FILTERS  = [
   { label: "All",  min: 0  },
   { label: "≥70%", min: 70 },
@@ -66,23 +66,28 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
   const [search, setSearch]     = useState("");
   const [source, setSource]     = useState("All");
   const [scoreFilter, setScore] = useState("All");
-  const [appliedIds, setAppliedIds] = useState(() => new Set(
-    jobs.filter(j => j.status === 'applied').map(j => j.id)
-  ));
-  const [pendingId, setPendingId] = useState(null);
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [savingId, setSavingId] = useState(null);
 
-  const markApplied = async (e, job) => {
+  const saveToApplications = async (e, job) => {
     e.stopPropagation();
-    if (appliedIds.has(job.id)) return;
-    setPendingId(job.id);
+    const key = job.url || String(job.id);
+    if (savedIds.has(key)) return;
+    setSavingId(key);
     try {
-      await jobsApi.updateFeedStatus(job.id, 'applied');
-      setAppliedIds(prev => new Set([...prev, job.id]));
-      toast.success(`Marked "${job.title}" as applied`);
+      await jobApi.create(user.id, {
+        title: job.title,
+        company: job.company || 'Unknown',
+        location: job.location || '',
+        description: job.description || job.title,
+        apply_url: job.url || '',
+      });
+      setSavedIds(prev => new Set([...prev, key]));
+      toast.success(`"${job.title}" saved to applications`);
     } catch {
-      toast.error('Failed to update status');
+      toast.error('Failed to save job');
     } finally {
-      setPendingId(null);
+      setSavingId(null);
     }
   };
 
@@ -200,7 +205,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             </div>
             <p className="text-sm font-medium text-gray-700 mb-1">No matches yet</p>
             <p className="text-xs text-gray-500 max-w-[220px] leading-relaxed">
-              Add skills to your profile and we'll surface matching jobs from Drushim and LinkedIn.
+              Add skills to your profile and we'll surface matching jobs from Drushim, LinkedIn, and TechMap.
             </p>
             <Button
               size="sm"
@@ -246,6 +251,11 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                     <span className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-blue-600 opacity-70 group-hover:opacity-100 transition-opacity">
                       <Linkedin className="w-3 h-3" />
                       <span className="hidden sm:inline">LinkedIn</span>
+                    </span>
+                  ) : job.source === "techmap" ? (
+                    <span className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-purple-600 opacity-70 group-hover:opacity-100 transition-opacity">
+                      <Globe className="w-3 h-3" />
+                      <span className="hidden sm:inline">TechMap</span>
                     </span>
                   ) : (
                     <span className="shrink-0 flex items-center gap-1 text-[10px] font-medium text-emerald-600 opacity-70 group-hover:opacity-100 transition-opacity">
@@ -310,22 +320,22 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                   </div>
                 )}
 
-                {/* Row 5: actions — own row so they never overflow on mobile */}
+                {/* Row 5: actions */}
                 <div className="flex items-center gap-2 mt-2.5 w-full">
-                  {appliedIds.has(job.id) ? (
-                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-                      <CheckCircle2 className="w-3 h-3" /> Applied
+                  {savedIds.has(job.url || String(job.id)) ? (
+                    <span className="flex items-center gap-1 text-[11px] text-blue-600 font-medium">
+                      <Bookmark className="w-3 h-3 fill-current" /> Saved
                     </span>
                   ) : (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-6 px-2 text-[11px] border-emerald-200 text-emerald-600 hover:bg-emerald-50 shrink-0"
-                      disabled={pendingId === job.id}
-                      onClick={(e) => markApplied(e, job)}
+                      className="h-6 px-2 text-[11px] border-blue-200 text-blue-600 hover:bg-blue-50 shrink-0"
+                      disabled={savingId === (job.url || String(job.id))}
+                      onClick={(e) => saveToApplications(e, job)}
                     >
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Applied
+                      <Bookmark className="w-3 h-3 mr-1" />
+                      Save
                     </Button>
                   )}
                   {job.url && (
@@ -336,18 +346,6 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
                     </a>
                   )}
                 </div>
-
-                {/* Recruiter tip — shown when applied */}
-                {appliedIds.has(job.id) && (
-                  <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-                    <Phone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                    <div className="text-[11px] leading-relaxed text-blue-700">
-                      <span className="font-semibold">Keep your phone nearby</span> — recruiters typically call within 3–7 business days.
-                      <span className="mx-1 text-blue-400">·</span>
-                      <span dir="rtl" className="font-medium">שמור על הטלפון קרוב — מגייסים בדרך כלל מתקשרים תוך 3–7 ימי עסקים</span>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "@/lib/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, AlertCircle, MapPin, Building2, Briefcase, Award, Bookmark, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, Search, Globe, AlertCircle, MapPin, Building2, Briefcase, Award } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { jobApi } from "@/api/jobmate";
 import JobCard from "../components/jobs/JobCard";
 
 const DRUSHIM_CATEGORIES = {
@@ -38,36 +35,15 @@ const JOB_SITES = {
 };
 
 export default function IsraeliJobs() {
-  const { user } = useAuth();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [selectedSite, setSelectedSite] = useState("drushim");
   const [selectedCategory, setSelectedCategory] = useState("236");
   const [customUrl, setCustomUrl] = useState("");
   const [searchUrl, setSearchUrl] = useState(`https://www.drushim.co.il/jobs/subcat/${selectedCategory}`);
   const [selectedJob, setSelectedJob] = useState(null);
-  const [savedUrls, setSavedUrls] = useState(new Set());
 
-  const saveJobMutation = useMutation({
-    mutationFn: (job) => jobApi.create(user.id, {
-      title: job.title,
-      company: job.company || 'Unknown',
-      location: job.location || '',
-      description: job.description || '',
-      url: job.url || '',
-      job_type: job.job_type || '',
-      status: 'saved',
-      source: selectedSite,
-    }),
-    onSuccess: (_, job) => {
-      setSavedUrls(prev => new Set([...prev, job.url]));
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast.success(`"${_.title}" saved to your jobs`);
-    },
-    onError: () => toast.error('Failed to save job'),
-  });
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['israeli-jobs', searchUrl, selectedSite],
     queryFn: async () => {
       const site = JOB_SITES[selectedSite];
@@ -333,26 +309,7 @@ export default function IsraeliJobs() {
                   )}
 
                   {/* Actions */}
-                  <div className="border-t pt-6 flex flex-col gap-3">
-                    {savedUrls.has(selectedJob.url) ? (
-                      <Button variant="outline" disabled className="w-full text-emerald-600 border-emerald-200">
-                        <CheckCircle2 className="w-4 h-4 ml-2" /> נשמר בעבודות שלי
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => saveJobMutation.mutate(selectedJob)}
-                        disabled={saveJobMutation.isPending}
-                        className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
-                      >
-                        {saveJobMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                        ) : (
-                          <Bookmark className="w-4 h-4 ml-2" />
-                        )}
-                        שמור לעבודות שלי
-                      </Button>
-                    )}
+                  <div className="border-t pt-6">
                     <Button
                       onClick={() => window.open(selectedJob.url, '_blank')}
                       className="w-full"

@@ -50,6 +50,7 @@ def _run_migrations():
             ("verification_token", "VARCHAR(64)"),
             ("job_type_preference", "VARCHAR(100)"),
             ("availability", "VARCHAR(100)"),
+            ("linkedin_oauth_token", "TEXT"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
@@ -58,11 +59,18 @@ def _run_migrations():
             except Exception:
                 conn.rollback()
 
-        # ── jobs table: ingest_job_id FK ──────────────────────────────────────
+        # ── jobs table ────────────────────────────────────────────────────────
         try:
             conn.execute(text("ALTER TABLE jobs ADD COLUMN ingest_job_id INTEGER REFERENCES ingest_jobs(id)"))
             conn.commit()
             print("✓ Migration: added jobs.ingest_job_id")
+        except Exception:
+            conn.rollback()
+
+        try:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN opening_sentence TEXT"))
+            conn.commit()
+            print("✓ Migration: added jobs.opening_sentence")
         except Exception:
             conn.rollback()
 

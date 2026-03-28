@@ -397,3 +397,117 @@ def admin_users_list(
         }
         for u in users
     ]
+
+
+@router.get("/users/detail")
+def admin_users_detail(
+    limit: int = 100,
+    offset: int = 0,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Return rich per-user details with AI token usage, job counts and last login."""
+    query = db.query(User)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            (User.email.ilike(like)) | (User.full_name.ilike(like)) | (User.target_role.ilike(like))
+        )
+    users = query.order_by(User.created_at.desc()).offset(offset).limit(limit).all()
+
+    # AI totals per user
+    ai_totals: dict = {}
+    for row in db.query(
+        AIUsageLog.user_id,
+        func.coalesce(func.sum(AIUsageLog.tokens_in + AIUsageLog.tokens_out), 0),
+        func.coalesce(func.sum(AIUsageLog.cost_usd), 0.0),
+        func.count(AIUsageLog.id),
+    ).group_by(AIUsageLog.user_id).all():
+        ai_totals[row[0]] = {
+            "tokens": int(row[1]),
+            "cost_usd": round(float(row[2]), 6),
+            "calls": row[3],
+        }
+
+    # AI breakdown per user per feature
+    ai_by_feature: dict = {}
+    for row in db.query(
+        AIUsageLog.user_id,
+        AIUsageLog.feature,
+        func.coalesce(func.sum(AIUsageLog.tokens_in + AIUsageLog.tokens_out), 0),
+        func.coalesce(func.sum(AIUsageLog.cost_usd), 0.0),
+        func.count(AIUsageLog.id),
+    ).group_by(AIUsageLog.user_id, AIUsageLog.feature).all():
+        ai_by_feature.setdefault(row[0], []).append({
+            "feature": row[1],
+            "tokens": int(row[2]),
+            "cost_usd": round(float(row[3]), 6),
+            "calls": row[4],
+        })
+
+    # Job counts per user
+    job_counts: dict = dict(
+        db.query(Job.user_id, func.count(Job.id)).group_by(Job.user_id).all()
+    )
+
+    # Job status breakdown per user
+    job_by_status_raw = db.query(
+        Job.user_id, Job.status, func.count(Job.id)
+    ).group_by(Job.user_id, Job.status).all()
+    job_by_status: dict = {}
+    for row in job_by_status_raw:
+        uid, st, cnt = row
+        status_str = str(st.value if hasattr(st, "value") else st)
+        job_by_status.setdefault(uid, {})[status_str] = cnt
+
+    # Last login per user
+    last_login: dict = dict(
+        db.query(UserSession.user_id, func.max(UserSession.created_at))
+        .group_by(UserSession.user_id).all()
+    )
+
+    result = []
+    for u in users:
+        ai = ai_totals.get(u.id, {"tokens": 0, "cost_usd": 0.0, "calls": 0})
+        result.append({
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "joined_at": u.created_at.isoformat() if u.created_at else None,
+            "is_verified": u.is_verified,
+            "subscription_tier": u.subscription_tier,
+            "subscription_status": u.subscription_status,
+            "target_role": u.target_role,
+            "years_of_experience": u.years_of_experience,
+            "skills": u.skills_list,
+            "skills_count": len(u.skills_list),
+            "location_preference": u.location_preference,
+            "work_mode_preference": str(u.work_mode_preference.value) if u.work_mode_preference else None,
+            "min_salary_preference": u.min_salary_preference,
+            "max_salary_preference": u.max_salary_preference,
+            "industry_preference": u.industry_preference,
+            "job_type_preference": u.job_type_preference,
+            "availability": u.availability,
+            "has_resume": bool(u.resume_filename),
+            "linkedin_connected": bool(u.linkedin_li_at),
+            "jobs_total": job_counts.get(u.id, 0),
+            "jobs_by_status": job_by_status.get(u.id, {}),
+            "last_login_at": last_login.get(u.id).isoformat() if last_login.get(u.id) else None,
+            "ai": {
+                "total_tokens": ai["tokens"],
+                "total_cost_usd": ai["cost_usd"],
+                "total_calls": ai["calls"],
+                "by_feature": ai_by_feature.get(u.id, []),
+            },
+        })
+
+    total_q = db.query(func.count(User.id))
+    if search:
+        like = f"%{search}%"
+        total_q = total_q.filter(
+            (User.email.ilike(like)) | (User.full_name.ilike(like)) | (User.target_role.ilike(like))
+        )
+    total = total_q.scalar() or 0
+
+    return {"users": result, "total": total}

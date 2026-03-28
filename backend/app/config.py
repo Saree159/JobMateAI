@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     gmail_user: str = ""            # e.g. hirematrix.ai@gmail.com
     gmail_app_password: str = ""    # Gmail App Password (not your regular password)
 
+    # LinkedIn OAuth 2.0
+    linkedin_client_id: str = ""
+    linkedin_client_secret: str = ""
+    linkedin_redirect_uri: str = "http://localhost:8000/api/auth/linkedin/callback"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

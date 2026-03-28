@@ -4,7 +4,7 @@ Handles job CRUD operations, match scoring, and cover letter generation.
 """
 import asyncio
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -14,7 +14,7 @@ from app.models import User, Job, JobStatus
 from app.models import IngestJob, UserJobFeedStatus
 from app.schemas import JobCreate, JobUpdate, JobResponse, MatchScoreResponse, CoverLetterResponse
 from app.schemas import FeedJobResponse, StatusUpdateRequest
-from app.services.ai import calculate_match_score, generate_cover_letter
+from app.services.ai import calculate_match_score, generate_cover_letter, generate_opening_sentence
 from app.routers.users import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -155,10 +155,28 @@ def jobs_today_count(db: Session = Depends(get_db)):
     return {"newToday": count}
 
 
+async def _generate_opening_bg(job_id: int, user_name: str, user_skills: list, target_role: str, job_title: str, company: str):
+    """Background task: generate bilingual opening sentence and save to job row."""
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        sentence = await generate_opening_sentence(user_name, user_skills, target_role, job_title, company)
+        job = db.query(Job).filter(Job.id == job_id).first()
+        if job:
+            job.opening_sentence = sentence
+            db.commit()
+            logger.info(f"Opening sentence generated for job {job_id}")
+    except Exception as e:
+        logger.error(f"Failed to generate opening sentence for job {job_id}: {e}")
+    finally:
+        db.close()
+
+
 @router.post("/users/{user_id}/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
 def create_job(
     user_id: int,
     job_data: JobCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -193,7 +211,18 @@ def create_job(
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
-    
+
+    # Generate bilingual opening sentence in the background
+    background_tasks.add_task(
+        _generate_opening_bg,
+        db_job.id,
+        current_user.full_name or "",
+        current_user.skills_list,
+        current_user.target_role or "",
+        job_data.title,
+        job_data.company,
+    )
+
     return db_job
 
 

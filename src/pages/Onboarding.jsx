@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { userApi, resumeApi } from "@/api/jobmate";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -122,22 +122,30 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, updateUser, getToken } = useAuth();
+  const [searchParams] = useSearchParams();
+  const fromProfile = searchParams.get("from") === "profile";
   const fileInputRef = useRef(null);
 
   const [step, setStep]           = useState(1);
   const [direction, setDirection] = useState(1);
-  const [formData, setFormData]   = useState({
-    target_role: "",
+  const [formData, setFormData]   = useState(() => ({
+    target_role: user?.target_role || "",
     custom_role: "",
-    experience_level: "",
-    min_salary_preference: null,
-    industry_preference: "",
-    job_type_preference: [],
-    availability: "",
-    work_mode_preference: "remote",
-    location_preference: "",
-    skills: [],
-  });
+    experience_level: user?.years_of_experience != null
+      ? (user.years_of_experience >= 5 ? "senior" : user.years_of_experience >= 3 ? "mid" : user.years_of_experience >= 1 ? "junior" : "entry")
+      : "",
+    min_salary_preference: user?.min_salary_preference ?? null,
+    industry_preference: user?.industry_preference || "",
+    job_type_preference: user?.job_type_preference
+      ? user.job_type_preference.split(",").map(s => s.trim()).filter(Boolean)
+      : [],
+    availability: user?.availability || "",
+    work_mode_preference: user?.work_mode_preference || "remote",
+    location_preference: user?.location_preference || "",
+    skills: Array.isArray(user?.skills)
+      ? user.skills
+      : (user?.skills ? user.skills.split(",").map(s => s.trim()).filter(Boolean) : []),
+  }));
   const [skillInput, setSkillInput]       = useState("");
   const [error, setError]                 = useState("");
   const [isUploading, setIsUploading]     = useState(false);
@@ -149,7 +157,7 @@ export default function Onboarding() {
     onSuccess: (updatedUser) => {
       updateUser(updatedUser);
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-      navigate(createPageUrl("dashboard"));
+      navigate(fromProfile ? createPageUrl("profile") : createPageUrl("dashboard"));
     },
     onError: () => setError("Failed to save profile. Please try again."),
   });
@@ -258,7 +266,9 @@ export default function Onboarding() {
           </button>
 
           {/* Brand */}
-          <span className="text-base font-extrabold tracking-tight text-gray-900">HireMatrix</span>
+          <span className="text-base font-extrabold tracking-tight text-gray-900">
+            {fromProfile ? "Profile Setup" : "HireMatrix"}
+          </span>
 
           {/* Step counter */}
           <span className="text-sm font-semibold text-gray-400">
@@ -564,6 +574,8 @@ export default function Onboarding() {
                   >
                     {updateUserMutation.isPending ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
+                    ) : fromProfile ? (
+                      <>Save Profile <ChevronRight className="w-5 h-5 ml-1" /></>
                     ) : (
                       <>Find My Matches <ChevronRight className="w-5 h-5 ml-1" /></>
                     )}

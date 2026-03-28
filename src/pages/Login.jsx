@@ -54,7 +54,12 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
 
       if (result.success) {
-        navigate('/dashboard');
+        // First-time users haven't completed onboarding yet
+        if (!result.user?.target_role) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       } else if (result.error === 'EMAIL_NOT_VERIFIED') {
         setUnverifiedEmail(formData.email);
         setError('');

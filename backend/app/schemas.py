@@ -127,6 +127,7 @@ class JobResponse(JobBase):
     ingest_job_id: Optional[int] = None  # Source feed job, if any
     match_score: Optional[float] = None
     cover_letter: Optional[str] = None
+    opening_sentence: Optional[str] = None
     notes: Optional[str] = None
     applied_date: Optional[datetime] = None
     interview_date: Optional[datetime] = None

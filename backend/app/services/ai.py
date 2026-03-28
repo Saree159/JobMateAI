@@ -185,6 +185,44 @@ Best regards,
 {user_name}"""
 
 
+async def generate_opening_sentence(
+    user_name: str,
+    user_skills: List[str],
+    target_role: str,
+    job_title: str,
+    company: str,
+) -> str:
+    """
+    Generate a short bilingual (EN + HE) opening sentence for a job application.
+    Stored on the Job record and shown in the ApplicationCard.
+    """
+    skills_str = ", ".join(user_skills[:4]) if user_skills else (target_role or "software development")
+
+    prompt = f"""Write ONE short personalized opening sentence (max 25 words) for a job application.
+
+Position: {job_title} at {company}
+Applicant's top skills: {skills_str}
+
+Output ONLY two lines — no extra text:
+EN: [sentence in English]
+HE: [same sentence in Hebrew]"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+            max_tokens=120,
+        )
+        log_ai_usage(response.usage, feature="opening_sentence")
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return (
+            f"EN: I'm excited to apply for the {job_title} position at {company}.\n"
+            f"HE: אני שמח להגיש מועמדות לתפקיד {job_title} ב-{company}."
+        )
+
+
 async def generate_interview_questions(
     job_title: str,
     company: str,

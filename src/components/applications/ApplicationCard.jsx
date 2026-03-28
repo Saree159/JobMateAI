@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobApi } from "@/api/jobmate";
-import { Building2, MapPin, Calendar, MoreHorizontal, ExternalLink, Trash2, Phone } from "lucide-react";
+import { Building2, MapPin, Calendar, MoreHorizontal, ExternalLink, Trash2, Phone, MessageSquareQuote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -31,11 +31,17 @@ export default function ApplicationCard({ application }) {
   const queryClient = useQueryClient();
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => jobApi.update(id, { status }),
+    mutationFn: ({ id, status }) => {
+      if (!id) throw new Error('Missing job id');
+      return jobApi.update(id, { status });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
   });
   const deleteApp = useMutation({
-    mutationFn: (id) => jobApi.delete(id),
+    mutationFn: (id) => {
+      if (!id) throw new Error('Missing job id');
+      return jobApi.delete(id);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
   });
 
@@ -112,9 +118,22 @@ export default function ApplicationCard({ application }) {
             )}
             <span className="flex items-center gap-1 text-[11px] text-gray-400 ml-auto">
               <Calendar className="w-3 h-3" />
-              {format(new Date(application.created_date), 'MMM d, yyyy')}
+              {application.created_at ? format(new Date(application.created_at), 'MMM d, yyyy') : '—'}
             </span>
           </div>
+
+          {application.opening_sentence && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2">
+              <MessageSquareQuote className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed text-indigo-700 space-y-0.5">
+                {application.opening_sentence.split('\n').map((line, i) => (
+                  <p key={i} dir={line.startsWith('HE:') ? 'rtl' : 'ltr'}>
+                    {line.replace(/^(EN|HE):\s*/, '')}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
 
           {application.notes && (
             <p className="text-xs text-gray-400 mt-2 line-clamp-2 leading-relaxed">{application.notes}</p>

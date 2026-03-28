@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText, Languages, Linkedin, Link, Unlink } from "lucide-react";
+import { User, Briefcase, MapPin, DollarSign, X, Save, CheckCircle2, Crown, Upload, FileUp, Loader2, Bell, Mail, Download, Wand2, FileText, Languages, Linkedin, Link, Unlink, Sparkles } from "lucide-react";
 import SubscriptionBadge from "../components/subscription/SubscriptionBadge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -36,12 +36,33 @@ export default function Profile() {
   const [success, setSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // LinkedIn login
-  const [liEmail, setLiEmail] = useState('');
-  const [liPassword, setLiPassword] = useState('');
+  // LinkedIn
   const [liAtInput, setLiAtInput] = useState('');
   const [liAtSaving, setLiAtSaving] = useState(false);
   const [showManualCookie, setShowManualCookie] = useState(false);
+
+  // Show success/error toast if redirected back from LinkedIn OAuth
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('linkedin_connected') === 'true') {
+      toast.success('LinkedIn connected successfully!');
+      window.history.replaceState({}, '', window.location.pathname);
+      // Re-fetch user to get updated linkedin_connected flag
+      userApi.getById(user?.id).then(updated => {
+        if (updated) { updateUser(updated); queryClient.setQueryData(['currentUser'], updated); }
+      }).catch(() => {});
+    } else if (params.get('linkedin_error')) {
+      const msg = {
+        not_configured: 'LinkedIn OAuth is not configured yet.',
+        invalid_state:  'OAuth session expired — please try again.',
+        token_exchange: 'Failed to exchange LinkedIn token.',
+        network_error:  'Network error — please try again.',
+        user_not_found: 'User not found.',
+      }[params.get('linkedin_error')] || 'LinkedIn connection failed.';
+      toast.error(msg);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Resume rewriter state
   const [rewriteFile, setRewriteFile] = useState(null);
@@ -149,29 +170,9 @@ export default function Profile() {
     }
   };
 
-  const handleLinkedInLogin = async () => {
-    if (!liEmail.trim() || !liPassword.trim()) return;
-    setLiAtSaving(true);
-    try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const res = await fetch(`${API}/api/users/${user.id}/linkedin/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: liEmail.trim(), password: liPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Connection failed');
-      const updated = await userApi.getById(user.id);
-      updateUser(updated);
-      queryClient.setQueryData(['currentUser'], updated);
-      setLiEmail('');
-      setLiPassword('');
-      toast.success('LinkedIn connected!');
-    } catch (err) {
-      toast.error(err.message || 'Failed to connect LinkedIn');
-    } finally {
-      setLiAtSaving(false);
-    }
+  const handleLinkedInOAuth = () => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    window.location.href = `${API}/api/auth/linkedin?user_id=${user.id}`;
   };
 
   const handleSaveLiAt = async () => {
@@ -193,6 +194,10 @@ export default function Profile() {
   const handleDisconnectLinkedIn = async () => {
     setLiAtSaving(true);
     try {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      // Clear OAuth token
+      await fetch(`${API}/api/auth/linkedin/${user.id}`, { method: 'DELETE' });
+      // Clear li_at cookie too
       const updated = await userApi.update(user.id, { linkedin_li_at: '' });
       updateUser(updated);
       queryClient.setQueryData(['currentUser'], updated);
@@ -285,12 +290,41 @@ export default function Profile() {
           </h1>
           <p className="text-gray-500 text-sm md:text-base">{t('profile.subtitle')}</p>
         </div>
-        {!isEditing && (
-          <Button onClick={startEditing} className="bg-blue-600 hover:bg-blue-700 shrink-0">
-            {t('profile.editProfile')}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/onboarding?from=profile')}
+            className="gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            Setup Wizard
           </Button>
-        )}
+          {!isEditing && (
+            <Button onClick={startEditing} className="bg-blue-600 hover:bg-blue-700">
+              {t('profile.editProfile')}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Prompt incomplete profile */}
+      {!user.target_role && (
+        <div
+          className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 cursor-pointer hover:bg-blue-100 transition-colors"
+          onClick={() => navigate('/onboarding?from=profile')}
+        >
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">Complete your profile for better job matches</p>
+              <p className="text-xs text-blue-600">Take the 2-minute setup wizard to tell us about your goals.</p>
+            </div>
+          </div>
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 shrink-0 text-xs">
+            Start
+          </Button>
+        </div>
+      )}
 
       {success && (
         <Alert className="mb-6 border-green-500 bg-green-900/30">
@@ -679,9 +713,13 @@ export default function Profile() {
           <CardContent className="space-y-4">
             {user.linkedin_connected ? (
               <div className="space-y-3">
-                <p className="text-sm text-gray-400">
-                  Your LinkedIn session is active. Job searches and descriptions will use your account for authenticated access.
-                </p>
+                <div className="flex items-center gap-2.5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <Linkedin className="w-4 h-4 text-blue-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-300">LinkedIn connected</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Your profile is linked. Job searches use your account for authenticated access.</p>
+                  </div>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -696,45 +734,24 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-400">
-                  Sign in with your LinkedIn credentials to unlock real job listings and full descriptions. Your credentials are used once to obtain a session token and are never stored.
+                  Connect via LinkedIn's official OAuth — no password shared with us. We'll auto-fill your name and use your account for job searches.
                 </p>
 
-                <div className="space-y-3">
-                  <Input
-                    type="email"
-                    placeholder="LinkedIn email"
-                    value={liEmail}
-                    onChange={(e) => setLiEmail(e.target.value)}
-                    disabled={liAtSaving}
-                  />
-                  <Input
-                    type="password"
-                    placeholder="LinkedIn password"
-                    value={liPassword}
-                    onChange={(e) => setLiPassword(e.target.value)}
-                    disabled={liAtSaving}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLinkedInLogin()}
-                  />
-                  <Button
-                    onClick={handleLinkedInLogin}
-                    disabled={liAtSaving || !liEmail.trim() || !liPassword.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    {liAtSaving ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting…</>
-                    ) : (
-                      <><Linkedin className="w-4 h-4 mr-2" />Connect LinkedIn</>
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleLinkedInOAuth}
+                  className="w-full bg-[#0A66C2] hover:bg-[#004182] text-white"
+                >
+                  <Linkedin className="w-4 h-4 mr-2" />
+                  Sign in with LinkedIn
+                </Button>
 
                 <details className="group" open={showManualCookie} onToggle={(e) => setShowManualCookie(e.target.open)}>
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
-                    Have 2FA enabled? Paste your session cookie manually instead
+                    Advanced: paste session cookie manually
                   </summary>
                   <div className="mt-3 space-y-2">
                     <p className="text-xs text-gray-500">
-                      Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-600">li_at</code> value
+                      Open linkedin.com → F12 → Application → Cookies → copy <code className="text-blue-400">li_at</code> value
                     </p>
                     <div className="flex gap-2">
                       <Input

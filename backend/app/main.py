@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import init_db
 from app.routers import users, jobs, resume, notifications, alerts, analytics, ingest, billing, admin
+from app.routers import linkedin_auth
 
 
 @asynccontextmanager
@@ -76,6 +77,7 @@ app.include_router(alerts.router)
 app.include_router(analytics.router)
 app.include_router(billing.router)
 app.include_router(admin.router)
+app.include_router(linkedin_auth.router)
 
 
 @app.get("/")

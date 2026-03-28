@@ -209,7 +209,31 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             n = await _persist_scraped_jobs(linkedin_jobs, source="linkedin")
             logger.info(f"[scheduler] persisted {n} new linkedin jobs to ingest_jobs table")
 
-        jobs = drushim_jobs + linkedin_jobs
+        # ── TechMap ──────────────────────────────────────────────────────────
+        from app.services.techmap import fetch_for_role as techmap_fetch
+        techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')
+        cache_key_techmap = make_jobs_cache_key("techmap", techmap_role_key)
+        techmap_jobs = cache.get(cache_key_techmap)
+        fresh_techmap = False
+        if not techmap_jobs:
+            logger.info(f"[scheduler] techmap fetch for user {user_id} role={user.target_role}")
+            try:
+                techmap_jobs = await techmap_fetch(user.target_role)
+                if techmap_jobs:
+                    cache.set(cache_key_techmap, techmap_jobs, ttl=21600)  # 6h — CSVs update daily
+                    fresh_techmap = True
+            except Exception as e:
+                logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
+                techmap_jobs = []
+        techmap_jobs = techmap_jobs or []
+        for j in techmap_jobs:
+            j.setdefault("source", "techmap")
+
+        if fresh_techmap and techmap_jobs:
+            n = await _persist_scraped_jobs(techmap_jobs, source="techmap")
+            logger.info(f"[scheduler] persisted {n} new techmap jobs to ingest_jobs table")
+
+        jobs = drushim_jobs + linkedin_jobs + techmap_jobs
         if not jobs:
             return None
 
