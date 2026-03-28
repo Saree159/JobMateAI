@@ -14,7 +14,7 @@ const STATUS_CONFIG = {
 
 export default function RecentActivity({ applications, isLoading }) {
   const recentApps = [...applications]
-    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     .slice(0, 5);
 
   if (isLoading) {
@@ -87,7 +87,7 @@ export default function RecentActivity({ applications, isLoading }) {
                         )}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        {format(new Date(app.created_date), 'MMM d')}
+                        {app.created_at ? format(new Date(app.created_at), 'MMM d') : '—'}
                       </p>
                     </div>
                   </div>
