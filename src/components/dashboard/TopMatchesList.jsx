@@ -60,14 +60,17 @@ function FilterChip({ active, onClick, children }) {
   );
 }
 
+const PAGE_SIZE = 10;
+
 export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshing }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [search, setSearch]     = useState("");
-  const [source, setSource]     = useState("All");
-  const [scoreFilter, setScore] = useState("All");
-  const [savedIds, setSavedIds] = useState(new Set());
-  const [savingId, setSavingId] = useState(null);
+  const [search, setSearch]         = useState("");
+  const [source, setSource]         = useState("All");
+  const [scoreFilter, setScore]     = useState("All");
+  const [savedIds, setSavedIds]     = useState(new Set());
+  const [savingId, setSavingId]     = useState(null);
+  const [visibleCount, setVisible]  = useState(PAGE_SIZE);
 
   const saveToApplications = async (e, job) => {
     e.stopPropagation();
@@ -103,7 +106,12 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
   }, [jobs, search, source, scoreFilter]);
 
   const hasActiveFilter = search || source !== "All" || scoreFilter !== "All";
-  const clearFilters    = () => { setSearch(""); setSource("All"); setScore("All"); };
+  const clearFilters    = () => { setSearch(""); setSource("All"); setScore("All"); setVisible(PAGE_SIZE); };
+
+  // Reset pagination whenever filter changes
+  const handleSearch = (v) => { setSearch(v); setVisible(PAGE_SIZE); };
+  const handleSource = (v) => { setSource(v); setVisible(PAGE_SIZE); };
+  const handleScore  = (v) => { setScore(v);  setVisible(PAGE_SIZE); };
 
   if (isLoading) {
     return (
@@ -157,12 +165,12 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
               <Input
                 placeholder="Search title or company…"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => handleSearch(e.target.value)}
                 className="pl-8 h-8 text-sm bg-gray-50 border-gray-200 focus:border-blue-500/50 placeholder:text-gray-400"
               />
               {search && (
                 <button
-                  onClick={() => setSearch("")}
+                  onClick={() => handleSearch("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -173,13 +181,13 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             {/* Source + score chips */}
             <div className="flex flex-wrap items-center gap-1.5 w-full">
               {SOURCE_FILTERS.map(s => (
-                <FilterChip key={s} active={source === s} onClick={() => setSource(s)}>
+                <FilterChip key={s} active={source === s} onClick={() => handleSource(s)}>
                   {s}
                 </FilterChip>
               ))}
               <div className="w-px h-4 bg-gray-200 mx-0.5" />
               {SCORE_FILTERS.map(f => (
-                <FilterChip key={f.label} active={scoreFilter === f.label} onClick={() => setScore(f.label)}>
+                <FilterChip key={f.label} active={scoreFilter === f.label} onClick={() => handleScore(f.label)}>
                   {f.label}
                 </FilterChip>
               ))}
@@ -228,7 +236,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
             </button>
           </div>
         ) : (
-          filtered.map((job, idx) => {
+          filtered.slice(0, visibleCount).map((job, idx) => {
             const reqYears  = extractRequiredYears(job.description);
             const userYears = user?.years_of_experience;
             const meetsExp  = reqYears != null && userYears != null ? userYears >= reqYears : null;
@@ -349,6 +357,16 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
               </div>
             );
           })
+        )}
+
+        {/* Load More */}
+        {filtered.length > visibleCount && (
+          <button
+            onClick={() => setVisible(prev => prev + PAGE_SIZE)}
+            className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium border border-dashed border-blue-200 hover:border-blue-300 rounded-xl transition-colors"
+          >
+            Load More ({filtered.length - visibleCount} remaining)
+          </button>
         )}
 
         {/* Footer nav */}
