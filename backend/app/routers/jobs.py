@@ -259,7 +259,7 @@ def list_user_jobs(
 @router.get("/jobs/top-matches")
 async def get_top_matching_jobs(
     user_id: int = Query(..., description="User ID"),
-    limit: int = Query(10, description="Number of top matches to return"),
+    limit: int = Query(9999, description="Max results to return (default: all)"),
     force_refresh: bool = Query(False, description="Bypass cache and re-scrape"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
