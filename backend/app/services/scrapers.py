@@ -710,216 +710,176 @@ class GotFriendsScraper(JobScraper):
 
 
 class LinkedInJobSearchScraper(JobScraper):
-    """Search LinkedIn public job listings by keyword and location using Crawl4AI."""
+    """
+    Search LinkedIn public job listings using the Guest Jobs API.
+    No authentication, no Playwright — plain httpx requests.
+    Returns full job descriptions from the public posting endpoint.
+    """
 
-    # Fetch descriptions for at most this many jobs to avoid rate limiting
-    MAX_DESCRIPTION_FETCHES = 10
+    _HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
 
-    @staticmethod
-    def _build_browser_config(li_at: Optional[str] = None):
-        """Return a BrowserConfig with the li_at session cookie injected when available."""
-        try:
-            from crawl4ai import BrowserConfig
-            if li_at:
-                cookies = [{
-                    "name": "li_at",
-                    "value": li_at,
-                    "domain": ".linkedin.com",
-                    "path": "/",
-                    "secure": True,
-                    "httpOnly": True,
-                    "sameSite": "None",
-                }]
-                return BrowserConfig(headless=True, cookies=cookies)
-            return BrowserConfig(headless=True)
-        except Exception:
-            return None
+    # Guest search API — returns HTML with job cards (no auth needed)
+    _SEARCH_URL = (
+        "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+        "?keywords={keywords}&location={location}&start={start}&count={count}"
+    )
+    # Guest job detail API — returns HTML with full description (no auth needed)
+    _DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+
+    MAX_JOBS = 25
+    MAX_DESCRIPTIONS = 15  # fetch descriptions for top N results
 
     async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None) -> List[Dict]:
-        """Search LinkedIn jobs, then concurrently fetch descriptions for each result.
-
-        When `li_at` (LinkedIn session cookie) is provided, the browser will be
-        authenticated — no login-wall, full results, and real descriptions.
-        """
-        if not CRAWL4AI_AVAILABLE:
-            logger.warning("Crawl4AI not available for LinkedIn scraping")
-            return []
+        """Search LinkedIn via Guest API and enrich with full descriptions."""
+        import httpx
         from urllib.parse import quote_plus
-        url = (
-            f"https://www.linkedin.com/jobs/search/"
-            f"?keywords={quote_plus(role)}&location={quote_plus(location)}"
+
+        search_url = self._SEARCH_URL.format(
+            keywords=quote_plus(role),
+            location=quote_plus(location),
+            start=0,
+            count=self.MAX_JOBS,
         )
         try:
-            browser_cfg = self._build_browser_config(li_at)
-            crawler_kwargs = {"verbose": False}
-            if browser_cfg is not None:
-                crawler_kwargs["config"] = browser_cfg
-
-            async with AsyncWebCrawler(**crawler_kwargs) as crawler:
-                result = await crawler.arun(
-                    url=url,
-                    css_selector="ul.jobs-search__results-list",
-                    cache_mode=CacheMode.BYPASS,
-                    screenshot=False,
-                    verbose=False,
-                    magic=True,
-                    simulate_user=True,
-                    user_agent=self._UA,
-                )
-                if not result.success:
-                    logger.error(f"Crawl4AI failed for LinkedIn search: {url}")
+            async with httpx.AsyncClient(headers=self._HEADERS, timeout=20, follow_redirects=True) as client:
+                resp = await client.get(search_url)
+                if resp.status_code != 200:
+                    logger.warning(f"LinkedIn guest search returned {resp.status_code}")
                     return []
 
-                soup = BeautifulSoup(result.html, 'html.parser')
-                cards = soup.select("li > div.base-card")
-                logger.info(f"Found {len(cards)} LinkedIn job cards for '{role}' in '{location}' (auth={'yes' if li_at else 'no'})")
+                soup = BeautifulSoup(resp.text, "html.parser")
+                cards = soup.select("li")
+                logger.info(f"LinkedIn guest search: {len(cards)} cards for '{role}' in '{location}'")
 
                 jobs = []
                 for card in cards:
-                    try:
-                        job = self._parse_card(card)
-                        if job and job.get("title"):
-                            jobs.append(job)
-                    except Exception as e:
-                        logger.error(f"Error parsing LinkedIn card: {e}")
-                        continue
+                    job = self._parse_card(card)
+                    if job and job.get("title") and job.get("job_id"):
+                        jobs.append(job)
 
-            # Fetch descriptions concurrently (limited to MAX_DESCRIPTION_FETCHES)
-            if jobs:
-                await self._enrich_descriptions(jobs[:self.MAX_DESCRIPTION_FETCHES], li_at=li_at)
+            if not jobs:
+                return []
 
+            # Fetch full descriptions concurrently for top results
+            await self._enrich_descriptions(jobs[:self.MAX_DESCRIPTIONS])
             return jobs
+
         except Exception as e:
-            logger.error(f"LinkedIn search error: {e}")
+            logger.error(f"LinkedIn guest search error: {e}")
             return []
 
-    # CSS selector passed to Crawl4AI — limits result.html to just the description area
-    _DESC_CSS = (
-        "div.show-more-less-html__markup,"
-        "div.description__text--rich,"
-        "div.description__text"
-    )
-
-    # Realistic Chrome UA to reduce bot-detection fingerprint
-    _UA = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
-
-    @staticmethod
-    def _og_description(full_html: str) -> Optional[str]:
-        """Extract og:description meta tag — present even on login-wall redirects."""
-        try:
-            soup = BeautifulSoup(full_html, 'html.parser')
-            tag = (
-                soup.find("meta", property="og:description")
-                or soup.find("meta", attrs={"name": "description"})
-            )
-            if tag and tag.get("content"):
-                text = tag["content"].strip()
-                return text if len(text) >= 40 else None
-        except Exception:
-            pass
-        return None
-
-    async def _enrich_descriptions(self, jobs: List[Dict], li_at: Optional[str] = None) -> None:
-        """Fetch description for each job concurrently (in-place update)."""
-        semaphore = asyncio.Semaphore(2)  # keep concurrency low to avoid rate limits
-        browser_cfg = self._build_browser_config(li_at)
+    async def _enrich_descriptions(self, jobs: List[Dict]) -> None:
+        """Fetch full description for each job from the guest detail API."""
+        import httpx
+        semaphore = asyncio.Semaphore(5)
 
         async def fetch_one(job: Dict) -> None:
-            job_url = job.get("url")
-            if not job_url:
+            job_id = job.get("job_id")
+            if not job_id:
                 return
             async with semaphore:
                 try:
-                    crawler_kwargs = {"verbose": False}
-                    if browser_cfg is not None:
-                        crawler_kwargs["config"] = browser_cfg
-
-                    async with AsyncWebCrawler(**crawler_kwargs) as crawler:
-                        # magic=True  → playwright_stealth (hides navigator.webdriver)
-                        #             + simulates mouse/keyboard to look human
-                        # css_selector → result.html contains only the description area
-                        result = await crawler.arun(
-                            url=job_url,
-                            css_selector=self._DESC_CSS,
-                            cache_mode=CacheMode.BYPASS,
-                            screenshot=False,
-                            verbose=False,
-                            magic=True,
-                            simulate_user=True,
-                            user_agent=self._UA,
-                        )
-                        if not result.success or not result.html:
+                    async with httpx.AsyncClient(headers=self._HEADERS, timeout=15, follow_redirects=True) as client:
+                        resp = await client.get(self._DETAIL_URL.format(job_id=job_id))
+                        if resp.status_code != 200:
                             return
 
-                        soup = BeautifulSoup(result.html, 'html.parser')
+                    soup = BeautifulSoup(resp.text, "html.parser")
 
-                        # Detect login-wall (works for any language / redirect)
-                        result_url = getattr(result, 'url', '') or job_url
-                        if _is_linkedin_login_wall(soup, result_url):
-                            logger.warning(f"LinkedIn login-wall hit for {job_url} — trying og:description")
-                            # Last resort: og:description from the full crawled HTML
-                            og = self._og_description(result.html)
-                            if og:
-                                job["description"] = og
-                                job["skills"] = self.extract_skills(og)
-                            return
-
-                        # Remove noise nodes: buttons ("See more"), icons, scripts
-                        for el in soup.select("button, svg, script, style, [aria-hidden='true']"):
+                    # Primary description container
+                    desc_el = (
+                        soup.select_one("div.show-more-less-html__markup")
+                        or soup.select_one("div.description__text")
+                        or soup.select_one("section.description")
+                    )
+                    if desc_el:
+                        for el in desc_el.select("button, svg, script, style"):
                             el.decompose()
-
-                        # Take the most specific description element available
-                        desc_el = (
-                            soup.select_one("div.show-more-less-html__markup")
-                            or soup.select_one("div.description__text--rich")
-                            or soup.select_one("div.description__text")
-                            or soup.find()  # root of the css-filtered HTML
-                        )
-                        if not desc_el:
-                            return
-
-                        # Preserve paragraph structure; collapse 3+ blank lines to 2
                         text = desc_el.get_text(separator="\n", strip=True)
                         text = re.sub(r'\n{3,}', '\n\n', text).strip()
+                        if len(text) >= 80:
+                            job["description"] = text
+                            job["skills"] = self.extract_skills(text)
+                            tl = text.lower()
+                            if "remote" in tl:
+                                job["work_mode"] = "Remote"
+                            elif "hybrid" in tl:
+                                job["work_mode"] = "Hybrid"
 
-                        if len(text) < 80:
-                            return
-
-                        job["description"] = text
-                        job["skills"] = self.extract_skills(text)
-                        text_lower = text.lower()
-                        if "remote" in text_lower:
-                            job["work_mode"] = "Remote"
-                        elif "hybrid" in text_lower:
-                            job["work_mode"] = "Hybrid"
+                    # Enrich with seniority / job type from the detail page
+                    criteria = soup.select("li.description__job-criteria-item")
+                    for item in criteria:
+                        label_el = item.select_one("h3")
+                        value_el = item.select_one("span")
+                        if not label_el or not value_el:
+                            continue
+                        label = label_el.get_text(strip=True).lower()
+                        value = value_el.get_text(strip=True)
+                        if "seniority" in label:
+                            job["experience_level"] = value
+                        elif "employment" in label or "job type" in label:
+                            job["job_type"] = value
 
                 except Exception as e:
-                    logger.warning(f"Could not fetch description for {job_url}: {e}")
+                    logger.warning(f"Could not fetch LinkedIn description for job {job_id}: {e}")
 
-        await asyncio.gather(*[fetch_one(job) for job in jobs])
+        await asyncio.gather(*[fetch_one(j) for j in jobs])
 
     def _parse_card(self, card) -> Optional[Dict]:
-        """Extract job data from a LinkedIn base-card element."""
-        link_el = card.select_one("a.base-card__full-link")
-        title_el = card.select_one("h3.base-search-card__title")
-        company_el = card.select_one("h4.base-search-card__subtitle a")
-        location_el = card.select_one("span.job-search-card__location")
-        return {
-            "title":    self.clean_text(title_el.get_text() if title_el else ""),
-            "company":  self.clean_text(company_el.get_text() if company_el else ""),
-            "location": self.clean_text(location_el.get_text() if location_el else ""),
-            "url":      link_el["href"] if link_el else None,
-            "description": None,
-            "job_type": "Full-time",
-            "work_mode": "Onsite",
-            "skills": [],
-            "salary_min": None,
-            "salary_max": None,
-        }
+        """Extract job data from a LinkedIn guest search result card."""
+        try:
+            # Job ID — embedded in data-entity-urn or in the detail link
+            job_id = None
+            entity = card.get("data-entity-urn", "")
+            if entity:
+                job_id = entity.split(":")[-1]
+            if not job_id:
+                link = card.select_one("a[href*='/jobs/view/']")
+                if link:
+                    m = re.search(r'/jobs/view/(\d+)', link.get("href", ""))
+                    if m:
+                        job_id = m.group(1)
+
+            title_el   = card.select_one("h3.base-search-card__title")
+            company_el = card.select_one("h4.base-search-card__subtitle")
+            location_el = card.select_one("span.job-search-card__location")
+            link_el    = card.select_one("a.base-card__full-link") or card.select_one("a[href*='/jobs/view/']")
+
+            title   = self.clean_text(title_el.get_text()   if title_el   else "")
+            company = self.clean_text(company_el.get_text() if company_el else "")
+            loc     = self.clean_text(location_el.get_text() if location_el else "")
+            url     = link_el["href"].split("?")[0] if link_el else (
+                f"https://www.linkedin.com/jobs/view/{job_id}" if job_id else None
+            )
+
+            if not title:
+                return None
+
+            return {
+                "job_id":      job_id,
+                "title":       title,
+                "company":     company,
+                "location":    loc,
+                "url":         url,
+                "apply_url":   url,
+                "description": None,
+                "job_type":    "Full-time",
+                "work_mode":   "Onsite",
+                "experience_level": None,
+                "skills":      [],
+                "source":      "linkedin",
+            }
+        except Exception as e:
+            logger.error(f"Error parsing LinkedIn card: {e}")
+            return None
 
 
 class ScraperFactory:
