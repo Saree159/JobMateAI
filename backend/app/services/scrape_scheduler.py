@@ -220,7 +220,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             try:
                 techmap_jobs = await techmap_fetch(user.target_role)
                 if techmap_jobs:
-                    cache.set(cache_key_techmap, techmap_jobs, ttl=21600)  # 6h — CSVs update daily
+                    cache.set(cache_key_techmap, techmap_jobs, ttl=3600)  # 1h
                     fresh_techmap = True
             except Exception as e:
                 logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")

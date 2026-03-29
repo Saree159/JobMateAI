@@ -52,6 +52,24 @@ _SIZES: dict[str, str] = {
 }
 
 
+_TECH_TOKENS = [
+    "python","javascript","typescript","java","go","rust","c++","c#","ruby","php","scala","kotlin","swift",
+    "react","angular","vue","next.js","node.js","express","django","fastapi","flask","spring",
+    "sql","postgresql","mysql","mongodb","redis","elasticsearch","dynamodb","cassandra",
+    "aws","azure","gcp","docker","kubernetes","terraform","ansible","jenkins","ci/cd","github actions",
+    "graphql","rest","grpc","kafka","rabbitmq","celery",
+    "machine learning","deep learning","nlp","pytorch","tensorflow","scikit-learn",
+    "devops","sre","linux","bash","git",
+    "backend","frontend","fullstack","full-stack","full stack",
+    "microservices","distributed","cloud","data engineering","data science",
+]
+
+def _skills_from_title(title: str) -> list[str]:
+    """Extract recognised tech skills from a job title string."""
+    t = title.lower()
+    return [tok for tok in _TECH_TOKENS if tok in t]
+
+
 def _city(raw: str) -> str:
     return _CITIES.get(raw.strip(), raw.strip())
 
@@ -88,8 +106,11 @@ async def _fetch_csv(category: str) -> List[Dict]:
         size     = _SIZES.get((row.get("size") or "").strip(), "")
         industry = (row.get("category") or "").strip()
 
-        # Build a minimal description so the skill scorer has something to work with
+        # Build description with enough signal for the skill scorer
         description = " ".join(filter(None, [title, company, industry, size, level]))
+
+        # Extract skills from title so match scoring works without a full description
+        skills = _skills_from_title(title)
 
         jobs.append({
             "title":            title,
@@ -100,7 +121,7 @@ async def _fetch_csv(category: str) -> List[Dict]:
             "description":      description,
             "experience_level": level or None,
             "job_type":         "Full-time",
-            "skills":           [],
+            "skills":           skills,
             "source":           "techmap",
             "industry":         industry,
             "company_size":     size,
