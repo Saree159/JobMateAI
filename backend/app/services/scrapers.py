@@ -737,7 +737,7 @@ class LinkedInJobSearchScraper(JobScraper):
     MAX_JOBS = 25
     MAX_DESCRIPTIONS = 15  # fetch descriptions for top N results
 
-    async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None) -> List[Dict]:
+    async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None, start: int = 0) -> List[Dict]:
         """Search LinkedIn via Guest API and enrich with full descriptions."""
         import httpx
         from urllib.parse import quote_plus
@@ -745,7 +745,7 @@ class LinkedInJobSearchScraper(JobScraper):
         search_url = self._SEARCH_URL.format(
             keywords=quote_plus(role),
             location=quote_plus(location),
-            start=0,
+            start=start,
             count=self.MAX_JOBS,
         )
         try:

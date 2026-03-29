@@ -34,6 +34,8 @@ const JOB_SITES = {
   }
 };
 
+const PAGE_SIZE = 10;
+
 export default function IsraeliJobs() {
   const { t } = useTranslation();
   const [selectedSite, setSelectedSite] = useState("drushim");
@@ -41,6 +43,7 @@ export default function IsraeliJobs() {
   const [customUrl, setCustomUrl] = useState("");
   const [searchUrl, setSearchUrl] = useState(`https://www.drushim.co.il/jobs/subcat/${selectedCategory}`);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
 
   const { data, isLoading, error } = useQuery({
@@ -60,6 +63,7 @@ export default function IsraeliJobs() {
 
   const handleSiteChange = (site) => {
     setSelectedSite(site);
+    setVisibleCount(PAGE_SIZE);
     if (site === "drushim") {
       setSearchUrl(`https://www.drushim.co.il/jobs/subcat/${selectedCategory}`);
     } else if (site === "gotfriends") {
@@ -69,11 +73,13 @@ export default function IsraeliJobs() {
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
+    setVisibleCount(PAGE_SIZE);
     setSearchUrl(`https://www.drushim.co.il/jobs/subcat/${category}`);
   };
 
   const handleCustomSearch = () => {
     if (customUrl) {
+      setVisibleCount(PAGE_SIZE);
       setSearchUrl(customUrl);
     }
   };
@@ -205,10 +211,10 @@ export default function IsraeliJobs() {
         {!isLoading && !error && jobs.length > 0 && (
           <>
             <div className="mb-4 text-gray-400">
-              {t('israeliJobs.totalJobs', { count: jobs.length })} — {data.source}
+              Showing {Math.min(visibleCount, jobs.length)} of {jobs.length} jobs — {data.source}
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {jobs.map((job, index) => (
+              {jobs.slice(0, visibleCount).map((job, index) => (
                 <JobCard
                   key={index}
                   job={{
@@ -227,6 +233,18 @@ export default function IsraeliJobs() {
                 />
               ))}
             </div>
+
+            {visibleCount < jobs.length && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
+                  className="px-8"
+                >
+                  Load More Jobs
+                </Button>
+              </div>
+            )}
           </>
         )}
 

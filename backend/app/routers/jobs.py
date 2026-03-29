@@ -934,6 +934,7 @@ async def scrape_linkedin_jobs(
     role: str = Query(..., description="Job title / keyword to search"),
     location: str = Query("", description="City, country, or 'Remote'"),
     user_id: Optional[int] = Query(None, description="User ID — used to load the user's li_at session cookie"),
+    start: int = Query(0, description="Pagination offset (0, 25, 50, …)"),
     force_refresh: bool = Query(False, description="Force refresh cache"),
     db: Session = Depends(get_db),
 ):
@@ -942,6 +943,7 @@ async def scrape_linkedin_jobs(
     When user_id is provided and the user has a stored li_at token, the search
     runs as an authenticated LinkedIn session (no login-wall, full descriptions).
     Results are cached for 30 minutes unless force_refresh=true.
+    Each page returns up to 25 jobs; use start=0, 25, 50, … for pagination.
     """
     try:
         import re
@@ -955,10 +957,8 @@ async def scrape_linkedin_jobs(
             if user:
                 li_at = user.linkedin_li_at
 
-        cache_key = make_jobs_cache_key(
-            "linkedin",
-            re.sub(r'\W+', '_', f"{role}_{location}").lower().strip('_')
-        )
+        slug = re.sub(r'\W+', '_', f"{role}_{location}").lower().strip('_')
+        cache_key = make_jobs_cache_key("linkedin", f"{slug}_s{start}")
         cache = get_cache()
 
         if not force_refresh:
@@ -971,13 +971,15 @@ async def scrape_linkedin_jobs(
                     "jobs": cached_data,
                     "source": "linkedin.com",
                     "cached": True,
+                    "start": start,
+                    "has_more": len(cached_data) >= 25,
                 }
 
-        logger.info(f"Cache MISS for {cache_key} - scraping LinkedIn (auth={'yes' if li_at else 'no'})...")
+        logger.info(f"Cache MISS for {cache_key} - scraping LinkedIn start={start} (auth={'yes' if li_at else 'no'})...")
         scraper = LinkedInJobSearchScraper()
-        jobs = await scraper.search_async(role, location, li_at=li_at)
+        jobs = await scraper.search_async(role, location, li_at=li_at, start=start)
 
-        if not jobs:
+        if not jobs and start == 0:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No jobs found — LinkedIn may be blocking the request or no results exist for this search",
@@ -992,6 +994,8 @@ async def scrape_linkedin_jobs(
             "jobs": jobs,
             "source": "linkedin.com",
             "cached": False,
+            "start": start,
+            "has_more": len(jobs) >= 25,
         }
 
     except HTTPException:

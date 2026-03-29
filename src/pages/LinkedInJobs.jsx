@@ -32,6 +32,9 @@ function DescriptionPreview({ text }) {
   );
 }
 
+const PAGE_SIZE = 10;   // jobs shown per "Load More" click
+const FETCH_SIZE = 25;  // jobs fetched from backend per request
+
 export default function LinkedInJobs() {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -39,11 +42,14 @@ export default function LinkedInJobs() {
 
   const [role, setRole] = useState(user?.target_role || "");
   const [location, setLocation] = useState(user?.location_preference || "");
-  const [jobs, setJobs] = useState([]);
+  const [jobs, setJobs] = useState([]);          // all fetched jobs
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE); // how many to display
+  const [fetchStart, setFetchStart] = useState(0);  // next backend offset to fetch
+  const [hasMore, setHasMore] = useState(false);    // backend might have more
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
-  const [cached, setCached] = useState(false);
   const [savedUrls, setSavedUrls] = useState(new Set());
 
   const saveJobMutation = useMutation({
@@ -65,6 +71,23 @@ export default function LinkedInJobs() {
     onError: () => toast.error('Failed to save job'),
   });
 
+  const fetchJobs = async (start, append = false) => {
+    const params = new URLSearchParams({ role: role.trim(), start });
+    if (location.trim()) params.set("location", location.trim());
+    if (user?.id) params.set("user_id", user.id);
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/scrape/linkedin?${params}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || "Failed to fetch jobs");
+    }
+    const data = await response.json();
+    const newJobs = data.jobs || [];
+    setJobs(prev => append ? [...prev, ...newJobs] : newJobs);
+    setFetchStart(start + newJobs.length);
+    setHasMore(data.has_more || false);
+    return newJobs;
+  };
+
   const handleSearch = async () => {
     if (!role.trim()) {
       setError("Please enter a job role to search.");
@@ -73,23 +96,37 @@ export default function LinkedInJobs() {
     setError("");
     setIsLoading(true);
     setSearched(true);
+    setVisibleCount(PAGE_SIZE);
+    setFetchStart(0);
+    setHasMore(false);
     try {
-      const params = new URLSearchParams({ role: role.trim() });
-      if (location.trim()) params.set("location", location.trim());
-      if (user?.id) params.set("user_id", user.id);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/scrape/linkedin?${params}`);
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || "Failed to fetch jobs");
-      }
-      const data = await response.json();
-      setJobs(data.jobs || []);
-      setCached(data.cached || false);
+      await fetchJobs(0, false);
     } catch (err) {
       setError(err.message);
       setJobs([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    // If we have more fetched jobs to show, just reveal them
+    if (visibleCount < jobs.length) {
+      setVisibleCount(prev => prev + PAGE_SIZE);
+      return;
+    }
+    // Otherwise fetch next batch from backend
+    if (!hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const newJobs = await fetchJobs(fetchStart, true);
+      if (newJobs.length > 0) {
+        setVisibleCount(prev => prev + PAGE_SIZE);
+      }
+    } catch (err) {
+      toast.error("Failed to load more jobs");
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -184,13 +221,12 @@ export default function LinkedInJobs() {
           <>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-400">
-                {jobs.length} jobs found
-                {cached && <span className="ml-2 text-xs text-gray-500">(cached)</span>}
+                Showing {Math.min(visibleCount, jobs.length)} of {jobs.length} loaded jobs
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {jobs.map((job, idx) => (
+              {jobs.slice(0, visibleCount).map((job, idx) => (
                 <Card
                   key={idx}
                   className="border border-gray-100 hover:border-gray-200 transition-colors"
@@ -282,6 +318,24 @@ export default function LinkedInJobs() {
                 </Card>
               ))}
             </div>
+
+            {/* Load More */}
+            {(visibleCount < jobs.length || hasMore) && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-8"
+                >
+                  {isLoadingMore ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</>
+                  ) : (
+                    `Load More Jobs`
+                  )}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
