@@ -360,13 +360,23 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
         )}
 
         {/* Load More */}
-        {filtered.length > visibleCount && (
-          <button
-            onClick={() => setVisible(prev => prev + PAGE_SIZE)}
-            className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium border border-dashed border-blue-200 hover:border-blue-300 rounded-xl transition-colors"
-          >
-            Load More ({filtered.length - visibleCount} remaining)
-          </button>
+        {filtered.length > 0 && (
+          visibleCount < filtered.length ? (
+            <button
+              onClick={() => setVisible(prev => prev + PAGE_SIZE)}
+              className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium border border-dashed border-blue-200 hover:border-blue-300 rounded-xl transition-colors"
+            >
+              Load More ({filtered.length - visibleCount} remaining)
+            </button>
+          ) : (
+            <button
+              onClick={() => { setVisible(PAGE_SIZE); onRefresh?.(); }}
+              disabled={isRefreshing}
+              className="w-full py-2 text-sm text-gray-500 hover:text-blue-600 font-medium border border-dashed border-gray-200 hover:border-blue-200 rounded-xl transition-colors disabled:opacity-40"
+            >
+              {isRefreshing ? "Loading more jobs…" : "Load More Jobs"}
+            </button>
+          )
         )}
 
         {/* Footer nav */}

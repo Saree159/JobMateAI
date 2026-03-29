@@ -42,7 +42,18 @@ export default function Dashboard() {
     setIsRefreshing(true);
     try {
       const result = await jobApi.topMatches(user.id, true);
-      queryClient.setQueryData(['top-matches', user?.id], result);
+      // Merge new jobs with existing ones (dedupe by url)
+      const existing = queryClient.getQueryData(['top-matches', user?.id]);
+      if (existing?.jobs?.length && result?.jobs?.length) {
+        const existingUrls = new Set(existing.jobs.map(j => j.url));
+        const merged = [
+          ...existing.jobs,
+          ...result.jobs.filter(j => !existingUrls.has(j.url)),
+        ].sort((a, b) => (b.match_score ?? 0) - (a.match_score ?? 0));
+        queryClient.setQueryData(['top-matches', user?.id], { ...result, jobs: merged });
+      } else {
+        queryClient.setQueryData(['top-matches', user?.id], result);
+      }
     } finally {
       setIsRefreshing(false);
     }
