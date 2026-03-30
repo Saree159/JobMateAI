@@ -750,11 +750,22 @@ class LinkedInJobSearchScraper(JobScraper):
     MAX_DESCRIPTIONS = 15  # fetch descriptions for top N results
 
     @staticmethod
-    def _get_proxy() -> Optional[str]:
-        """Return proxy URL from env var HTTPS_PROXY / HTTP_PROXY / SCRAPERAPI_KEY, or None."""
+    def _scraper_url(target_url: str) -> str:
+        """
+        Wrap target_url with ScraperAPI if SCRAPERAPI_KEY is set, otherwise return as-is.
+        ScraperAPI handles residential IP rotation, bypassing cloud-IP blocks.
+        """
         import os
-        if os.environ.get("SCRAPERAPI_KEY"):
-            return f"http://scraperapi:{os.environ['SCRAPERAPI_KEY']}@proxy-server.scraperapi.com:8001"
+        from urllib.parse import quote as _q
+        key = os.environ.get("SCRAPERAPI_KEY", "")
+        if key:
+            return f"https://api.scraperapi.com/?api_key={key}&url={_q(target_url, safe='')}&render=false"
+        return target_url
+
+    @staticmethod
+    def _get_proxy() -> Optional[str]:
+        """Return proxy URL from HTTPS_PROXY / HTTP_PROXY env var, or None."""
+        import os
         return os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or None
 
     async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None, start: int = 0) -> List[Dict]:
@@ -764,16 +775,17 @@ class LinkedInJobSearchScraper(JobScraper):
 
         proxy = self._get_proxy()
 
-        search_url = self._SEARCH_URL.format(
+        raw_search_url = self._SEARCH_URL.format(
             keywords=quote_plus(role),
             location=quote_plus(location),
             start=start,
             count=self.MAX_JOBS,
         )
+        search_url = self._scraper_url(raw_search_url)
         try:
-            client_kwargs = dict(headers=self._HEADERS, timeout=20, follow_redirects=True)
+            client_kwargs = dict(headers=self._HEADERS, timeout=30, follow_redirects=True)
             if proxy:
-                client_kwargs["proxies"] = proxy
+                client_kwargs["proxy"] = proxy
             async with httpx.AsyncClient(**client_kwargs) as client:
                 resp = await client.get(search_url)
                 if resp.status_code != 200:
@@ -813,11 +825,12 @@ class LinkedInJobSearchScraper(JobScraper):
                 return
             async with semaphore:
                 try:
-                    client_kwargs = dict(headers=self._HEADERS, timeout=15, follow_redirects=True)
+                    detail_url = self._scraper_url(self._DETAIL_URL.format(job_id=job_id))
+                    client_kwargs = dict(headers=self._HEADERS, timeout=20, follow_redirects=True)
                     if proxy:
-                        client_kwargs["proxies"] = proxy
+                        client_kwargs["proxy"] = proxy
                     async with httpx.AsyncClient(**client_kwargs) as client:
-                        resp = await client.get(self._DETAIL_URL.format(job_id=job_id))
+                        resp = await client.get(detail_url)
                         if resp.status_code != 200:
                             return
 
