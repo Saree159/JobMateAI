@@ -718,12 +718,24 @@ class LinkedInJobSearchScraper(JobScraper):
 
     _HEADERS = {
         "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
         ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Connection": "keep-alive",
     }
 
     # Guest search API — returns HTML with job cards (no auth needed)
@@ -737,10 +749,20 @@ class LinkedInJobSearchScraper(JobScraper):
     MAX_JOBS = 25
     MAX_DESCRIPTIONS = 15  # fetch descriptions for top N results
 
+    @staticmethod
+    def _get_proxy() -> Optional[str]:
+        """Return proxy URL from env var HTTPS_PROXY / HTTP_PROXY / SCRAPERAPI_KEY, or None."""
+        import os
+        if os.environ.get("SCRAPERAPI_KEY"):
+            return f"http://scraperapi:{os.environ['SCRAPERAPI_KEY']}@proxy-server.scraperapi.com:8001"
+        return os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or None
+
     async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None, start: int = 0) -> List[Dict]:
         """Search LinkedIn via Guest API and enrich with full descriptions."""
         import httpx
         from urllib.parse import quote_plus
+
+        proxy = self._get_proxy()
 
         search_url = self._SEARCH_URL.format(
             keywords=quote_plus(role),
@@ -749,7 +771,10 @@ class LinkedInJobSearchScraper(JobScraper):
             count=self.MAX_JOBS,
         )
         try:
-            async with httpx.AsyncClient(headers=self._HEADERS, timeout=20, follow_redirects=True) as client:
+            client_kwargs = dict(headers=self._HEADERS, timeout=20, follow_redirects=True)
+            if proxy:
+                client_kwargs["proxies"] = proxy
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 resp = await client.get(search_url)
                 if resp.status_code != 200:
                     logger.warning(f"LinkedIn guest search returned {resp.status_code}")
@@ -780,6 +805,7 @@ class LinkedInJobSearchScraper(JobScraper):
         """Fetch full description for each job from the guest detail API."""
         import httpx
         semaphore = asyncio.Semaphore(5)
+        proxy = self._get_proxy()
 
         async def fetch_one(job: Dict) -> None:
             job_id = job.get("job_id")
@@ -787,7 +813,10 @@ class LinkedInJobSearchScraper(JobScraper):
                 return
             async with semaphore:
                 try:
-                    async with httpx.AsyncClient(headers=self._HEADERS, timeout=15, follow_redirects=True) as client:
+                    client_kwargs = dict(headers=self._HEADERS, timeout=15, follow_redirects=True)
+                    if proxy:
+                        client_kwargs["proxies"] = proxy
+                    async with httpx.AsyncClient(**client_kwargs) as client:
                         resp = await client.get(self._DETAIL_URL.format(job_id=job_id))
                         if resp.status_code != 200:
                             return
