@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { analytics } from "@/lib/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,8 +111,8 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
 
   // Reset pagination whenever filter changes
   const handleSearch = (v) => { setSearch(v); setVisible(PAGE_SIZE); };
-  const handleSource = (v) => { setSource(v); setVisible(PAGE_SIZE); };
-  const handleScore  = (v) => { setScore(v);  setVisible(PAGE_SIZE); };
+  const handleSource = (v) => { analytics.filterChange("source", v); setSource(v); setVisible(PAGE_SIZE); };
+  const handleScore  = (v) => { analytics.filterChange("score", v);  setScore(v);  setVisible(PAGE_SIZE); };
 
   if (isLoading) {
     return (
@@ -245,7 +246,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
               <div
                 key={idx}
                 className="p-4 border border-gray-100 rounded-xl hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer group overflow-hidden w-full min-w-0"
-                onClick={() => navigate(createPageUrl("jobMatch"), { state: { job } })}
+                onClick={() => { analytics.jobClick(job); navigate(createPageUrl("jobMatch"), { state: { job } }); }}
               >
                 {/* Row 1: title + score + source */}
                 <div className="flex items-start justify-between gap-2 min-w-0">
@@ -363,7 +364,7 @@ export default function TopMatchesList({ jobs, isLoading, onRefresh, isRefreshin
         {filtered.length > 0 && (
           visibleCount < filtered.length ? (
             <button
-              onClick={() => setVisible(prev => prev + PAGE_SIZE)}
+              onClick={() => { analytics.loadMore("dashboard", filtered.length - visibleCount); setVisible(prev => prev + PAGE_SIZE); }}
               className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium border border-dashed border-blue-200 hover:border-blue-300 rounded-xl transition-colors"
             >
               Load More ({filtered.length - visibleCount} remaining)

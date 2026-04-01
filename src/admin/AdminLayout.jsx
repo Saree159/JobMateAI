@@ -5,7 +5,7 @@ import {
   LayoutDashboard, DollarSign, Users, Cpu, Zap, Activity,
   Filter, TrendingUp, Megaphone, Server, Bell, Settings,
   ChevronLeft, ChevronRight, Menu, X, Search, Calendar,
-  ArrowUpRight, LogOut
+  ArrowUpRight, LogOut, MousePointerClick
 } from 'lucide-react';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Revenue',        path: '/admin/revenue',      icon: DollarSign },
   { label: 'Users',          path: '/admin/users',        icon: Users },
   { label: 'User Logs',      path: '/admin/user-logs',    icon: Activity },
+  { label: 'Behavior',       path: '/admin/behavior',     icon: MousePointerClick },
   { label: 'AI Usage',       path: '/admin/ai-usage',     icon: Cpu },
   { label: 'Token Costs',    path: '/admin/token-costs',  icon: Zap },
   { label: 'Product',        path: '/admin/product',      icon: Activity },

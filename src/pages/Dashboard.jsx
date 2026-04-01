@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { analytics } from "@/lib/analytics";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi } from "@/api/jobmate";
@@ -38,7 +39,10 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  useEffect(() => { analytics.page("dashboard"); }, []);
+
   const handleRefreshMatches = async () => {
+    analytics.refreshMatches();
     setIsRefreshing(true);
     try {
       const result = await jobApi.topMatches(user.id, true);

@@ -28,6 +28,7 @@ import AdminInfra from './admin/pages/Infrastructure';
 import AdminAlerts from './admin/pages/Alerts';
 import AdminSettings from './admin/pages/Settings';
 import AdminUserLogs from './admin/pages/UserLogs';
+import AdminBehavior from './admin/pages/Behavior';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
       <Route path="/admin/infra" element={<AdminLayout><AdminInfra /></AdminLayout>} />
       <Route path="/admin/alerts" element={<AdminLayout><AdminAlerts /></AdminLayout>} />
       <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
+      <Route path="/admin/behavior" element={<AdminLayout><AdminBehavior /></AdminLayout>} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>

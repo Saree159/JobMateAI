@@ -2,15 +2,17 @@
 Analytics API Router
 Provides analytics and insights on job applications.
 """
+import json
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 from app.database import get_db
-from app.models import User, Job, Application, JobStatus
+from app.models import User, Job, Application, JobStatus, UserEvent
 from app.schemas import AnalyticsDashboard, ApplicationStats, MonthlyTrend
 from app.routers.users import get_current_user
 
@@ -338,3 +340,31 @@ async def get_insights(
         "insights": insights if insights else ["Keep tracking applications to get personalized insights!"],
         "recommendations": recommendations if recommendations else ["You're doing great! Keep applying and stay consistent."]
     }
+
+
+# ── User behavior event tracking ─────────────────────────────────────────────
+
+class EventPayload(BaseModel):
+    event: str
+    page: Optional[str] = None
+    properties: Optional[dict] = None
+    session_id: Optional[str] = None
+
+
+@router.post("/event", status_code=201)
+async def track_event(
+    payload: EventPayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Receive a single behavior event from the frontend."""
+    ev = UserEvent(
+        user_id=current_user.id,
+        event=payload.event,
+        page=payload.page,
+        properties=json.dumps(payload.properties or {}),
+        session_id=payload.session_id,
+    )
+    db.add(ev)
+    db.commit()
+    return {"ok": True}

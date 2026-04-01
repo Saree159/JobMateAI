@@ -10,6 +10,8 @@ from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from fastapi import APIRouter, Header, HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel
+
 from app.config import settings
 from app.database import get_db
 from app.models import IngestEvent, IngestJob
@@ -150,3 +152,78 @@ def ingest_linkedin_email(
     db.commit()
 
     return IngestEmailResponse(emailId=email_id, alreadyProcessed=False, inserted=inserted, updated=updated, skipped=skipped)
+
+
+# ── n8n jobs ingest ──────────────────────────────────────────────────────────
+
+class _JobItem(BaseModel):
+    title: str = ""
+    company: str = ""
+    location: str = ""
+    url: str = ""
+    description: str = ""
+    skills: List[str] = []
+
+
+class _JobsPayload(BaseModel):
+    source: str = "n8n"
+    jobs: List[_JobItem] = []
+
+
+@router.post("/jobs")
+def ingest_jobs(
+    payload: _JobsPayload,
+    x_api_key: Optional[str] = Header(None, alias="X-API-KEY"),
+    db: Session = Depends(get_db),
+):
+    """Accept a batch of jobs pushed by n8n (or any external collector)."""
+    if x_api_key != settings.ingestion_api_key:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+
+    inserted = updated = skipped = 0
+    now = datetime.utcnow()
+    source = payload.source or "n8n"
+
+    for item in payload.jobs:
+        if not item.url and not item.title:
+            skipped += 1
+            continue
+
+        canonical = normalize_url(item.url) if item.url else f"{item.title}|{item.company}"
+        if not canonical:
+            skipped += 1
+            continue
+
+        raw_data = json.dumps({
+            "title": item.title,
+            "company": item.company,
+            "location": item.location,
+            "url": item.url,
+            "description": item.description,
+            "skills": item.skills,
+        })
+
+        existing = db.query(IngestJob).filter(IngestJob.canonical_key == canonical).first()
+        if existing:
+            existing.last_seen_at = now
+            existing.raw = raw_data
+            db.add(existing)
+            updated += 1
+        else:
+            db.add(IngestJob(
+                canonical_key=canonical,
+                title=item.title,
+                company=item.company,
+                location=item.location,
+                url=item.url or None,
+                raw=raw_data,
+                source=source,
+                status="new",
+                first_seen_at=now,
+                last_seen_at=now,
+            ))
+            inserted += 1
+
+    db.commit()
+    logger.info(f"[ingest/jobs] source={source} inserted={inserted} updated={updated} skipped={skipped}")
+    return {"inserted": inserted, "updated": updated, "skipped": skipped}

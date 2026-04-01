@@ -1,0 +1,115 @@
+{
+  "name": "HireMateAI — LinkedIn Jobs Ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 30 }]
+        }
+      },
+      "id": "node-schedule",
+      "name": "Every 30 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Edit these to match your users' target roles ─────────────────\nconst ROLES = [\n  'Software Engineer',\n  'Backend Developer',\n  'Frontend Developer',\n  'Full Stack Developer',\n  'DevOps Engineer',\n  'Data Scientist',\n];\nconst LOCATION = 'Israel';\n// ──────────────────────────────────────────────────────────────────\nreturn ROLES.map(role => ({ json: { role, location: LOCATION } }));"
+      },
+      "id": "node-roles",
+      "name": "Define Roles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "keywords", "value": "={{ $json.role }}" },
+            { "name": "location", "value": "={{ $json.location }}" },
+            { "name": "start",    "value": "0" },
+            { "name": "count",    "value": "25" },
+            { "name": "f_TPR",   "value": "r86400" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "User-Agent",      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" },
+            { "name": "Accept",          "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+            { "name": "Accept-Language", "value": "en-US,en;q=0.9" },
+            { "name": "Referer",         "value": "https://www.linkedin.com/jobs/" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": { "responseFormat": "text" }
+          }
+        }
+      },
+      "id": "node-fetch",
+      "name": "Fetch LinkedIn Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse LinkedIn HTML job cards\nconst html = $input.first().json.data || '';\nconst jobs = [];\nconst blocks = html.split(/<li[^>]*>/).slice(1);\n\nfor (const block of blocks) {\n  const titleMatch = block.match(/class=\"base-search-card__title\"[^>]*>([\\s\\S]*?)<\\/h3>/i);\n  if (!titleMatch) continue;\n  const title = titleMatch[1].replace(/<[^>]+>/g, '').trim();\n  if (!title || title.length < 2) continue;\n\n  const compMatch = block.match(/class=\"base-search-card__subtitle\"[\\s\\S]*?>([^<]+)</);\n  const company = compMatch ? compMatch[1].trim() : '';\n\n  const locMatch = block.match(/class=\"job-search-card__location\"[^>]*>([\\s\\S]*?)<\\/span>/i);\n  const location = locMatch ? locMatch[1].replace(/<[^>]+>/g, '').trim() : '';\n\n  const urlMatch = block.match(/href=\"(https:\\/\\/[^\"]*linkedin\\.com\\/jobs\\/view\\/[^\"]+)\"/i);\n  let url = urlMatch ? urlMatch[1].replace(/&amp;/g, '&') : '';\n  if (url.includes('?')) url = url.split('?')[0];\n\n  jobs.push({ title, company, location, url, source: 'linkedin' });\n}\n\nreturn jobs.map(job => ({ json: job }));"
+      },
+      "id": "node-parse",
+      "name": "Parse Job Cards",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all jobs from all role-fetches, deduplicate by URL\nconst jobs = $input.all().map(item => item.json);\nconst unique = [];\nconst seen = new Set();\nfor (const job of jobs) {\n  const key = job.url || (job.title + '|' + job.company);\n  if (key && !seen.has(key)) {\n    seen.add(key);\n    unique.push(job);\n  }\n}\nreturn [{ json: { source: 'linkedin', jobs: unique } }];"
+      },
+      "id": "node-collect",
+      "name": "Deduplicate & Build Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.HIREMATAI_BACKEND_URL }}/api/ingest/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-KEY",     "value": "={{ $vars.HIREMATAI_API_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}"
+      },
+      "id": "node-push",
+      "name": "Push to HireMateAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Every 30 min":             { "main": [[{ "node": "Define Roles",               "type": "main", "index": 0 }]] },
+    "Define Roles":             { "main": [[{ "node": "Fetch LinkedIn Jobs",        "type": "main", "index": 0 }]] },
+    "Fetch LinkedIn Jobs":      { "main": [[{ "node": "Parse Job Cards",            "type": "main", "index": 0 }]] },
+    "Parse Job Cards":          { "main": [[{ "node": "Deduplicate & Build Payload","type": "main", "index": 0 }]] },
+    "Deduplicate & Build Payload": { "main": [[{ "node": "Push to HireMateAI",     "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "id": "hirematai-linkedin-ingest-v1"
+}

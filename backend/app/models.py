@@ -355,3 +355,18 @@ class UserJobFeedStatus(Base):
     def __repr__(self):
         return f"<UserJobFeedStatus(user={self.user_id}, job={self.ingest_job_id}, status='{self.status}')>"
 
+
+class UserEvent(Base):
+    """Tracks individual user actions for product analytics."""
+    __tablename__ = "user_events"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    event      = Column(String(100), nullable=False, index=True)   # e.g. "job_click"
+    page       = Column(String(100), nullable=True)                # e.g. "dashboard"
+    properties = Column(Text, nullable=True)                       # JSON blob
+    session_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = relationship("User")
+

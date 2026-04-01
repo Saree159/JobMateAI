@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # Admin dashboard API key (set a strong value in production)
     admin_api_key: str = "changeme-admin"
 
+    # Comma-separated list of admin emails (JWT-based admin access)
+    admin_emails: str = "saree.ali28@gmail.com"
+
+    @property
+    def admin_emails_list(self) -> List[str]:
+        return [e.strip().lower() for e in self.admin_emails.split(",")]
+
     # PayPal billing
     paypal_client_id: str = ""
     paypal_client_secret: str = ""

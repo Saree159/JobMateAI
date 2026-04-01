@@ -209,6 +209,36 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             n = await _persist_scraped_jobs(linkedin_jobs, source="linkedin")
             logger.info(f"[scheduler] persisted {n} new linkedin jobs to ingest_jobs table")
 
+        # ── LinkedIn fallback: use n8n-ingested jobs when scraper is blocked ──
+        if not linkedin_jobs:
+            import json as _json
+            from datetime import timedelta
+            from app.models import IngestJob
+            cutoff = datetime.utcnow() - timedelta(hours=6)
+            rows = (
+                db.query(IngestJob)
+                .filter(IngestJob.source == "linkedin", IngestJob.last_seen_at >= cutoff)
+                .order_by(IngestJob.last_seen_at.desc())
+                .limit(100)
+                .all()
+            )
+            for row in rows:
+                try:
+                    raw = _json.loads(row.raw or "{}")
+                except Exception:
+                    raw = {}
+                linkedin_jobs.append({
+                    "title": row.title or "",
+                    "company": row.company or "",
+                    "location": row.location or "",
+                    "url": row.url or "",
+                    "description": raw.get("description", ""),
+                    "skills": raw.get("skills", []),
+                    "source": "linkedin",
+                })
+            if rows:
+                logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from n8n ingest_jobs fallback")
+
         # ── TechMap ──────────────────────────────────────────────────────────
         from app.services.techmap import fetch_for_role as techmap_fetch
         techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')

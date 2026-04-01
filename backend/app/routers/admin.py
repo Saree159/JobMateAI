@@ -10,9 +10,11 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional
 
+import json as _json
 from app.database import get_db
-from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession
+from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent
 from app.config import settings
+from app.routers.users import get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -24,6 +26,13 @@ def verify_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"))
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing admin key",
         )
+
+
+def verify_admin_user(current_user: User = Depends(get_current_user)):
+    """Dependency: allow access only to users whose email is in admin_emails_list."""
+    if current_user.email.lower() not in settings.admin_emails_list:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
 
 
 def month_label(dt: datetime) -> str:
@@ -511,3 +520,135 @@ def admin_users_detail(
     total = total_q.scalar() or 0
 
     return {"users": result, "total": total}
+
+
+# ── Behavior / user-event analytics (JWT-based, admin emails only) ────────────
+
+@router.get("/behavior/summary")
+def behavior_summary(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin_user),
+):
+    """Aggregated behavior stats: event counts, top pages, daily trend."""
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    # Events by type
+    by_event = dict(
+        db.query(UserEvent.event, func.count(UserEvent.id))
+        .filter(UserEvent.created_at >= cutoff)
+        .group_by(UserEvent.event)
+        .order_by(func.count(UserEvent.id).desc())
+        .all()
+    )
+
+    # Events by page
+    by_page = dict(
+        db.query(UserEvent.page, func.count(UserEvent.id))
+        .filter(UserEvent.created_at >= cutoff, UserEvent.page.isnot(None))
+        .group_by(UserEvent.page)
+        .order_by(func.count(UserEvent.id).desc())
+        .all()
+    )
+
+    # Unique active users in window
+    active_users = db.query(func.count(func.distinct(UserEvent.user_id))).filter(
+        UserEvent.created_at >= cutoff
+    ).scalar() or 0
+
+    # Daily event counts (last `days` days)
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    daily = []
+    for i in range(days - 1, -1, -1):
+        day_start = today - timedelta(days=i)
+        day_end = day_start + timedelta(days=1)
+        count = db.query(func.count(UserEvent.id)).filter(
+            UserEvent.created_at >= day_start,
+            UserEvent.created_at < day_end,
+        ).scalar() or 0
+        daily.append({"day": day_start.strftime("%b %d"), "events": count})
+
+    # Feature adoption: unique users per event type
+    adoption = [
+        {"event": row[0], "unique_users": row[1]}
+        for row in db.query(UserEvent.event, func.count(func.distinct(UserEvent.user_id)))
+        .filter(UserEvent.created_at >= cutoff)
+        .group_by(UserEvent.event)
+        .order_by(func.count(func.distinct(UserEvent.user_id)).desc())
+        .all()
+    ]
+
+    return {
+        "active_users": active_users,
+        "total_events": sum(by_event.values()),
+        "by_event": by_event,
+        "by_page": by_page,
+        "daily": daily,
+        "feature_adoption": adoption,
+        "days": days,
+    }
+
+
+@router.get("/behavior/stream")
+def behavior_stream(
+    limit: int = 100,
+    event: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin_user),
+):
+    """Recent event stream with user info."""
+    q = db.query(UserEvent, User.email, User.full_name).outerjoin(
+        User, UserEvent.user_id == User.id
+    )
+    if event:
+        q = q.filter(UserEvent.event == event)
+    rows = q.order_by(UserEvent.created_at.desc()).limit(limit).all()
+
+    return [
+        {
+            "id": ev.id,
+            "event": ev.event,
+            "page": ev.page,
+            "properties": _json.loads(ev.properties or "{}"),
+            "session_id": ev.session_id,
+            "created_at": ev.created_at.isoformat(),
+            "user_email": email,
+            "user_name": name,
+        }
+        for ev, email, name in rows
+    ]
+
+
+@router.get("/behavior/per-user")
+def behavior_per_user(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin_user),
+):
+    """Per-user event counts and last seen, sorted by activity."""
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    rows = (
+        db.query(
+            UserEvent.user_id,
+            User.email,
+            User.full_name,
+            func.count(UserEvent.id).label("event_count"),
+            func.max(UserEvent.created_at).label("last_seen"),
+        )
+        .outerjoin(User, UserEvent.user_id == User.id)
+        .filter(UserEvent.created_at >= cutoff)
+        .group_by(UserEvent.user_id, User.email, User.full_name)
+        .order_by(func.count(UserEvent.id).desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "user_id": r.user_id,
+            "email": r.email,
+            "name": r.full_name,
+            "event_count": r.event_count,
+            "last_seen": r.last_seen.isoformat() if r.last_seen else None,
+        }
+        for r in rows
+    ]
