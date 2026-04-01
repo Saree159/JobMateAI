@@ -119,7 +119,7 @@ export default function AdminLayout({ children }) {
   const currentPage = navItems.find(n => isActive(n.path))?.label ?? 'Overview';
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="dark flex h-screen bg-background overflow-hidden">
       {/* Desktop Sidebar */}
       <aside
         className={`hidden lg:flex flex-col shrink-0 border-r border-white/10 bg-[hsl(222,47%,5%)] transition-all duration-300 ${
