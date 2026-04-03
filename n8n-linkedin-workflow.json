@@ -26,24 +26,14 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search",
+        "url": "=https://api.scraperapi.com/",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "keywords", "value": "={{ $json.role }}" },
-            { "name": "location", "value": "={{ $json.location }}" },
-            { "name": "start",    "value": "0" },
-            { "name": "count",    "value": "25" },
-            { "name": "f_TPR",   "value": "r86400" }
-          ]
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "User-Agent",      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" },
-            { "name": "Accept",          "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
-            { "name": "Accept-Language", "value": "en-US,en;q=0.9" },
-            { "name": "Referer",         "value": "https://www.linkedin.com/jobs/" }
+            { "name": "api_key",  "value": "={{ $vars.SCRAPERAPI_KEY }}" },
+            { "name": "url",      "value": "=https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={{ encodeURIComponent($json.role) }}&location={{ encodeURIComponent($json.location) }}&start=0&count=25&f_TPR=r86400" },
+            { "name": "render",   "value": "false" },
+            { "name": "country_code", "value": "il" }
           ]
         },
         "options": {
@@ -60,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse LinkedIn HTML job cards\nconst html = $input.first().json.data || '';\nconst jobs = [];\nconst blocks = html.split(/<li[^>]*>/).slice(1);\n\nfor (const block of blocks) {\n  const titleMatch = block.match(/class=\"base-search-card__title\"[^>]*>([\\s\\S]*?)<\\/h3>/i);\n  if (!titleMatch) continue;\n  const title = titleMatch[1].replace(/<[^>]+>/g, '').trim();\n  if (!title || title.length < 2) continue;\n\n  const compMatch = block.match(/class=\"base-search-card__subtitle\"[\\s\\S]*?>([^<]+)</);\n  const company = compMatch ? compMatch[1].trim() : '';\n\n  const locMatch = block.match(/class=\"job-search-card__location\"[^>]*>([\\s\\S]*?)<\\/span>/i);\n  const location = locMatch ? locMatch[1].replace(/<[^>]+>/g, '').trim() : '';\n\n  const urlMatch = block.match(/href=\"(https:\\/\\/[^\"]*linkedin\\.com\\/jobs\\/view\\/[^\"]+)\"/i);\n  let url = urlMatch ? urlMatch[1].replace(/&amp;/g, '&') : '';\n  if (url.includes('?')) url = url.split('?')[0];\n\n  jobs.push({ title, company, location, url, source: 'linkedin' });\n}\n\nreturn jobs.map(job => ({ json: job }));"
+        "jsCode": "// Parse LinkedIn HTML job cards — outputs one item per job\nconst html = $input.first().json.data || '';\nconst jobs = [];\nconst blocks = html.split(/<li[^>]*>/).slice(1);\n\nfor (const block of blocks) {\n  // Title\n  const titleMatch = block.match(/class=\"base-search-card__title\"[^>]*>([\\s\\S]*?)<\\/h3>/i);\n  if (!titleMatch) continue;\n  const title = titleMatch[1].replace(/<[^>]+>/g, '').trim();\n  if (!title || title.length < 2) continue;\n\n  // Company — grab the full subtitle section then strip tags\n  const compSection = block.match(/class=\"base-search-card__subtitle\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const company = compSection\n    ? compSection[1].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim()\n    : '';\n\n  // Location\n  const locMatch = block.match(/class=\"job-search-card__location\"[^>]*>([\\s\\S]*?)<\\/span>/i);\n  const location = locMatch\n    ? locMatch[1].replace(/<[^>]+>/g, '').trim()\n    : '';\n\n  // URL — strip tracking params\n  const urlMatch = block.match(/href=\"(https:\\/\\/[^\"]*linkedin\\.com\\/jobs\\/view\\/[^\"]+)\"/i);\n  let url = urlMatch ? urlMatch[1].replace(/&amp;/g, '&') : '';\n  if (url.includes('?')) url = url.split('?')[0];\n\n  // Job ID (for detail fetch)\n  const jobIdMatch = url.match(/\\/view\\/(\\d+)/);\n  const jobId = jobIdMatch ? jobIdMatch[1] : '';\n\n  if (!url && !title) continue;\n\n  jobs.push({ title, company, location, url, jobId, source: 'linkedin' });\n}\n\nreturn jobs.map(job => ({ json: job }));"
       },
       "id": "node-parse",
       "name": "Parse Job Cards",
@@ -70,14 +60,51 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "=https://api.scraperapi.com/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "api_key",  "value": "={{ $vars.SCRAPERAPI_KEY }}" },
+            { "name": "url",      "value": "=https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{{ $json.jobId }}" },
+            { "name": "render",   "value": "false" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": { "responseFormat": "text" }
+          },
+          "batching": {
+            "batch": { "batchSize": 5, "batchInterval": 1500 }
+          }
+        }
+      },
+      "id": "node-fetch-detail",
+      "name": "Fetch Job Detail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge description from detail page with original job fields\nconst items = $input.all();\nconst parsed = $('Parse Job Cards').all();\n\nreturn items.map((item, i) => {\n  const html = item.json.data || '';\n  const original = parsed[i] ? parsed[i].json : {};\n\n  // Extract description — try multiple selectors LinkedIn uses\n  let description = '';\n  const descMatch =\n    html.match(/class=\"show-more-less-html__markup[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/i) ||\n    html.match(/class=\"description__text[^\"]*\"[^>]*>([\\s\\S]*?)<\\/section>/i) ||\n    html.match(/<section[^>]*class=\"[^\"]*description[^\"]*\"[^>]*>([\\s\\S]*?)<\\/section>/i);\n\n  if (descMatch) {\n    description = descMatch[1]\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim()\n      .slice(0, 2000);\n  }\n\n  return {\n    json: {\n      ...original,\n      description,\n    }\n  };\n});"
+      },
+      "id": "node-parse-desc",
+      "name": "Parse Description",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Collect all jobs from all role-fetches, deduplicate by URL\nconst jobs = $input.all().map(item => item.json);\nconst unique = [];\nconst seen = new Set();\nfor (const job of jobs) {\n  const key = job.url || (job.title + '|' + job.company);\n  if (key && !seen.has(key)) {\n    seen.add(key);\n    unique.push(job);\n  }\n}\nreturn [{ json: { source: 'linkedin', jobs: unique } }];"
+        "jsCode": "// Collect all jobs, deduplicate by URL\nconst jobs = $input.all().map(item => item.json);\nconst unique = [];\nconst seen = new Set();\nfor (const job of jobs) {\n  const key = job.url || (job.title + '|' + job.company);\n  if (key && !seen.has(key)) {\n    seen.add(key);\n    unique.push({\n      title:       job.title       || '',\n      company:     job.company     || '',\n      location:    job.location    || '',\n      url:         job.url         || '',\n      description: job.description || '',\n      skills:      [],\n    });\n  }\n}\nreturn [{ json: { source: 'linkedin', jobs: unique } }];"
       },
       "id": "node-collect",
       "name": "Deduplicate & Build Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 300]
+      "position": [1440, 300]
     },
     {
       "parameters": {
@@ -99,15 +126,17 @@
       "name": "Push to HireMateAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1200, 300]
+      "position": [1680, 300]
     }
   ],
   "connections": {
-    "Every 30 min":             { "main": [[{ "node": "Define Roles",               "type": "main", "index": 0 }]] },
-    "Define Roles":             { "main": [[{ "node": "Fetch LinkedIn Jobs",        "type": "main", "index": 0 }]] },
-    "Fetch LinkedIn Jobs":      { "main": [[{ "node": "Parse Job Cards",            "type": "main", "index": 0 }]] },
-    "Parse Job Cards":          { "main": [[{ "node": "Deduplicate & Build Payload","type": "main", "index": 0 }]] },
-    "Deduplicate & Build Payload": { "main": [[{ "node": "Push to HireMateAI",     "type": "main", "index": 0 }]] }
+    "Every 30 min":               { "main": [[{ "node": "Define Roles",               "type": "main", "index": 0 }]] },
+    "Define Roles":               { "main": [[{ "node": "Fetch LinkedIn Jobs",        "type": "main", "index": 0 }]] },
+    "Fetch LinkedIn Jobs":        { "main": [[{ "node": "Parse Job Cards",            "type": "main", "index": 0 }]] },
+    "Parse Job Cards":            { "main": [[{ "node": "Fetch Job Detail",           "type": "main", "index": 0 }]] },
+    "Fetch Job Detail":           { "main": [[{ "node": "Parse Description",          "type": "main", "index": 0 }]] },
+    "Parse Description":          { "main": [[{ "node": "Deduplicate & Build Payload","type": "main", "index": 0 }]] },
+    "Deduplicate & Build Payload":{ "main": [[{ "node": "Push to HireMateAI",        "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },

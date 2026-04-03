@@ -11,7 +11,6 @@ Scopes used: openid profile email
 What we get: name, email, profile picture, LinkedIn sub (ID)
 """
 import secrets
-import time
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, Query
@@ -21,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models import User
+from app.services.cache import get_cache
 
 router = APIRouter(prefix="/api/auth", tags=["linkedin-oauth"])
 
@@ -28,32 +28,26 @@ LINKEDIN_AUTH_URL  = "https://www.linkedin.com/oauth/v2/authorization"
 LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 LINKEDIN_USERINFO  = "https://api.linkedin.com/v2/userinfo"
 
-# Simple in-memory state store: {state: (user_id, expires_at)}
-# Good enough for single-instance deployments; use Redis for multi-instance.
-_state_store: dict[str, tuple[int, float]] = {}
+# OAuth state is stored in Redis (with in-memory fallback) so it survives
+# across multiple Container App replicas on Azure.
 _STATE_TTL = 600  # 10 minutes
+_STATE_PREFIX = "linkedin_oauth_state:"
 
 
 def _store_state(user_id: int) -> str:
-    # Purge expired states
-    now = time.time()
-    expired = [k for k, (_, exp) in _state_store.items() if exp < now]
-    for k in expired:
-        del _state_store[k]
-
     state = secrets.token_urlsafe(24)
-    _state_store[state] = (user_id, now + _STATE_TTL)
+    get_cache().set(f"{_STATE_PREFIX}{state}", user_id, ttl=_STATE_TTL)
     return state
 
 
-def _consume_state(state: str) -> "Optional[int]":
-    entry = _state_store.pop(state, None)
-    if entry is None:
+def _consume_state(state: str) -> Optional[int]:
+    cache = get_cache()
+    key = f"{_STATE_PREFIX}{state}"
+    user_id = cache.get(key)
+    if user_id is None:
         return None
-    user_id, expires_at = entry
-    if time.time() > expires_at:
-        return None
-    return user_id
+    cache.delete(key)
+    return int(user_id)
 
 
 # ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ All endpoints require the X-Admin-Key header to match settings.admin_api_key.
 """
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text
+from sqlalchemy import func, text, cast, Date, extract
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional
@@ -58,22 +58,20 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     new_week = db.query(func.count(User.id)).filter(User.created_at >= week_start).scalar() or 0
     new_month = db.query(func.count(User.id)).filter(User.created_at >= month_start).scalar() or 0
 
-    # Monthly signups — last 7 months
+    # Monthly signups — last 7 months (1 query, grouped in Python)
+    seven_months_ago = (now.replace(day=1) - timedelta(days=6 * 30)).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    _signup_rows = db.query(User.created_at).filter(User.created_at >= seven_months_ago).all()
+    _signup_by_ym = defaultdict(int)
+    for (dt,) in _signup_rows:
+        _signup_by_ym[dt.strftime("%Y-%m")] += 1
     monthly_signups = []
     for i in range(6, -1, -1):
         m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
-        if i > 0:
-            m_end = (now.replace(day=1) - timedelta(days=(i - 1) * 30)).replace(
-                day=1, hour=0, minute=0, second=0, microsecond=0
-            )
-        else:
-            m_end = now
-        count = db.query(func.count(User.id)).filter(
-            User.created_at >= m_start, User.created_at < m_end
-        ).scalar() or 0
-        monthly_signups.append({"month": m_start.strftime("%b"), "signups": count})
+        monthly_signups.append({"month": m_start.strftime("%b"), "signups": _signup_by_ym.get(m_start.strftime("%Y-%m"), 0)})
 
     # Users with completed profiles
     with_skills = db.query(func.count(User.id)).filter(
@@ -198,23 +196,28 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
         for row in ai_by_model_raw
     ]
 
-    # Daily cost — last 30 days
+    # Daily cost — last 30 days (1 query instead of 60)
+    _ai_window_start = today_start - timedelta(days=29)
+    _ai_daily_rows = (
+        db.query(
+            cast(AIUsageLog.created_at, Date).label("day"),
+            func.coalesce(func.sum(AIUsageLog.cost_usd), 0.0).label("cost"),
+            func.coalesce(func.sum(AIUsageLog.tokens_in + AIUsageLog.tokens_out), 0).label("tokens"),
+        )
+        .filter(AIUsageLog.created_at >= _ai_window_start)
+        .group_by(cast(AIUsageLog.created_at, Date))
+        .all()
+    )
+    _ai_daily_lookup = {str(r.day): (float(r.cost), int(r.tokens)) for r in _ai_daily_rows}
     ai_daily = []
     for i in range(29, -1, -1):
-        day_start = (today_start - timedelta(days=i))
-        day_end = day_start + timedelta(days=1)
-        cost = db.query(func.coalesce(func.sum(AIUsageLog.cost_usd), 0.0)).filter(
-            AIUsageLog.created_at >= day_start,
-            AIUsageLog.created_at < day_end,
-        ).scalar() or 0.0
-        tokens = db.query(func.coalesce(func.sum(AIUsageLog.tokens_in + AIUsageLog.tokens_out), 0)).filter(
-            AIUsageLog.created_at >= day_start,
-            AIUsageLog.created_at < day_end,
-        ).scalar() or 0
+        day_start = today_start - timedelta(days=i)
+        key = day_start.strftime("%Y-%m-%d")
+        cost, tokens = _ai_daily_lookup.get(key, (0.0, 0))
         ai_daily.append({
             "day": day_start.strftime("%b %d"),
-            "cost": round(float(cost), 4),
-            "tokens": int(tokens),
+            "cost": round(cost, 4),
+            "tokens": tokens,
         })
 
     # ── Retention / Sessions ─────────────────────────────────────────────────
@@ -229,34 +232,40 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
         UserSession.created_at >= month_start
     ).scalar() or 0
 
-    # DAU/WAU/MAU trend — last 7 months
+    # DAU/WAU/MAU trend — last 7 months (1 query, grouped in Python)
+    _trend_cutoff = (now.replace(day=1) - timedelta(days=6 * 30)).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    _session_rows = (
+        db.query(UserSession.user_id, UserSession.created_at)
+        .filter(UserSession.created_at >= _trend_cutoff)
+        .all()
+    )
     dau_wau_mau_trend = []
     for i in range(6, -1, -1):
         m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
         m_end = (m_start + timedelta(days=32)).replace(day=1)
-        mau_count = db.query(func.count(func.distinct(UserSession.user_id))).filter(
-            UserSession.created_at >= m_start, UserSession.created_at < m_end
-        ).scalar() or 0
-        # WAU: last week of the month as proxy
         wau_start = m_end - timedelta(days=7)
-        wau_count = db.query(func.count(func.distinct(UserSession.user_id))).filter(
-            UserSession.created_at >= wau_start, UserSession.created_at < m_end
-        ).scalar() or 0
-        # DAU: last day of month as proxy
         dau_start = m_end - timedelta(days=1)
-        dau_count = db.query(func.count(func.distinct(UserSession.user_id))).filter(
-            UserSession.created_at >= dau_start, UserSession.created_at < m_end
-        ).scalar() or 0
+        mau_users, wau_users, dau_users = set(), set(), set()
+        for uid, sdt in _session_rows:
+            if m_start <= sdt < m_end:
+                mau_users.add(uid)
+            if wau_start <= sdt < m_end:
+                wau_users.add(uid)
+            if dau_start <= sdt < m_end:
+                dau_users.add(uid)
         dau_wau_mau_trend.append({
             "month": m_start.strftime("%b"),
-            "dau": dau_count,
-            "wau": wau_count,
-            "mau": mau_count,
+            "dau": len(dau_users),
+            "wau": len(wau_users),
+            "mau": len(mau_users),
         })
 
     # Cohort retention — signup month cohorts, D1/D7/D30 retention
+    # 2 queries per cohort (users + their sessions) instead of 1 per user per window
     cohort_retention = []
     for i in range(6, -1, -1):
         cohort_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(
@@ -268,21 +277,27 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
         ).all()
         cohort_size = len(cohort_users)
 
+        if cohort_size == 0:
+            cohort_retention.append({"cohort": cohort_start.strftime("%b %Y"), "size": 0, "d1": None, "d7": None, "d30": None})
+            continue
+
+        # Load all sessions for this cohort's users in one query
+        cohort_user_ids = [u[0] for u in cohort_users]
+        cohort_sessions = db.query(UserSession.user_id, UserSession.created_at).filter(
+            UserSession.user_id.in_(cohort_user_ids)
+        ).all()
+        sessions_by_user = defaultdict(list)
+        for uid, sdt in cohort_sessions:
+            sessions_by_user[uid].append(sdt)
+
         def retention_pct(day_min, day_max):
-            if cohort_size == 0:
-                return None
             retained = 0
             for u_id, u_created in cohort_users:
                 window_start = u_created + timedelta(days=day_min)
                 window_end = u_created + timedelta(days=day_max)
                 if window_end > now:
-                    return None  # Not enough time has passed — mark as pending
-                has_session = db.query(UserSession.id).filter(
-                    UserSession.user_id == u_id,
-                    UserSession.created_at >= window_start,
-                    UserSession.created_at < window_end,
-                ).first()
-                if has_session:
+                    return None
+                if any(window_start <= s < window_end for s in sessions_by_user[u_id]):
                     retained += 1
             return round((retained / cohort_size) * 100, 1)
 

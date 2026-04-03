@@ -1,4 +1,5 @@
 import './App.css'
+import { useEffect } from 'react'
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -29,6 +30,11 @@ import AdminAlerts from './admin/pages/Alerts';
 import AdminSettings from './admin/pages/Settings';
 import AdminUserLogs from './admin/pages/UserLogs';
 import AdminBehavior from './admin/pages/Behavior';
+
+// Apply saved language direction on every page load
+const lang = localStorage.getItem('hirematex_lang') || 'en';
+document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+document.documentElement.lang = lang;
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];

@@ -28,10 +28,15 @@ async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
       if (response.status === 401) {
-        localStorage.removeItem('hirematex_auth_token');
-        localStorage.removeItem('hirematex_user');
-        window.location.href = '/login';
-        throw new Error('Session expired. Please log in again.');
+        const hasToken = !!localStorage.getItem('hirematex_auth_token');
+        if (hasToken) {
+          // Existing session expired — redirect to login
+          localStorage.removeItem('hirematex_auth_token');
+          localStorage.removeItem('hirematex_user');
+          window.location.href = '/login';
+        }
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Incorrect email or password');
       }
       const error = await response.json().catch(() => ({}));
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);

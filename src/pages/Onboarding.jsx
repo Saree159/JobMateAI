@@ -37,12 +37,12 @@ const EXPERIENCE_LEVELS = [
 ];
 
 const SALARY_OPTIONS = [
-  { label: "Under ₪8,000",      value: 0 },
-  { label: "₪8,000 – ₪12,000",  value: 8000 },
-  { label: "₪12,000 – ₪18,000", value: 12000 },
-  { label: "₪18,000 – ₪25,000", value: 18000 },
-  { label: "₪25,000 – ₪35,000", value: 25000 },
-  { label: "₪35,000+",          value: 35000 },
+  { label: "Under ₪8,000",      min: 0,     max: 8000  },
+  { label: "₪8,000 – ₪12,000",  min: 8000,  max: 12000 },
+  { label: "₪12,000 – ₪18,000", min: 12000, max: 18000 },
+  { label: "₪18,000 – ₪25,000", min: 18000, max: 25000 },
+  { label: "₪25,000 – ₪35,000", min: 25000, max: 35000 },
+  { label: "₪35,000+",          min: 35000, max: null  },
 ];
 
 const INDUSTRY_OPTIONS = [
@@ -70,6 +70,17 @@ const AVAILABILITY_OPTIONS = [
   { label: "Within 2 weeks", icon: "📅", value: "2-weeks" },
   { label: "Within 1 month", icon: "🗓️", value: "1-month" },
   { label: "3+ months",      icon: "⏳", value: "3-months" },
+];
+
+const ISRAELI_LOCATIONS = [
+  // Regions
+  "Central Israel", "Tel Aviv Area", "North Israel", "South Israel",
+  "Jerusalem Area", "Sharon Area", "Haifa Area",
+  // Cities
+  "Tel Aviv", "Jerusalem", "Haifa", "Beer Sheva",
+  "Herzliya", "Ramat Gan", "Petah Tikva", "Rishon LeZion",
+  "Netanya", "Rehovot", "Kfar Saba", "Ra'anana",
+  "Modiin", "Ashdod", "Holon", "Bnei Brak",
 ];
 
 const WORK_MODES = [
@@ -135,7 +146,10 @@ export default function Onboarding() {
       ? (user.years_of_experience >= 5 ? "senior" : user.years_of_experience >= 3 ? "mid" : user.years_of_experience >= 1 ? "junior" : "entry")
       : "",
     min_salary_preference: user?.min_salary_preference ?? null,
-    industry_preference: user?.industry_preference || "",
+    max_salary_preference: user?.max_salary_preference ?? null,
+    industry_preference: user?.industry_preference
+      ? user.industry_preference.split(",").map(s => s.trim()).filter(Boolean)
+      : [],
     job_type_preference: user?.job_type_preference
       ? user.job_type_preference.split(",").map(s => s.trim()).filter(Boolean)
       : [],
@@ -226,6 +240,10 @@ export default function Onboarding() {
   // ── Complete ─────────────────────────────────────────────────────────────────
 
   const handleComplete = () => {
+    if (!resumeUploaded && formData.skills.length === 0) {
+      setError("Please upload your resume or add at least one skill before saving.");
+      return;
+    }
     const role = formData.target_role === "other" ? formData.custom_role : formData.target_role;
     updateUserMutation.mutate({
       target_role: role,
@@ -233,7 +251,8 @@ export default function Onboarding() {
       work_mode_preference: formData.work_mode_preference,
       location_preference: formData.location_preference,
       min_salary_preference: formData.min_salary_preference,
-      industry_preference: formData.industry_preference,
+      max_salary_preference: formData.max_salary_preference,
+      industry_preference: formData.industry_preference.join(","),
       job_type_preference: formData.job_type_preference.join(","),
       availability: formData.availability,
       years_of_experience: expLevelToYears(formData.experience_level),
@@ -364,13 +383,13 @@ export default function Onboarding() {
               {/* ── Step 3: Salary ────────────────────────────────────────────── */}
               {step === 3 && (
                 <div className="space-y-6">
-                  <Question title="What's your minimum preferred salary?" subtitle="Monthly, in ₪ (ILS)" />
+                  <Question title="What's your preferred salary range?" subtitle="Monthly, in ₪ (ILS)" />
                   <div className="grid grid-cols-2 gap-2.5">
                     {SALARY_OPTIONS.map((opt) => (
                       <OptionCard
-                        key={opt.value}
-                        selected={formData.min_salary_preference === opt.value}
-                        onClick={() => autoAdvance({ ...formData, min_salary_preference: opt.value })}
+                        key={opt.min}
+                        selected={formData.min_salary_preference === opt.min}
+                        onClick={() => autoAdvance({ ...formData, min_salary_preference: opt.min, max_salary_preference: opt.max })}
                         className="py-5"
                       >
                         <span className="font-bold text-sm text-center">{opt.label}</span>
@@ -383,13 +402,19 @@ export default function Onboarding() {
               {/* ── Step 4: Industry ──────────────────────────────────────────── */}
               {step === 4 && (
                 <div className="space-y-6">
-                  <Question title="Which industry excites you most?" />
+                  <Question title="Which industries interest you?" subtitle="Select all that apply" />
                   <div className="grid grid-cols-2 gap-2.5">
                     {INDUSTRY_OPTIONS.map((opt) => (
                       <OptionCard
                         key={opt.label}
-                        selected={formData.industry_preference === opt.label}
-                        onClick={() => autoAdvance({ ...formData, industry_preference: opt.label })}
+                        selected={formData.industry_preference.includes(opt.label)}
+                        onClick={() => {
+                          const current = formData.industry_preference;
+                          const updated = current.includes(opt.label)
+                            ? current.filter((v) => v !== opt.label)
+                            : [...current, opt.label];
+                          setFormData((p) => ({ ...p, industry_preference: updated }));
+                        }}
                         className="flex-row justify-start gap-3 px-5 py-4"
                       >
                         <span className="text-xl flex-shrink-0">{opt.icon}</span>
@@ -397,6 +422,15 @@ export default function Onboarding() {
                       </OptionCard>
                     ))}
                   </div>
+                  <ContinueButton
+                    onClick={() => {
+                      if (formData.industry_preference.length === 0) {
+                        setError("Please select at least one industry.");
+                        return;
+                      }
+                      goNext();
+                    }}
+                  />
                 </div>
               )}
 
@@ -478,10 +512,27 @@ export default function Onboarding() {
                       </button>
                     ))}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <label className="text-sm text-gray-500 font-medium">Preferred city or region</label>
+                    <div className="flex flex-wrap gap-2">
+                      {ISRAELI_LOCATIONS.map((city) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => setFormData((p) => ({ ...p, location_preference: city }))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full border text-sm font-medium transition-all duration-150",
+                            formData.location_preference === city
+                              ? "border-blue-600 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                          )}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
                     <Input
-                      placeholder="e.g. Tel Aviv, Berlin, Remote"
+                      placeholder="Or type a custom city / region…"
                       value={formData.location_preference}
                       onChange={(e) => setFormData((p) => ({ ...p, location_preference: e.target.value }))}
                       className="h-12 rounded-xl text-base"
@@ -569,7 +620,7 @@ export default function Onboarding() {
 
                   <Button
                     onClick={handleComplete}
-                    disabled={updateUserMutation.isPending}
+                    disabled={updateUserMutation.isPending || isUploading}
                     className="w-full h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-base font-bold tracking-wide shadow-lg shadow-blue-200 transition-all"
                   >
                     {updateUserMutation.isPending ? (
