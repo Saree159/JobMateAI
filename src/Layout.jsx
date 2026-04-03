@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Briefcase, LayoutDashboard, FileText, User, LogOut, CreditCard, BarChart3, Globe, Linkedin } from "lucide-react";
+import { Briefcase, LayoutDashboard, FileText, User, LogOut, CreditCard, BarChart3 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader,
@@ -21,8 +21,6 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { title: t('nav.dashboard'),    url: createPageUrl("Dashboard"),    icon: LayoutDashboard },
     { title: t('nav.jobs'),         url: createPageUrl("Jobs"),         icon: Briefcase       },
-    { title: t('nav.israeliJobs'),  url: createPageUrl("IsraeliJobs"),  icon: Globe           },
-    { title: t('nav.linkedinJobs'), url: createPageUrl("LinkedInJobs"), icon: Linkedin        },
     { title: t('nav.applications'), url: createPageUrl("Applications"), icon: FileText        },
     { title: t('nav.analytics'),    url: createPageUrl("Analytics"),    icon: BarChart3       },
     { title: t('nav.profile'),      url: createPageUrl("Profile"),      icon: User            },

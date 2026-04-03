@@ -57,13 +57,12 @@ function SourceBadge({ source }) {
 }
 
 // ── Discover job card ────────────────────────────────────────────────────────
-function DiscoverCard({ job, onSave, saving, saved }) {
-  const [expanded, setExpanded] = useState(false);
-  const lines = (job.description || "").split("\n").filter(Boolean);
-  const preview = lines.slice(0, 3).join("\n");
-
+function DiscoverCard({ job, onSelect, onSave, saving, saved }) {
   return (
-    <Card className="border border-gray-100 hover:border-gray-200 transition-colors flex flex-col">
+    <Card
+      className="border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col cursor-pointer"
+      onClick={() => onSelect(job)}
+    >
       <CardContent className="p-5 flex flex-col gap-3 flex-1">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -96,19 +95,9 @@ function DiscoverCard({ job, onSave, saving, saved }) {
 
         {/* Description preview */}
         {job.description && (
-          <div className="text-xs text-gray-400 leading-relaxed">
-            <p className="whitespace-pre-line break-words">
-              {expanded ? job.description : preview}
-            </p>
-            {lines.length > 3 && (
-              <button
-                className="text-blue-600 hover:text-blue-700 mt-1 font-medium"
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? "Show less" : "Show more"}
-              </button>
-            )}
-          </div>
+          <p className="text-xs text-gray-400 leading-relaxed line-clamp-3 whitespace-pre-line break-words">
+            {job.description}
+          </p>
         )}
 
         {/* Skills */}
@@ -123,7 +112,7 @@ function DiscoverCard({ job, onSave, saving, saved }) {
         )}
 
         {/* Actions */}
-        <div className="mt-auto flex gap-2 pt-1">
+        <div className="mt-auto flex gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
           {saved ? (
             <Button variant="outline" size="sm" disabled className="flex-1 text-emerald-600 border-emerald-200">
               <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Saved
@@ -139,13 +128,13 @@ function DiscoverCard({ job, onSave, saving, saved }) {
               Save
             </Button>
           )}
-          {job.url && (
-            <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex-1">
-              <Button variant="outline" size="sm" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> View
-              </Button>
-            </a>
-          )}
+          <Button
+            variant="outline" size="sm"
+            className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50"
+            onClick={() => onSelect(job)}
+          >
+            <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -165,7 +154,8 @@ export default function Jobs() {
   const [discoverSearch, setDiscoverSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", job_type: "all", experience_level: "all", location: "" });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [savedUrls, setSavedUrls] = useState(new Set());
+  // url → tracked job id (for discover jobs that have been saved)
+  const [savedJobMap, setSavedJobMap] = useState(new Map());
 
   // My tracked jobs
   const { data: myJobs = [], isLoading: myLoading } = useQuery({
@@ -194,12 +184,29 @@ export default function Jobs() {
       source: job.source || "other",
     }),
     onSuccess: (saved, job) => {
-      setSavedUrls((prev) => new Set([...prev, job.url]));
+      setSavedJobMap((prev) => new Map([...prev, [job.url, saved.id]]));
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast.success(`"${saved.title}" saved to your applications`);
+      return saved;
     },
     onError: () => toast.error("Failed to save job"),
   });
+
+  const handleSelectJob = async (job) => {
+    const existingId = savedJobMap.get(job.url);
+    if (existingId) {
+      navigate(createPageUrl("JobDetails") + `?id=${existingId}`);
+      return;
+    }
+    // Save first, then navigate
+    try {
+      const saved = await saveJobMutation.mutateAsync(job);
+      navigate(createPageUrl("JobDetails") + `?id=${saved.id}`);
+    } catch {
+      // If save fails, fall back to external URL
+      if (job.url) window.open(job.url, "_blank");
+    }
+  };
 
   // ── Filtered "My Jobs" ──────────────────────────────────────────────────
   const filteredMyJobs = myJobs
@@ -345,9 +352,10 @@ export default function Jobs() {
                   <DiscoverCard
                     key={`${job.source}-${job.url || idx}`}
                     job={job}
+                    onSelect={handleSelectJob}
                     onSave={(j) => saveJobMutation.mutate(j)}
                     saving={saveJobMutation.isPending}
-                    saved={savedUrls.has(job.url)}
+                    saved={savedJobMap.has(job.url)}
                   />
                 ))}
               </div>
