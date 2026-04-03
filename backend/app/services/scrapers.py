@@ -878,11 +878,11 @@ class LinkedInJobSearchScraper(JobScraper):
     def _parse_card(self, card) -> Optional[Dict]:
         """Extract job data from a LinkedIn guest search result card."""
         try:
-            # Job ID — embedded in data-entity-urn or in the detail link
+            # Job ID — data-entity-urn is on the inner div, not the <li>
             job_id = None
-            entity = card.get("data-entity-urn", "")
-            if entity:
-                job_id = entity.split(":")[-1]
+            entity_el = card.select_one("[data-entity-urn]")
+            if entity_el:
+                job_id = entity_el.get("data-entity-urn", "").split(":")[-1]
             if not job_id:
                 link = card.select_one("a[href*='/jobs/view/']")
                 if link:
