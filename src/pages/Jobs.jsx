@@ -154,8 +154,7 @@ export default function Jobs() {
   const [discoverSearch, setDiscoverSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", job_type: "all", experience_level: "all", location: "" });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  // url → tracked job id (for discover jobs that have been saved)
-  const [savedJobMap, setSavedJobMap] = useState(new Map());
+  const [savedUrls, setSavedUrls] = useState(new Set());
 
   // My tracked jobs
   const { data: myJobs = [], isLoading: myLoading } = useQuery({
@@ -184,28 +183,15 @@ export default function Jobs() {
       source: job.source || "other",
     }),
     onSuccess: (saved, job) => {
-      setSavedJobMap((prev) => new Map([...prev, [job.url, saved.id]]));
+      setSavedUrls((prev) => new Set([...prev, job.url]));
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast.success(`"${saved.title}" saved to your applications`);
-      return saved;
     },
     onError: () => toast.error("Failed to save job"),
   });
 
-  const handleSelectJob = async (job) => {
-    const existingId = savedJobMap.get(job.url);
-    if (existingId) {
-      navigate(createPageUrl("JobDetails") + `?id=${existingId}`);
-      return;
-    }
-    // Save first, then navigate
-    try {
-      const saved = await saveJobMutation.mutateAsync(job);
-      navigate(createPageUrl("JobDetails") + `?id=${saved.id}`);
-    } catch {
-      // If save fails, fall back to external URL
-      if (job.url) window.open(job.url, "_blank");
-    }
+  const handleSelectJob = (job) => {
+    navigate(createPageUrl("JobDetails"), { state: { feedJob: job } });
   };
 
   // ── Filtered "My Jobs" ──────────────────────────────────────────────────
@@ -355,7 +341,7 @@ export default function Jobs() {
                     onSelect={handleSelectJob}
                     onSave={(j) => saveJobMutation.mutate(j)}
                     saving={saveJobMutation.isPending}
-                    saved={savedJobMap.has(job.url)}
+                    saved={savedUrls.has(job.url)}
                   />
                 ))}
               </div>

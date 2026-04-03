@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi, resumeApi } from "@/api/jobmate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   ArrowLeft,
@@ -17,6 +17,8 @@ import {
   TrendingUp,
   ScanSearch,
   Calendar,
+  Bookmark,
+  FileDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,10 +32,16 @@ import { toast } from 'sonner';
 
 export default function JobDetails() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, getToken } = useAuth();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
+
+  // Feed job passed via navigate state (not yet saved to tracker)
+  const feedJob = location.state?.feedJob || null;
+
+  const [trackedJobId, setTrackedJobId] = React.useState(jobId);
   const [notes, setNotes] = React.useState('');
   const [isEditingNotes, setIsEditingNotes] = React.useState(false);
   const [interviewQuestions, setInterviewQuestions] = React.useState(null);
@@ -42,33 +50,79 @@ export default function JobDetails() {
   const [showSalaryEstimate, setShowSalaryEstimate] = React.useState(false);
   const [gapAnalysis, setGapAnalysis] = React.useState(null);
   const [showGapAnalysis, setShowGapAnalysis] = React.useState(false);
+  const [gapAnswers, setGapAnswers] = React.useState({});
+  const [tailoredCv, setTailoredCv] = React.useState(null);
+
+  // Lazily save a feed job to the tracker the first time an AI feature is used
+  const lazyTrackMutation = useMutation({
+    mutationFn: () => jobApi.create(user.id, {
+      title: feedJob.title,
+      company: feedJob.company || 'Unknown',
+      location: feedJob.location || '',
+      description: feedJob.description || '',
+      url: feedJob.url || '',
+      source: feedJob.source || 'other',
+      status: 'saved',
+    }),
+    onSuccess: (saved) => {
+      setTrackedJobId(String(saved.id));
+      window.history.replaceState({}, '', `${window.location.pathname}?id=${saved.id}`);
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      toast.success('Job saved to your applications');
+    },
+  });
+
+  const ensureTracked = async () => {
+    if (trackedJobId) return trackedJobId;
+    const saved = await lazyTrackMutation.mutateAsync();
+    return String(saved.id);
+  };
 
   const analyzeGapsMutation = useMutation({
     mutationFn: async () => {
       const token = getToken();
       const resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
-      return resumeApi.analyzeGaps(resumeFile, job.description, token);
+      return resumeApi.analyzeGaps(resumeFile, effectiveJob.description, token);
     },
     onSuccess: (data) => {
       setGapAnalysis(data);
+      setGapAnswers({});
+      setTailoredCv(null);
       setShowGapAnalysis(true);
       toast.success('Gap analysis complete!');
     },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to analyze resume gaps');
+    onError: (err) => toast.error(err.message || 'Failed to analyze resume gaps'),
+  });
+
+  const generateTailoredCvMutation = useMutation({
+    mutationFn: async () => {
+      const token = getToken();
+      const resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      const answersText = (gapAnalysis?.gaps || [])
+        .map((gap, i) =>
+          gapAnswers[i]?.trim()
+            ? `Requirement: ${gap.requirement}\nQuestion: ${gap.question}\nAnswer: ${gapAnswers[i]}`
+            : null
+        )
+        .filter(Boolean)
+        .join('\n\n');
+      return resumeApi.rewriteDiff(resumeFile, effectiveJob.description, token, answersText);
     },
+    onSuccess: (data) => {
+      setTailoredCv(data);
+      toast.success('Tailored CV generated!');
+    },
+    onError: (err) => toast.error(err.message || 'Failed to generate tailored CV'),
   });
 
   const generateSalaryMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${jobId}/salary-estimate`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to estimate salary');
-      }
+      const id = await ensureTracked();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/salary-estimate`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
+      );
+      if (!response.ok) throw new Error('Failed to estimate salary');
       return response.json();
     },
     onSuccess: (data) => {
@@ -76,21 +130,17 @@ export default function JobDetails() {
       setShowSalaryEstimate(true);
       toast.success('Salary estimate generated!');
     },
-    onError: () => {
-      toast.error('Failed to estimate salary');
-    }
+    onError: () => toast.error('Failed to estimate salary'),
   });
 
   const generateQuestionsMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${jobId}/interview-questions`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to generate questions');
-      }
+      const id = await ensureTracked();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/interview-questions`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
+      );
+      if (!response.ok) throw new Error('Failed to generate questions');
       return response.json();
     },
     onSuccess: (data) => {
@@ -98,72 +148,73 @@ export default function JobDetails() {
       setShowInterviewQuestions(true);
       toast.success('Interview questions generated!');
     },
-    onError: () => {
-      toast.error('Failed to generate interview questions');
-    }
+    onError: () => toast.error('Failed to generate interview questions'),
   });
 
   const { data: job, isLoading: jobLoading } = useQuery({
     queryKey: ['job', jobId],
-    queryFn: async () => {
-      return await jobApi.getById(parseInt(jobId));
-    },
+    queryFn: async () => await jobApi.getById(parseInt(jobId)),
     enabled: !!jobId,
   });
 
-  // Initialize notes when job loads
+  // Effective job: from API (tracked) or from router state (feed/discover)
+  const effectiveJob = job || feedJob;
+
   React.useEffect(() => {
-    if (job?.notes) {
-      setNotes(job.notes);
-    }
+    if (job?.notes) setNotes(job.notes);
   }, [job]);
 
   const updateNotesMutation = useMutation({
-    mutationFn: (noteText) => jobApi.update(parseInt(jobId), { notes: noteText }),
+    mutationFn: async (noteText) => {
+      const id = await ensureTracked();
+      return jobApi.update(parseInt(id), { notes: noteText });
+    },
     onSuccess: (updatedJob) => {
       queryClient.setQueryData(['job', jobId], updatedJob);
       setIsEditingNotes(false);
-      toast.success('Notes saved successfully');
+      toast.success('Notes saved');
     },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to save notes');
-    }
+    onError: (error) => toast.error(error.message || 'Failed to save notes'),
   });
 
-  const handleSaveNotes = () => {
-    updateNotesMutation.mutate(notes);
-  };
-
   const calculateMatchScore = () => {
-    if (!job) return 0;
-    // Use server-calculated match score if available
-    if (job.match_score) return job.match_score;
-    
-    // Fallback client-side calculation
+    if (!effectiveJob) return 0;
+    if (effectiveJob.match_score) return effectiveJob.match_score;
     if (!user?.skills) return 0;
     const skills = typeof user.skills === 'string' ? user.skills.split(',').map(s => s.trim()) : user.skills;
     if (!skills.length) return 0;
-    
-    const jobText = `${job.title} ${job.description}`.toLowerCase();
-    const matches = skills.filter(skill => 
-      jobText.includes(skill.toLowerCase())
-    );
-    
+    const jobText = `${effectiveJob.title} ${effectiveJob.description}`.toLowerCase();
+    const matches = skills.filter(skill => jobText.includes(skill.toLowerCase()));
     return Math.min(100, Math.round((matches.length / skills.length) * 100));
   };
 
   const matchScore = calculateMatchScore();
 
-  // Extract required years of experience from job description
   const extractRequiredYears = () => {
-    if (!job?.description) return null;
-    const match = job.description.match(/(\d+)\+?\s*(?:to\s*\d+)?\s*years?\s+(?:of\s+)?(?:experience|exp)/i)
-      || job.description.match(/experience[:\s]+(\d+)\+?\s*years?/i)
-      || job.description.match(/minimum\s+(\d+)\s*years?/i);
+    if (!effectiveJob?.description) return null;
+    const match =
+      effectiveJob.description.match(/(\d+)\+?\s*(?:to\s*\d+)?\s*years?\s+(?:of\s+)?(?:experience|exp)/i) ||
+      effectiveJob.description.match(/experience[:\s]+(\d+)\+?\s*years?/i) ||
+      effectiveJob.description.match(/minimum\s+(\d+)\s*years?/i);
     return match ? parseInt(match[1]) : null;
   };
 
   const requiredYears = extractRequiredYears();
+  const hasAnswers = Object.values(gapAnswers).some(a => a?.trim());
+
+  const downloadCV = () => {
+    if (!tailoredCv?.docx_b64) return;
+    const bytes = atob(tailoredCv.docx_b64);
+    const arr = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tailored_cv.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (jobLoading) {
     return (
@@ -173,7 +224,7 @@ export default function JobDetails() {
     );
   }
 
-  if (!job) {
+  if (!effectiveJob) {
     return (
       <div className="p-8 max-w-4xl mx-auto">
         <Alert variant="destructive">
@@ -205,53 +256,45 @@ export default function JobDetails() {
                   <Building2 className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2 leading-snug">{job.title}</h1>
+                  <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2 leading-snug">{effectiveJob.title}</h1>
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-400 text-sm">
                     <span className="flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
-                      {job.company}
+                      {effectiveJob.company}
                     </span>
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5" />
-                      {job.location}
+                      {effectiveJob.location}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Match Details — horizontal on mobile, vertical on md+ */}
+            {/* Match Details */}
             <div className="w-full md:w-auto bg-gray-50 p-4 md:p-5 rounded-lg md:space-y-4 flex md:block items-center gap-6 md:gap-0 md:min-w-[180px]">
-              {/* Match Score */}
               <div className="text-center shrink-0">
                 <div className={`text-3xl md:text-4xl font-semibold mb-0.5 ${
                   matchScore >= 70 ? 'text-green-500' :
-                  matchScore >= 50 ? 'text-yellow-500' :
-                  'text-gray-400'
+                  matchScore >= 50 ? 'text-yellow-500' : 'text-gray-400'
                 }`}>
                   {matchScore}%
                 </div>
                 <p className="text-xs text-gray-500">Match</p>
               </div>
-
               <div className="hidden md:block border-t border-gray-200 pt-3 space-y-2.5">
-                {/* User's role */}
                 {user?.target_role && (
                   <div>
                     <p className="text-xs text-gray-500">Your Role</p>
                     <p className="text-sm text-gray-900 font-medium truncate">{user.target_role}</p>
                   </div>
                 )}
-
-                {/* Years of experience */}
                 {user?.years_of_experience != null && (
                   <div>
                     <p className="text-xs text-gray-500">Your Experience</p>
                     <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} yrs</p>
                   </div>
                 )}
-
-                {/* Required experience from job */}
                 {requiredYears && (
                   <div>
                     <p className="text-xs text-gray-500">Required</p>
@@ -270,15 +313,9 @@ export default function JobDetails() {
                   </div>
                 )}
               </div>
-
-              {/* Mobile-only inline details */}
               <div className="md:hidden flex flex-wrap gap-3 text-xs">
-                {user?.target_role && (
-                  <span className="text-gray-400">{user.target_role}</span>
-                )}
-                {user?.years_of_experience != null && (
-                  <span className="text-gray-400">{user.years_of_experience} yrs exp</span>
-                )}
+                {user?.target_role && <span className="text-gray-400">{user.target_role}</span>}
+                {user?.years_of_experience != null && <span className="text-gray-400">{user.years_of_experience} yrs exp</span>}
                 {requiredYears && (
                   <span className={user?.years_of_experience != null
                     ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
@@ -295,20 +332,41 @@ export default function JobDetails() {
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6 min-w-0">
+
           {/* Description */}
           <Card className="border border-gray-100">
             <CardHeader>
               <CardTitle className="font-semibold">Job Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{job.description}</p>
+              <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{effectiveJob.description}</p>
             </CardContent>
           </Card>
 
           {/* Cover Letter Generator */}
-          <CoverLetterGenerator
-            job={job}
-          />
+          {trackedJobId ? (
+            <CoverLetterGenerator job={{ ...effectiveJob, id: parseInt(trackedJobId) }} />
+          ) : (
+            <Card className="border border-gray-100">
+              <CardHeader>
+                <CardTitle className="font-semibold">AI Cover Letter Generator</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center py-6">
+                <p className="text-sm text-gray-400 mb-4">
+                  Save this job to generate a personalized cover letter.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => lazyTrackMutation.mutate()}
+                  disabled={lazyTrackMutation.isPending}
+                >
+                  {lazyTrackMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                    : <><Bookmark className="w-4 h-4 mr-2" />Save Job First</>}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Resume Gap Analysis */}
           {user?.resume_filename && (
@@ -319,55 +377,124 @@ export default function JobDetails() {
                     <ScanSearch className="w-5 h-5 text-purple-600" />
                     Resume Gap Analysis
                   </CardTitle>
-                  {!showGapAnalysis && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => analyzeGapsMutation.mutate()}
-                      disabled={analyzeGapsMutation.isPending}
-                      className="text-purple-600 border-purple-300 hover:bg-purple-100"
-                    >
-                      {analyzeGapsMutation.isPending ? (
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analyzing…</>
-                      ) : (
-                        <><ScanSearch className="w-4 h-4 mr-2" />Analyze Gaps</>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => analyzeGapsMutation.mutate()}
+                    disabled={analyzeGapsMutation.isPending}
+                    className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                  >
+                    {analyzeGapsMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analyzing…</>
+                    ) : showGapAnalysis ? (
+                      <>🔄 Re-analyze</>
+                    ) : (
+                      <><ScanSearch className="w-4 h-4 mr-2" />Analyze Gaps</>
+                    )}
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 {showGapAnalysis && gapAnalysis ? (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
+                    {/* Summary */}
                     {gapAnalysis.summary && (
                       <p className="text-sm text-gray-700 bg-white rounded-lg border border-purple-100 p-3">
                         {gapAnalysis.summary}
                       </p>
                     )}
+
+                    {/* Gap Q&A — answer to fill in your CV */}
                     {gapAnalysis.gaps?.length > 0 && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
+                        <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                          Answer these to tailor your CV:
+                        </p>
                         {gapAnalysis.gaps.map((gap, i) => (
-                          <div key={i} className="bg-white rounded-lg border border-purple-100 p-3 space-y-1">
-                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Missing: {gap.requirement}</p>
-                            <p className="text-sm text-gray-600">💬 {gap.question}</p>
+                          <div key={i} className="bg-white rounded-lg border border-purple-100 p-4 space-y-3">
+                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                              Missing: {gap.requirement}
+                            </p>
+                            <p className="text-sm text-gray-700">💬 {gap.question}</p>
+                            <Textarea
+                              placeholder="Your answer…"
+                              value={gapAnswers[i] || ''}
+                              onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                              className="min-h-[72px] text-sm resize-none bg-gray-50 border-purple-100 focus:border-purple-400"
+                            />
                           </div>
                         ))}
                       </div>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => analyzeGapsMutation.mutate()} className="w-full">
-                      🔄 Re-analyze
-                    </Button>
+
+                    {/* Tailored CV */}
+                    {!tailoredCv ? (
+                      <Button
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                        onClick={() => generateTailoredCvMutation.mutate()}
+                        disabled={generateTailoredCvMutation.isPending || !hasAnswers}
+                      >
+                        {generateTailoredCvMutation.isPending ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating Tailored CV…</>
+                        ) : (
+                          <>✨ Generate Tailored CV</>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between bg-white rounded-lg border border-purple-100 p-3">
+                          <p className="text-sm font-semibold text-purple-700">Tailored CV ready!</p>
+                          <Button
+                            size="sm"
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            onClick={downloadCV}
+                          >
+                            <FileDown className="w-4 h-4 mr-2" /> Download .docx
+                          </Button>
+                        </div>
+
+                        {/* Diff view */}
+                        {tailoredCv.diff?.length > 0 && (
+                          <div className="bg-gray-900 rounded-lg p-4 max-h-72 overflow-y-auto text-xs font-mono space-y-0.5">
+                            {tailoredCv.diff.map((chunk, i) => (
+                              <div
+                                key={i}
+                                className={
+                                  chunk.type === 'insert' ? 'text-green-400' :
+                                  chunk.type === 'delete' ? 'text-red-400 line-through opacity-70' :
+                                  'text-gray-500'
+                                }
+                              >
+                                {chunk.type === 'insert' ? '+ ' : chunk.type === 'delete' ? '- ' : '  '}
+                                {chunk.text}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => generateTailoredCvMutation.mutate()}
+                          disabled={generateTailoredCvMutation.isPending}
+                        >
+                          ✨ Regenerate CV
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-400 text-center py-4">
                     Click "Analyze Gaps" to compare your resume against this job and find what's missing.
+                    Answer the questions to generate a tailored CV.
                   </p>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Interview Notes */}
+          {/* Notes */}
           <Card className="border border-gray-100">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -375,12 +502,8 @@ export default function JobDetails() {
                   <StickyNote className="w-5 h-5 text-blue-600" />
                   Notes & Reminders
                 </CardTitle>
-                {!isEditingNotes && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditingNotes(true)}
-                  >
+                {trackedJobId && !isEditingNotes && (
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditingNotes(true)}>
                     Edit
                   </Button>
                 )}
@@ -392,29 +515,19 @@ export default function JobDetails() {
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add interview notes, follow-up reminders, or any other information about this job..."
+                    placeholder="Add interview notes, follow-up reminders, or any other information..."
                     className="min-h-[120px]"
                   />
                   <div className="flex gap-2">
                     <Button
-                      onClick={handleSaveNotes}
+                      onClick={() => updateNotesMutation.mutate(notes)}
                       disabled={updateNotesMutation.isPending}
                       className="flex items-center gap-2"
                     >
-                      {updateNotesMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
+                      {updateNotesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       Save
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setNotes(job?.notes || '');
-                        setIsEditingNotes(false);
-                      }}
-                    >
+                    <Button variant="outline" onClick={() => { setNotes(job?.notes || ''); setIsEditingNotes(false); }}>
                       Cancel
                     </Button>
                   </div>
@@ -423,8 +536,10 @@ export default function JobDetails() {
                 <div>
                   {notes ? (
                     <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{notes}</p>
-                  ) : (
+                  ) : trackedJobId ? (
                     <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
+                  ) : (
+                    <p className="text-gray-400 italic text-sm">Save this job to your tracker to add notes.</p>
                   )}
                 </div>
               )}
@@ -448,15 +563,9 @@ export default function JobDetails() {
                     className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
                   >
                     {generateQuestionsMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Generating...
-                      </>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Generating...</>
                     ) : (
-                      <>
-                        <Lightbulb className="w-4 h-4 mr-2" />
-                        Generate Questions
-                      </>
+                      <><Lightbulb className="w-4 h-4 mr-2" />Generate Questions</>
                     )}
                   </Button>
                 )}
@@ -465,60 +574,37 @@ export default function JobDetails() {
             <CardContent>
               {showInterviewQuestions && interviewQuestions ? (
                 <div className="space-y-6">
-                  {/* Behavioral Questions */}
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        💼 Behavioral Questions
-                      </h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">💼 Behavioral Questions</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
-                            {q}
-                          </li>
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-
-                  {/* Technical Questions */}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        ⚙️ Technical Questions
-                      </h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">⚙️ Technical Questions</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
-                            {q}
-                          </li>
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-
-                  {/* Company-Specific Questions */}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        🏢 Questions to Ask Them
-                      </h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">🏢 Questions to Ask Them</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">
-                            {q}
-                          </li>
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateQuestionsMutation.mutate()}
-                    className="w-full"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => generateQuestionsMutation.mutate()} className="w-full">
                     🔄 Regenerate Questions
                   </Button>
                 </div>
@@ -547,15 +633,9 @@ export default function JobDetails() {
                     className="text-green-600 border-green-300 hover:bg-green-900/40"
                   >
                     {generateSalaryMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Estimating...
-                      </>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Estimating...</>
                     ) : (
-                      <>
-                        <TrendingUp className="w-4 h-4 mr-2" />
-                        Estimate Salary
-                      </>
+                      <><TrendingUp className="w-4 h-4 mr-2" />Estimate Salary</>
                     )}
                   </Button>
                 )}
@@ -564,72 +644,47 @@ export default function JobDetails() {
             <CardContent>
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
-                  {/* Salary Range */}
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      💰 Estimated Range
-                    </h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">💰 Estimated Range</h4>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
                         <p className="text-sm text-gray-400">Minimum</p>
-                        <p className="text-xl font-bold text-green-700">
-                          ${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}
-                        </p>
+                        <p className="text-xl font-bold text-green-700">${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">Median</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          ${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}
-                        </p>
+                        <p className="text-2xl font-bold text-green-600">${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">Maximum</p>
-                        <p className="text-xl font-bold text-green-700">
-                          ${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}
-                        </p>
+                        <p className="text-xl font-bold text-green-700">${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
-
-                  {/* Insights */}
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        💡 Key Insights
-                      </h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">💡 Key Insights</h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">
-                            {insight}
-                          </li>
+                          <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">{insight}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-
-                  {/* Factors */}
                   {salaryEstimate.factors && (
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-3">📊 Salary Factors</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium text-gray-900 capitalize">
-                              {key.replace('_', ' ')}:
-                            </span>
+                            <span className="font-medium text-gray-900 capitalize">{key.replace('_', ' ')}:</span>
                             <span className="text-gray-600 ml-2">{value}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateSalaryMutation.mutate()}
-                    className="w-full"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => generateSalaryMutation.mutate()} className="w-full">
                     🔄 Recalculate Estimate
                   </Button>
                 </div>
@@ -644,58 +699,73 @@ export default function JobDetails() {
 
         {/* Sidebar */}
         <div className="space-y-6 min-w-0">
-          {/* Save Button */}
-          <SaveJobButton 
-            job={job}
-            isSaved={job.status === 'saved'}
-          />
 
-          {/* Application Status */}
-          <Card className="border border-gray-100">
-            <CardHeader>
-              <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">Status</p>
-                <p className="font-medium capitalize">{job.status || 'saved'}</p>
-              </div>
-              {job.created_at && (
+          {/* Save / Track button */}
+          {trackedJobId ? (
+            <SaveJobButton
+              job={{ ...effectiveJob, id: parseInt(trackedJobId) }}
+              isSaved={job?.status === 'saved' || !jobId}
+            />
+          ) : (
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => lazyTrackMutation.mutate()}
+              disabled={lazyTrackMutation.isPending}
+            >
+              {lazyTrackMutation.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                : <><Bookmark className="w-4 h-4 mr-2" />Save to My Jobs</>}
+            </Button>
+          )}
+
+          {/* Application Status — only when tracked */}
+          {trackedJobId && (
+            <Card className="border border-gray-100">
+              <CardHeader>
+                <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Added</p>
-                  <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <p className="font-medium capitalize">{job?.status || 'saved'}</p>
                 </div>
-              )}
-              <div className="space-y-1">
-                <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Calendar className="w-3.5 h-3.5" /> Applied Date
-                </Label>
-                <Input
-                  type="date"
-                  defaultValue={job.applied_date ? new Date(job.applied_date).toISOString().split('T')[0] : ''}
-                  className="h-8 text-sm"
-                  onChange={(e) => {
-                    jobApi.update(parseInt(jobId), { applied_date: e.target.value || null })
-                      .then(() => queryClient.invalidateQueries({ queryKey: ['job', jobId] }));
-                  }}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Calendar className="w-3.5 h-3.5" /> Interview Date
-                </Label>
-                <Input
-                  type="date"
-                  defaultValue={job.interview_date ? new Date(job.interview_date).toISOString().split('T')[0] : ''}
-                  className="h-8 text-sm"
-                  onChange={(e) => {
-                    jobApi.update(parseInt(jobId), { interview_date: e.target.value || null })
-                      .then(() => queryClient.invalidateQueries({ queryKey: ['job', jobId] }));
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                {job?.created_at && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Added</p>
+                    <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Calendar className="w-3.5 h-3.5" /> Applied Date
+                  </Label>
+                  <Input
+                    type="date"
+                    defaultValue={job?.applied_date ? new Date(job.applied_date).toISOString().split('T')[0] : ''}
+                    className="h-8 text-sm"
+                    onChange={(e) => {
+                      jobApi.update(parseInt(trackedJobId), { applied_date: e.target.value || null })
+                        .then(() => queryClient.invalidateQueries({ queryKey: ['job', trackedJobId] }));
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Calendar className="w-3.5 h-3.5" /> Interview Date
+                  </Label>
+                  <Input
+                    type="date"
+                    defaultValue={job?.interview_date ? new Date(job.interview_date).toISOString().split('T')[0] : ''}
+                    className="h-8 text-sm"
+                    onChange={(e) => {
+                      jobApi.update(parseInt(trackedJobId), { interview_date: e.target.value || null })
+                        .then(() => queryClient.invalidateQueries({ queryKey: ['job', trackedJobId] }));
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <Card className="border border-gray-100">
@@ -703,14 +773,12 @@ export default function JobDetails() {
               <CardTitle className="font-semibold text-sm">Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  // Navigate to applications page or update status
-                  navigate(createPageUrl("Applications"));
-                }}
-              >
+              {effectiveJob.url && (
+                <a href={effectiveJob.url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full">View Original Listing</Button>
+                </a>
+              )}
+              <Button variant="outline" className="w-full" onClick={() => navigate(createPageUrl("Applications"))}>
                 View All Applications
               </Button>
             </CardContent>
