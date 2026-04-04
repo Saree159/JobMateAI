@@ -65,4 +65,33 @@ export const analytics = {
   profileUpdate: (fields) => track("profile_update", { fields }),
   resumeUpload: () => track("resume_upload", {}),
   search: (query, results) => track("search", { query, results }),
+  pageTime: (page, seconds) => track("page_time", { seconds }, page),
+};
+
+/**
+ * Track an event without requiring authentication.
+ * Used for registration-funnel events fired before the user has a token.
+ */
+export function trackPublic(event, props = {}, page = null) {
+  const inferredPage = page || inferPage(window.location.pathname);
+  fetch(`${API_BASE}/api/analytics/public-event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event,
+      page: inferredPage,
+      properties: props,
+      session_id: getSessionId(),
+    }),
+  }).catch(() => {});
+}
+
+/** Registration funnel helpers — fire from Register.jsx */
+export const regTrack = {
+  start: () => trackPublic("registration_start"),
+  fieldEmail: () => trackPublic("registration_field_email"),
+  fieldPassword: () => trackPublic("registration_field_password"),
+  submitAttempt: () => trackPublic("registration_submit_attempt"),
+  complete: (durationSeconds) =>
+    trackPublic("registration_complete", { duration_seconds: durationSeconds }),
 };

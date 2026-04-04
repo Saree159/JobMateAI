@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import { regTrack } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,12 @@ export default function Register() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const startTimeRef = useRef(Date.now());
+  const firedEmail = useRef(false);
+  const firedPassword = useRef(false);
+
+  // Fire registration_start once on mount
+  useEffect(() => { regTrack.start(); }, []);
 
   // Redirect if already authenticated
   React.useEffect(() => {
@@ -74,6 +81,7 @@ export default function Register() {
       return;
     }
 
+    regTrack.submitAttempt();
     setIsLoading(true);
 
     try {
@@ -82,8 +90,10 @@ export default function Register() {
         password: formData.password,
         full_name: formData.full_name || undefined,
       });
-      
+
       if (result.success) {
+        const duration = Math.round((Date.now() - startTimeRef.current) / 1000);
+        regTrack.complete(duration);
         navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       } else {
         setError(result.error || 'Registration failed');
@@ -96,10 +106,15 @@ export default function Register() {
   };
 
   const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    if (e.target.name === 'email' && !firedEmail.current && e.target.value) {
+      firedEmail.current = true;
+      regTrack.fieldEmail();
+    }
+    if (e.target.name === 'password' && !firedPassword.current && e.target.value) {
+      firedPassword.current = true;
+      regTrack.fieldPassword();
+    }
   };
 
   return (

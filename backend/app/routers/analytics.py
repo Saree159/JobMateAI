@@ -368,3 +368,21 @@ async def track_event(
     db.add(ev)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/public-event", status_code=201)
+def track_public_event(payload: EventPayload, db: Session = Depends(get_db)):
+    """
+    Track anonymous events (registration funnel etc.) without authentication.
+    user_id is null; events are correlated via session_id.
+    """
+    ev = UserEvent(
+        user_id=None,
+        event=payload.event,
+        page=payload.page or "register",
+        properties=json.dumps(payload.properties or {}),
+        session_id=payload.session_id,
+    )
+    db.add(ev)
+    db.commit()
+    return {"ok": True}

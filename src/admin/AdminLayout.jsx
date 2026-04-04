@@ -6,10 +6,14 @@ import {
   LayoutDashboard, DollarSign, Users, Cpu, Zap, Activity,
   Filter, TrendingUp, Megaphone, Server, Bell, Settings,
   ChevronLeft, ChevronRight, Menu, X, Search, Calendar,
-  ArrowUpRight, LogOut, MousePointerClick
+  ArrowUpRight, LogOut, MousePointerClick, BarChart2
 } from 'lucide-react';
 
-const navItems = [
+const primaryNav = [
+  { label: 'User Analytics', path: '/admin/user-analytics', icon: BarChart2 },
+];
+
+const legacyNav = [
   { label: 'Overview',       path: '/admin',              icon: LayoutDashboard },
   { label: 'Revenue',        path: '/admin/revenue',      icon: DollarSign },
   { label: 'Users',          path: '/admin/users',        icon: Users },
@@ -25,6 +29,8 @@ const navItems = [
   { label: 'Alerts',         path: '/admin/alerts',       icon: Bell,  badge: 3 },
   { label: 'Settings',       path: '/admin/settings',     icon: Settings },
 ];
+
+const navItems = [...primaryNav, ...legacyNav];
 
 export default function AdminLayout({ children }) {
   const location = useLocation();
@@ -64,34 +70,68 @@ export default function AdminLayout({ children }) {
       )}
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ label, path, icon: Icon, badge }) => {
-          const active = isActive(path);
-          return (
-            <Link
-              key={path}
-              to={path}
-              onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group relative ${
-                active
-                  ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                  : 'text-gray-400 hover:bg-white/8 hover:text-white'
-              }`}
-              title={collapsed ? label : ''}
-            >
-              <Icon className="w-4.5 h-4.5 shrink-0" style={{ width: 18, height: 18 }} />
-              {!collapsed && <span className="text-sm">{label}</span>}
-              {!collapsed && badge && (
-                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                  {badge}
-                </span>
-              )}
-              {collapsed && badge && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 p-3 overflow-y-auto">
+        {/* Primary */}
+        <div className="space-y-0.5 mb-3">
+          {primaryNav.map(({ label, path, icon: Icon }) => {
+            const active = isActive(path);
+            return (
+              <Link
+                key={path}
+                to={path}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 relative ${
+                  active
+                    ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                    : 'text-gray-300 hover:bg-white/8 hover:text-white'
+                }`}
+                title={collapsed ? label : ''}
+              >
+                <Icon className="shrink-0" style={{ width: 18, height: 18 }} />
+                {!collapsed && <span className="text-sm">{label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Legacy divider */}
+        {!collapsed && (
+          <div className="px-3 pb-1">
+            <span className="text-[10px] font-semibold tracking-widest text-gray-600 uppercase">Legacy</span>
+          </div>
+        )}
+        {collapsed && <div className="border-t border-white/10 my-2" />}
+
+        {/* Legacy pages */}
+        <div className="space-y-0.5 opacity-50">
+          {legacyNav.map(({ label, path, icon: Icon, badge }) => {
+            const active = isActive(path);
+            return (
+              <Link
+                key={path}
+                to={path}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 group relative ${
+                  active
+                    ? 'bg-blue-500/20 text-blue-300 font-semibold'
+                    : 'text-gray-400 hover:bg-white/8 hover:text-white'
+                }`}
+                title={collapsed ? label : ''}
+              >
+                <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
+                {!collapsed && <span className="text-xs">{label}</span>}
+                {!collapsed && badge && (
+                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {badge}
+                  </span>
+                )}
+                {collapsed && badge && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Footer */}

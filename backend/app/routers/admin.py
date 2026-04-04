@@ -667,3 +667,143 @@ def behavior_per_user(
         }
         for r in rows
     ]
+
+
+# ── User Analytics (registration funnel + behavior) ──────────────────────────
+
+@router.get("/user-analytics")
+def get_user_analytics(
+    db: Session = Depends(get_db),
+    admin: User = Depends(verify_admin_user),
+):
+    """
+    Aggregated user-behavior analytics focused on:
+    1. Registration funnel (start → complete + drop-off steps)
+    2. Average time to complete registration
+    3. First page visited after registration
+    4. Average time spent per page/section
+    5. Top navigation flow sequences
+    """
+    # ── Registration Funnel ───────────────────────────────────────────────
+    funnel_steps = [
+        ("registration_start",           "Visited Register"),
+        ("registration_field_email",     "Filled Email"),
+        ("registration_field_password",  "Filled Password"),
+        ("registration_submit_attempt",  "Clicked Submit"),
+        ("registration_complete",        "Completed"),
+    ]
+    funnel = []
+    for event_name, label in funnel_steps:
+        count = db.query(func.count(UserEvent.id)).filter(
+            UserEvent.event == event_name
+        ).scalar() or 0
+        funnel.append({"event": event_name, "label": label, "count": count})
+
+    # Total registered users as authoritative "completed" count
+    total_users = db.query(func.count(User.id)).scalar() or 0
+    # Override funnel completed count with real user count if tracking not yet live
+    if funnel[-1]["count"] == 0 and total_users > 0:
+        funnel[-1]["count"] = total_users
+
+    # ── Average registration duration ─────────────────────────────────────
+    complete_events = db.query(UserEvent).filter(
+        UserEvent.event == "registration_complete",
+        UserEvent.properties.isnot(None),
+    ).all()
+    durations = []
+    for ev in complete_events:
+        try:
+            props = _json.loads(ev.properties or "{}")
+            d = props.get("duration_seconds")
+            if d and isinstance(d, (int, float)) and 0 < d < 3600:
+                durations.append(d)
+        except Exception:
+            pass
+    avg_registration_seconds = round(sum(durations) / len(durations)) if durations else None
+
+    # ── First page after registration ─────────────────────────────────────
+    complete_sessions = db.query(UserEvent.session_id, UserEvent.created_at).filter(
+        UserEvent.event == "registration_complete",
+        UserEvent.session_id.isnot(None),
+    ).all()
+    first_page_counts: dict = defaultdict(int)
+    for sess_id, completed_at in complete_sessions:
+        first_pv = (
+            db.query(UserEvent)
+            .filter(
+                UserEvent.session_id == sess_id,
+                UserEvent.event == "page_view",
+                UserEvent.created_at > completed_at,
+            )
+            .order_by(UserEvent.created_at)
+            .first()
+        )
+        if first_pv:
+            first_page_counts[first_pv.page] += 1
+    # Fall back: look at first page_view per user (first session after signup)
+    if not first_page_counts:
+        rows = (
+            db.query(UserEvent.page, func.count(UserEvent.id).label("c"))
+            .filter(UserEvent.event == "page_view")
+            .group_by(UserEvent.page)
+            .order_by(func.count(UserEvent.id).desc())
+            .limit(8)
+            .all()
+        )
+        first_page_counts = {r.page: r.c for r in rows}
+
+    # ── Average time per page ─────────────────────────────────────────────
+    page_time_events = db.query(UserEvent).filter(
+        UserEvent.event == "page_time",
+        UserEvent.properties.isnot(None),
+    ).all()
+    page_buckets: dict = defaultdict(list)
+    for ev in page_time_events:
+        try:
+            props = _json.loads(ev.properties or "{}")
+            secs = props.get("seconds")
+            if secs and isinstance(secs, (int, float)) and 0 < secs < 3600:
+                page_buckets[ev.page].append(secs)
+        except Exception:
+            pass
+    avg_time_per_page = {
+        page: round(sum(times) / len(times))
+        for page, times in page_buckets.items()
+        if times
+    }
+
+    # ── Top navigation flows ──────────────────────────────────────────────
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    pv_events = (
+        db.query(UserEvent)
+        .filter(
+            UserEvent.event == "page_view",
+            UserEvent.session_id.isnot(None),
+            UserEvent.created_at >= cutoff,
+        )
+        .order_by(UserEvent.session_id, UserEvent.created_at)
+        .all()
+    )
+    session_pages: dict = defaultdict(list)
+    for ev in pv_events:
+        pages = session_pages[ev.session_id]
+        if not pages or pages[-1] != ev.page:  # deduplicate consecutive same-page
+            pages.append(ev.page)
+
+    sequence_counts: dict = defaultdict(int)
+    for pages in session_pages.values():
+        for i in range(len(pages) - 1):
+            sequence_counts[f"{pages[i]} → {pages[i+1]}"] += 1
+
+    top_flows = sorted(sequence_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    return {
+        "funnel": funnel,
+        "total_users": total_users,
+        "avg_registration_seconds": avg_registration_seconds,
+        "first_page_after_registration": dict(
+            sorted(first_page_counts.items(), key=lambda x: x[1], reverse=True)[:8]
+        ),
+        "avg_time_per_page_seconds": avg_time_per_page,
+        "top_flows": [{"path": k, "count": v} for k, v in top_flows],
+    }
