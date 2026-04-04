@@ -267,10 +267,11 @@ async def get_top_matching_jobs(
     """
     Return top job matches for a user based on their profile.
 
-    Results are cached per-user (30 min TTL).  The cache is automatically
-    invalidated when the user updates their skills, target role, or location.
-    A background scheduler also refreshes the cache every 30 minutes
-    (at :00 and :30 of each hour) when it detects a stale entry.
+    Results are cached per-user (25 h TTL).  The cache is automatically
+    invalidated when the user updates their profile (skills, role, location,
+    work mode).  A profile hash validates the cached result on every request
+    as a safety net.  A background scheduler also does a full refresh daily
+    at 07:30 Israel time.
     """
     if current_user.id != user_id:
         raise HTTPException(
@@ -289,8 +290,12 @@ async def get_top_matching_jobs(
     if not force_refresh:
         cached = cache.get(key)
         if cached:
-            logger.info(f"Cache HIT top-matches for user {user_id}")
-            return {**cached, "jobs": cached["jobs"][:limit], "cached": True}
+            from app.services.scrape_scheduler import profile_hash
+            if cached.get("profile_hash") == profile_hash(user):
+                logger.info(f"Cache HIT top-matches for user {user_id}")
+                return {**cached, "jobs": cached["jobs"][:limit], "cached": True}
+            logger.info(f"Profile changed for user {user_id} — invalidating cache")
+            cache.delete(key)
 
     logger.info(f"Cache MISS top-matches for user {user_id} — scraping...")
     result = await fetch_and_cache_top_matches(user_id)

@@ -106,6 +106,23 @@ class CacheService:
         except Exception as e:
             logger.error(f"Cache delete error for key {key}: {e}")
             return False
+
+    def delete_pattern(self, prefix: str) -> int:
+        """Delete all keys that start with prefix. Returns count deleted."""
+        count = 0
+        try:
+            if self.redis_client:
+                keys = list(self.redis_client.scan_iter(f"{prefix}*"))
+                if keys:
+                    count = self.redis_client.delete(*keys)
+            else:
+                to_delete = [k for k in list(self.memory_cache) if k.startswith(prefix)]
+                for k in to_delete:
+                    del self.memory_cache[k]
+                count = len(to_delete)
+        except Exception as e:
+            logger.error(f"Cache delete_pattern error for prefix '{prefix}': {e}")
+        return count
     
     def clear(self) -> bool:
         """Clear all cache."""

@@ -1,25 +1,48 @@
 """
 Background job scrape scheduler.
 
-Runs at :00 and :30 of every hour. For each user with a target_role,
-checks whether their per-user top-matches cache has expired; if so,
-re-scrapes and refreshes it.
+Runs ONCE DAILY at 07:30 Israel time.  Clears all role-level and per-user
+caches, then re-scrapes for every active user.  Shared role-level caches
+(drushim / linkedin / techmap) mean each unique role is scraped only once
+per day regardless of how many users share that role — keeping ScraperAPI
+usage minimal.
 
-The per-user cache key is:  jobs:top_matches:u{user_id}
+Profile-change invalidation
+---------------------------
+When a user updates skills / target_role / location / work_mode, the
+users router immediately deletes their per-user cache key.  A profile_hash
+is also stored with the cached result so the top-matches endpoint can
+detect changes that slip through (e.g. a failed cache delete) and
+re-scrape on the next request rather than serving stale data.
 
-Reliability improvements
-------------------------
-* A semaphore (MAX_CONCURRENT_SCRAPES) prevents thundering-herd scraping.
-* Random jitter is added between users to spread load.
-* Scraped jobs are persisted to the ingest_jobs table so the global feed
-  benefits from scheduler runs even when n8n is not active.
+Cache TTLs
+----------
+* Per-user top-matches cache : 25 h  (CACHE_TTL_USER)
+* Shared role-level caches   : 25 h  (CACHE_TTL_ROLE)
+  25 h gives a 1-hour buffer past the 24-h daily cycle so a slightly late
+  scheduler run never leaves users with an empty cache.
+
+Concurrency
+-----------
+A semaphore (MAX_CONCURRENT_SCRAPES) prevents thundering-herd scraping.
+Random jitter between users spreads the load across the refresh window.
 """
 import asyncio
+import hashlib
+import json
 import logging
 import random
 import re as _re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
+
+import pytz
+
+IL_TZ = pytz.timezone("Asia/Jerusalem")
+
+# Cache TTLs (seconds)
+CACHE_TTL_USER = 25 * 3600   # 25 hours — per-user top-matches result
+CACHE_TTL_ROLE = 25 * 3600   # 25 hours — shared role-level scrape results
 
 # Maximum number of users whose scrapes can run concurrently
 MAX_CONCURRENT_SCRAPES = 3
@@ -27,7 +50,7 @@ _scrape_semaphore = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
 
 logger = logging.getLogger(__name__)
 
-# Fields whose change should invalidate the top-matches cache
+# Fields whose change should invalidate the top-matches cache (used by users router)
 PROFILE_CACHE_FIELDS = {"skills", "target_role", "location_preference", "work_mode_preference"}
 
 ROLE_CATEGORY_MAP = [
@@ -60,6 +83,30 @@ def user_cache_key(user_id: int) -> str:
     return f"jobs:top_matches:u{user_id}"
 
 
+def profile_hash(user) -> str:
+    """MD5 of the profile fields that influence job matching.
+
+    Stored alongside each cached result.  If the hash changes between
+    requests the endpoint treats the cache as stale and re-scrapes.
+    """
+    data = {
+        "role":     (user.target_role or "").lower().strip(),
+        "skills":   sorted(s.lower() for s in (user.skills_list or [])),
+        "location": (user.location_preference or "").lower().strip(),
+        "work_mode": (user.work_mode_preference or "").lower().strip(),
+    }
+    return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
+
+
+def seconds_until_daily_refresh() -> float:
+    """Seconds until the next 07:30 Israel time."""
+    now_il = datetime.now(IL_TZ)
+    target = now_il.replace(hour=7, minute=30, second=0, microsecond=0)
+    if now_il >= target:
+        target += timedelta(days=1)
+    return (target - now_il).total_seconds()
+
+
 async def _persist_scraped_jobs(jobs: list, source: str) -> int:
     """
     Upsert a batch of scraped job dicts into the ingest_jobs table.
@@ -68,7 +115,6 @@ async def _persist_scraped_jobs(jobs: list, source: str) -> int:
     from app.database import SessionLocal
     from app.models import IngestJob
     from app.routers.ingest import normalize_url
-    import json
 
     if not jobs:
         return 0
@@ -167,7 +213,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 scraper = DrushimScraper()
                 drushim_jobs = await scraper.scrape_listing_async(drushim_url)
                 if drushim_jobs:
-                    cache.set(cache_key_drushim, drushim_jobs, ttl=1800)
+                    cache.set(cache_key_drushim, drushim_jobs, ttl=CACHE_TTL_ROLE)
                     fresh_drushim = True
             except Exception as e:
                 logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
@@ -176,10 +222,9 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         for j in drushim_jobs:
             j.setdefault("source", "drushim")
 
-        # Persist fresh Drushim results to the ingest_jobs DB so the global feed stays up-to-date
         if fresh_drushim and drushim_jobs:
             n = await _persist_scraped_jobs(drushim_jobs, source="drushim")
-            logger.info(f"[scheduler] persisted {n} new drushim jobs to ingest_jobs table")
+            logger.info(f"[scheduler] persisted {n} new drushim jobs")
 
         # ── LinkedIn ─────────────────────────────────────────────────────────
         linkedin_jobs = []
@@ -195,7 +240,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                     li_scraper = LinkedInJobSearchScraper()
                     linkedin_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at)
                     if linkedin_jobs:
-                        cache.set(cache_key_li, linkedin_jobs, ttl=1800)
+                        cache.set(cache_key_li, linkedin_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_linkedin = True
                 except Exception as e:
                     logger.warning(f"[scheduler] linkedin scrape failed for user {user_id}: {e}")
@@ -204,17 +249,15 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         for j in linkedin_jobs:
             j.setdefault("source", "linkedin")
 
-        # Persist fresh LinkedIn results to ingest_jobs
         if fresh_linkedin and linkedin_jobs:
             n = await _persist_scraped_jobs(linkedin_jobs, source="linkedin")
-            logger.info(f"[scheduler] persisted {n} new linkedin jobs to ingest_jobs table")
+            logger.info(f"[scheduler] persisted {n} new linkedin jobs")
 
         # ── LinkedIn fallback: use n8n-ingested jobs when scraper is blocked ──
         if not linkedin_jobs:
-            import json as _json
             from datetime import timedelta
             from app.models import IngestJob
-            cutoff = datetime.utcnow() - timedelta(hours=6)
+            cutoff = datetime.utcnow() - timedelta(hours=26)
             rows = (
                 db.query(IngestJob)
                 .filter(IngestJob.source == "linkedin", IngestJob.last_seen_at >= cutoff)
@@ -224,20 +267,20 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             )
             for row in rows:
                 try:
-                    raw = _json.loads(row.raw or "{}")
+                    raw = json.loads(row.raw or "{}")
                 except Exception:
                     raw = {}
                 linkedin_jobs.append({
-                    "title": row.title or "",
-                    "company": row.company or "",
-                    "location": row.location or "",
-                    "url": row.url or "",
+                    "title":       row.title or "",
+                    "company":     row.company or "",
+                    "location":    row.location or "",
+                    "url":         row.url or "",
                     "description": raw.get("description", ""),
-                    "skills": raw.get("skills", []),
-                    "source": "linkedin",
+                    "skills":      raw.get("skills", []),
+                    "source":      "linkedin",
                 })
             if rows:
-                logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from n8n ingest_jobs fallback")
+                logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from ingest_jobs fallback")
 
         # ── TechMap ──────────────────────────────────────────────────────────
         from app.services.techmap import fetch_for_role as techmap_fetch
@@ -250,7 +293,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             try:
                 techmap_jobs = await techmap_fetch(user.target_role)
                 if techmap_jobs:
-                    cache.set(cache_key_techmap, techmap_jobs, ttl=3600)  # 1h
+                    cache.set(cache_key_techmap, techmap_jobs, ttl=CACHE_TTL_ROLE)
                     fresh_techmap = True
             except Exception as e:
                 logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
@@ -261,7 +304,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
 
         if fresh_techmap and techmap_jobs:
             n = await _persist_scraped_jobs(techmap_jobs, source="techmap")
-            logger.info(f"[scheduler] persisted {n} new techmap jobs to ingest_jobs table")
+            logger.info(f"[scheduler] persisted {n} new techmap jobs")
 
         jobs = drushim_jobs + linkedin_jobs + techmap_jobs
         if not jobs:
@@ -281,12 +324,12 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         def score_job(job):
             if not user_set:
                 return 0
-            job_title = (job.get("title") or "").lower()
-            job_desc  = (job.get("description") or "").lower()
+            job_title  = (job.get("title") or "").lower()
+            job_desc   = (job.get("description") or "").lower()
             job_skills_listed = {s.lower() for s in (job.get("skills") or [])}
-            job_tech = _extract_tech(f"{job_title} {job_desc}") | job_skills_listed
-            forward  = len(user_set & job_tech) / len(user_set) if user_set else 0
-            backward = len(user_set & job_tech) / len(job_tech) if job_tech else 0
+            job_tech   = _extract_tech(f"{job_title} {job_desc}") | job_skills_listed
+            forward    = len(user_set & job_tech) / len(user_set) if user_set else 0
+            backward   = len(user_set & job_tech) / len(job_tech) if job_tech else 0
             role_bonus = 0.12 if any(rk in job_title for rk in role_keywords) else 0
             return round(min((forward * 0.50 + backward * 0.38 + role_bonus) * 100, 100))
 
@@ -297,15 +340,16 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         )
 
         result = {
-            "jobs": scored,
-            "user_skills": deduped_skills,
-            "category": category,
+            "jobs":          scored,
+            "user_skills":   deduped_skills,
+            "category":      category,
             "total_scraped": len(jobs),
-            "cached_at": datetime.utcnow().isoformat(),
+            "cached_at":     datetime.utcnow().isoformat(),
+            "profile_hash":  profile_hash(user),
         }
 
-        cache.set(user_cache_key(user_id), result, ttl=1800)
-        logger.info(f"[scheduler] cached {len(scored)} jobs for user {user_id}")
+        cache.set(user_cache_key(user_id), result, ttl=CACHE_TTL_USER)
+        logger.info(f"[scheduler] cached {len(scored)} jobs for user {user_id} (TTL={CACHE_TTL_USER}s)")
         return result
 
     except Exception as e:
@@ -317,22 +361,28 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
 
 async def run_scheduler():
     """
-    Background loop: sleep until the next :00 or :30 wall-clock minute,
-    then refresh the top-matches cache for every user whose cache has expired.
+    Background loop: sleep until 07:30 Israel time each day, then:
+      1. Clear all shared role-level caches (drushim / linkedin / techmap)
+         so fresh job data is fetched for today.
+      2. Clear every per-user top-matches cache.
+      3. Re-populate all active users under the scrape semaphore.
+
+    Shared role-level caches ensure that users sharing the same target_role
+    only trigger ONE ScraperAPI call per source per day — not one per user.
     """
-    logger.info("[scheduler] started — will refresh at :00 and :30 each hour")
+    logger.info("[scheduler] started — daily refresh at 07:30 Israel time")
+
     while True:
-        # Compute seconds until next :00 or :30
-        now = datetime.utcnow()
-        m, s = now.minute, now.second
-        if m < 30:
-            wait = (30 - m) * 60 - s
-        else:
-            wait = (60 - m) * 60 - s
-        logger.info(f"[scheduler] sleeping {wait}s until next window")
+        wait = seconds_until_daily_refresh()
+        next_run_il = datetime.now(IL_TZ) + timedelta(seconds=wait)
+        logger.info(
+            f"[scheduler] next run in {wait/3600:.1f}h "
+            f"({next_run_il.strftime('%Y-%m-%d %H:%M %Z')})"
+        )
         await asyncio.sleep(wait)
 
-        # Collect all users with a target_role
+        logger.info("[scheduler] 07:30 IL — starting daily cache refresh")
+
         from app.database import SessionLocal
         from app.models import User
         from app.services.cache import get_cache
@@ -346,14 +396,25 @@ async def run_scheduler():
             db.close()
 
         cache = get_cache()
-        stale = [uid for uid in user_ids if cache.get(user_cache_key(uid)) is None]
-        logger.info(f"[scheduler] {len(stale)}/{len(user_ids)} users need refresh")
 
-        for uid in stale:
+        # Clear shared role-level caches so each source is re-scraped fresh today
+        for prefix in ("jobs:drushim:", "jobs:linkedin:", "jobs:techmap:"):
+            deleted = cache.delete_pattern(prefix)
+            logger.info(f"[scheduler] cleared {deleted} '{prefix}' cache entries")
+
+        # Clear per-user top-matches caches
+        for uid in user_ids:
+            cache.delete(user_cache_key(uid))
+        logger.info(f"[scheduler] cleared top-matches cache for {len(user_ids)} users")
+
+        # Re-populate — shared role caches deduplicate scrapes across users
+        logger.info(f"[scheduler] re-populating {len(user_ids)} users...")
+        for uid in user_ids:
             try:
-                # Small random jitter (0–15 s) between users to spread scraping load
-                jitter = random.uniform(0, 15)
+                jitter = random.uniform(0, 30)
                 await asyncio.sleep(jitter)
                 await fetch_and_cache_top_matches(uid)
             except Exception as e:
                 logger.error(f"[scheduler] error refreshing user {uid}: {e}")
+
+        logger.info("[scheduler] daily refresh complete")
