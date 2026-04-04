@@ -674,7 +674,7 @@ def behavior_per_user(
 @router.get("/user-analytics")
 def get_user_analytics(
     db: Session = Depends(get_db),
-    admin: User = Depends(verify_admin_user),
+    _: None = Depends(verify_admin),
 ):
     """
     Aggregated user-behavior analytics.

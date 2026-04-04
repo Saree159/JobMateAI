@@ -1,20 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Clock, TrendingDown, ArrowRight, BarChart2, Navigation, CheckCircle2, TrendingUp } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-function getToken() {
-  return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-}
-
-async function fetchUserAnalytics() {
-  const res = await fetch(`${API_BASE}/api/admin/user-analytics`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch user analytics');
-  return res.json();
-}
+import { adminApi } from '@/api/admin';
 
 function fmtTime(seconds) {
   if (!seconds) return '—';
@@ -53,7 +40,7 @@ function KPI({ label, value, sub, icon: Icon, color = 'text-blue-400' }) {
 export default function UserAnalytics() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-user-analytics'],
-    queryFn: fetchUserAnalytics,
+    queryFn: adminApi.getUserAnalytics,
     refetchInterval: 60_000,
   });
 

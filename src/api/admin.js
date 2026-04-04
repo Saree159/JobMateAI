@@ -17,4 +17,5 @@ export const adminApi = {
     if (search) params.set('search', search);
     return get(`/api/admin/users/detail?${params}`);
   },
+  getUserAnalytics: () => get('/api/admin/user-analytics'),
 };
