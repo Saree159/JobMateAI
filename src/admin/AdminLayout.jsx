@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/lib/AuthContext';
 import logo from '@/assets/logo.png';
 import {
   LayoutDashboard, DollarSign, Users, Cpu, Zap, Activity,
@@ -27,6 +28,7 @@ const navItems = [
 
 export default function AdminLayout({ children }) {
   const location = useLocation();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -100,8 +102,8 @@ export default function AdminLayout({ children }) {
               <span className="text-white font-bold text-xs">A</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">Admin</p>
-              <p className="text-[10px] text-gray-500 truncate">hirematrix.ai@gmail.com</p>
+              <p className="text-xs font-semibold text-white truncate">{user?.full_name || 'Admin'}</p>
+              <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
             </div>
             <Link to="/dashboard" className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors" title="Back to App">
               <LogOut className="w-3.5 h-3.5" />

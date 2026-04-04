@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     admin_api_key: str = "changeme-admin"
 
     # Comma-separated list of admin emails (JWT-based admin access)
-    admin_emails: str = "saree.ali28@gmail.com"
+    admin_emails: str = "hirematrix.ai@gmail.com,saree.ali28@gmail.com"
 
     @property
     def admin_emails_list(self) -> List[str]:

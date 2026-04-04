@@ -44,8 +44,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const ADMIN_EMAILS = ['hirematrix.ai@gmail.com', 'saree.ali28@gmail.com'];
+
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, authError, isAuthenticated } = useAuth();
+  const { isLoadingAuth, authError, isAuthenticated, user } = useAuth();
 
   // Show loading spinner while checking auth
   if (isLoadingAuth) {
@@ -94,21 +96,27 @@ const AuthenticatedApp = () => {
         />
       ))}
       
-      {/* Admin routes */}
-      <Route path="/admin" element={<AdminLayout><AdminOverview /></AdminLayout>} />
-      <Route path="/admin/revenue" element={<AdminLayout><AdminRevenue /></AdminLayout>} />
-      <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
-      <Route path="/admin/user-logs" element={<AdminLayout><AdminUserLogs /></AdminLayout>} />
-      <Route path="/admin/ai-usage" element={<AdminLayout><AdminAIUsage /></AdminLayout>} />
-      <Route path="/admin/token-costs" element={<AdminLayout><AdminTokenCosts /></AdminLayout>} />
-      <Route path="/admin/product" element={<AdminLayout><AdminProduct /></AdminLayout>} />
-      <Route path="/admin/funnel" element={<AdminLayout><AdminFunnel /></AdminLayout>} />
-      <Route path="/admin/retention" element={<AdminLayout><AdminRetention /></AdminLayout>} />
-      <Route path="/admin/marketing" element={<AdminLayout><AdminMarketing /></AdminLayout>} />
-      <Route path="/admin/infra" element={<AdminLayout><AdminInfra /></AdminLayout>} />
-      <Route path="/admin/alerts" element={<AdminLayout><AdminAlerts /></AdminLayout>} />
-      <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
-      <Route path="/admin/behavior" element={<AdminLayout><AdminBehavior /></AdminLayout>} />
+      {/* Admin routes — restricted to admin emails */}
+      {(() => {
+        const isAdmin = isAuthenticated && ADMIN_EMAILS.includes(user?.email?.toLowerCase());
+        const adminEl = (el) => isAdmin ? el : <Navigate to={isAuthenticated ? "/" : "/login"} replace />;
+        return <>
+          <Route path="/admin" element={adminEl(<AdminLayout><AdminOverview /></AdminLayout>)} />
+          <Route path="/admin/revenue" element={adminEl(<AdminLayout><AdminRevenue /></AdminLayout>)} />
+          <Route path="/admin/users" element={adminEl(<AdminLayout><AdminUsers /></AdminLayout>)} />
+          <Route path="/admin/user-logs" element={adminEl(<AdminLayout><AdminUserLogs /></AdminLayout>)} />
+          <Route path="/admin/ai-usage" element={adminEl(<AdminLayout><AdminAIUsage /></AdminLayout>)} />
+          <Route path="/admin/token-costs" element={adminEl(<AdminLayout><AdminTokenCosts /></AdminLayout>)} />
+          <Route path="/admin/product" element={adminEl(<AdminLayout><AdminProduct /></AdminLayout>)} />
+          <Route path="/admin/funnel" element={adminEl(<AdminLayout><AdminFunnel /></AdminLayout>)} />
+          <Route path="/admin/retention" element={adminEl(<AdminLayout><AdminRetention /></AdminLayout>)} />
+          <Route path="/admin/marketing" element={adminEl(<AdminLayout><AdminMarketing /></AdminLayout>)} />
+          <Route path="/admin/infra" element={adminEl(<AdminLayout><AdminInfra /></AdminLayout>)} />
+          <Route path="/admin/alerts" element={adminEl(<AdminLayout><AdminAlerts /></AdminLayout>)} />
+          <Route path="/admin/settings" element={adminEl(<AdminLayout><AdminSettings /></AdminLayout>)} />
+          <Route path="/admin/behavior" element={adminEl(<AdminLayout><AdminBehavior /></AdminLayout>)} />
+        </>;
+      })()}
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
