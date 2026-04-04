@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Clock, TrendingDown, ArrowRight, BarChart2, Navigation } from 'lucide-react';
+import { Users, Clock, TrendingDown, ArrowRight, BarChart2, Navigation, CheckCircle2, TrendingUp } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -209,6 +209,66 @@ export default function UserAnalytics() {
           </div>
         )}
       </section>
+
+      {/* ── Signup Trend ── */}
+      {data?.signups_by_day?.length > 0 && (
+        <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-blue-400" />
+            Daily Signups — Last 30 Days
+          </h3>
+          <div className="flex items-end gap-1 h-20">
+            {(() => {
+              const days = data.signups_by_day;
+              const max = Math.max(...days.map(d => d.count), 1);
+              return days.map((d) => (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                  <div
+                    className="w-full bg-blue-500/70 hover:bg-blue-400 rounded-sm transition-all cursor-default"
+                    style={{ height: `${Math.max(4, Math.round((d.count / max) * 72))}px` }}
+                  />
+                  {d.count > 0 && (
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-white bg-gray-800 px-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                      {d.date.slice(5)}: {d.count}
+                    </span>
+                  )}
+                </div>
+              ));
+            })()}
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-600 mt-1">
+            <span>{data.signups_by_day[0]?.date?.slice(5)}</span>
+            <span>{data.signups_by_day[data.signups_by_day.length - 1]?.date?.slice(5)}</span>
+          </div>
+        </section>
+      )}
+
+      {/* ── Profile Completion ── */}
+      {data?.profile_completion && (
+        <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            Post-Registration Profile Completion
+          </h3>
+          <div className="space-y-2.5">
+            {[
+              { label: 'Set target role', value: data.profile_completion.with_role },
+              { label: 'Added skills', value: data.profile_completion.with_skills },
+              { label: 'Uploaded resume', value: data.profile_completion.with_resume },
+            ].map(({ label, value }) => {
+              const total = data.profile_completion.total_users;
+              const p = total > 0 ? Math.round((value / total) * 100) : 0;
+              return (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-300 w-36 shrink-0">{label}</span>
+                  <Bar value={value} max={total} color="bg-emerald-500" />
+                  <span className="text-sm text-white font-medium w-10 text-right">{p}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Navigation Flows ── */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6">

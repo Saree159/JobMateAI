@@ -677,14 +677,13 @@ def get_user_analytics(
     admin: User = Depends(verify_admin_user),
 ):
     """
-    Aggregated user-behavior analytics focused on:
-    1. Registration funnel (start → complete + drop-off steps)
-    2. Average time to complete registration
-    3. First page visited after registration
-    4. Average time spent per page/section
-    5. Top navigation flow sequences
+    Aggregated user-behavior analytics.
+    Uses a mix of new event tracking + historical data already in the DB.
     """
+    now = datetime.utcnow()
+
     # ── Registration Funnel ───────────────────────────────────────────────
+    # New tracking events (fires from Register.jsx after latest deploy)
     funnel_steps = [
         ("registration_start",           "Visited Register"),
         ("registration_field_email",     "Filled Email"),
@@ -699,13 +698,14 @@ def get_user_analytics(
         ).scalar() or 0
         funnel.append({"event": event_name, "label": label, "count": count})
 
-    # Total registered users as authoritative "completed" count
+    # Total registered users is always the authoritative "completed" count
     total_users = db.query(func.count(User.id)).scalar() or 0
-    # Override funnel completed count with real user count if tracking not yet live
-    if funnel[-1]["count"] == 0 and total_users > 0:
-        funnel[-1]["count"] = total_users
+    funnel[-1]["count"] = total_users  # always use real user count for "Completed"
+    # If new tracking not yet live, use total_users as proxy for start too
+    if funnel[0]["count"] == 0:
+        funnel[0]["count"] = total_users
 
-    # ── Average registration duration ─────────────────────────────────────
+    # ── Average registration duration (from new tracking) ─────────────────
     complete_events = db.query(UserEvent).filter(
         UserEvent.event == "registration_complete",
         UserEvent.properties.isnot(None),
@@ -721,7 +721,35 @@ def get_user_analytics(
             pass
     avg_registration_seconds = round(sum(durations) / len(durations)) if durations else None
 
+    # ── Signup trend — last 30 days from User table (historical) ──────────
+    cutoff_30 = now - timedelta(days=30)
+    signup_rows = (
+        db.query(
+            func.date(User.created_at).label("day"),
+            func.count(User.id).label("count"),
+        )
+        .filter(User.created_at >= cutoff_30)
+        .group_by(func.date(User.created_at))
+        .order_by(func.date(User.created_at))
+        .all()
+    )
+    signups_by_day = [
+        {"date": str(r.day), "count": r.count} for r in signup_rows
+    ]
+
+    # ── Profile completion after registration (from User table) ───────────
+    with_role = db.query(func.count(User.id)).filter(User.target_role.isnot(None), User.target_role != "").scalar() or 0
+    with_skills = db.query(func.count(User.id)).filter(User.skills.isnot(None), User.skills != "").scalar() or 0
+    with_resume = db.query(func.count(User.id)).filter(User.resume_content.isnot(None)).scalar() or 0
+    profile_completion = {
+        "total_users": total_users,
+        "with_role": with_role,
+        "with_skills": with_skills,
+        "with_resume": with_resume,
+    }
+
     # ── First page after registration ─────────────────────────────────────
+    # Primary: match registration_complete session → next page_view
     complete_sessions = db.query(UserEvent.session_id, UserEvent.created_at).filter(
         UserEvent.event == "registration_complete",
         UserEvent.session_id.isnot(None),
@@ -740,19 +768,39 @@ def get_user_analytics(
         )
         if first_pv:
             first_page_counts[first_pv.page] += 1
-    # Fall back: look at first page_view per user (first session after signup)
+
+    # Historical fallback: first page_view event per user ever recorded
     if not first_page_counts:
-        rows = (
+        # Subquery: earliest page_view created_at per user
+        first_pv_subq = (
+            db.query(
+                UserEvent.user_id,
+                func.min(UserEvent.created_at).label("min_at"),
+            )
+            .filter(
+                UserEvent.event == "page_view",
+                UserEvent.user_id.isnot(None),
+            )
+            .group_by(UserEvent.user_id)
+            .subquery()
+        )
+        first_pv_rows = (
             db.query(UserEvent.page, func.count(UserEvent.id).label("c"))
+            .join(
+                first_pv_subq,
+                (UserEvent.user_id == first_pv_subq.c.user_id)
+                & (UserEvent.created_at == first_pv_subq.c.min_at),
+            )
             .filter(UserEvent.event == "page_view")
             .group_by(UserEvent.page)
             .order_by(func.count(UserEvent.id).desc())
             .limit(8)
             .all()
         )
-        first_page_counts = {r.page: r.c for r in rows}
+        first_page_counts = {r.page: r.c for r in first_pv_rows}
 
     # ── Average time per page ─────────────────────────────────────────────
+    # Primary: explicit page_time events (new tracking)
     page_time_events = db.query(UserEvent).filter(
         UserEvent.event == "page_time",
         UserEvent.properties.isnot(None),
@@ -766,20 +814,38 @@ def get_user_analytics(
                 page_buckets[ev.page].append(secs)
         except Exception:
             pass
+
+    # Historical fallback: infer from time between consecutive page_view events
+    if not page_buckets:
+        all_pv = (
+            db.query(UserEvent)
+            .filter(
+                UserEvent.event == "page_view",
+                UserEvent.session_id.isnot(None),
+            )
+            .order_by(UserEvent.session_id, UserEvent.created_at)
+            .all()
+        )
+        for i in range(len(all_pv) - 1):
+            curr, nxt = all_pv[i], all_pv[i + 1]
+            if curr.session_id == nxt.session_id:
+                delta = (nxt.created_at - curr.created_at).total_seconds()
+                if 5 < delta < 600:  # 5 s–10 min window to filter noise
+                    page_buckets[curr.page].append(delta)
+
     avg_time_per_page = {
         page: round(sum(times) / len(times))
         for page, times in page_buckets.items()
-        if times
+        if len(times) >= 2  # need at least 2 data points
     }
 
     # ── Top navigation flows ──────────────────────────────────────────────
-    cutoff = datetime.utcnow() - timedelta(days=30)
     pv_events = (
         db.query(UserEvent)
         .filter(
             UserEvent.event == "page_view",
             UserEvent.session_id.isnot(None),
-            UserEvent.created_at >= cutoff,
+            UserEvent.created_at >= cutoff_30,
         )
         .order_by(UserEvent.session_id, UserEvent.created_at)
         .all()
@@ -787,7 +853,7 @@ def get_user_analytics(
     session_pages: dict = defaultdict(list)
     for ev in pv_events:
         pages = session_pages[ev.session_id]
-        if not pages or pages[-1] != ev.page:  # deduplicate consecutive same-page
+        if not pages or pages[-1] != ev.page:
             pages.append(ev.page)
 
     sequence_counts: dict = defaultdict(int)
@@ -801,6 +867,8 @@ def get_user_analytics(
         "funnel": funnel,
         "total_users": total_users,
         "avg_registration_seconds": avg_registration_seconds,
+        "signups_by_day": signups_by_day,
+        "profile_completion": profile_completion,
         "first_page_after_registration": dict(
             sorted(first_page_counts.items(), key=lambda x: x[1], reverse=True)[:8]
         ),
