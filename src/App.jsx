@@ -44,7 +44,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const ADMIN_EMAILS = ['hirematrix.ai@gmail.com', 'saree.ali28@gmail.com'];
+const ADMIN_EMAILS = ['hirematrix.ai@gmail.com', 'saree.ali28@gmail.com', 'faizkh14@gmail.com'];
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, isAuthenticated, user } = useAuth();
