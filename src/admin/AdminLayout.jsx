@@ -102,35 +102,20 @@ export default function AdminLayout({ children }) {
         )}
         {collapsed && <div className="border-t border-white/10 my-2" />}
 
-        {/* Legacy pages */}
-        <div className="space-y-0.5 opacity-50">
-          {legacyNav.map(({ label, path, icon: Icon, badge }) => {
-            const active = isActive(path);
-            return (
-              <Link
-                key={path}
-                to={path}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 group relative ${
-                  active
-                    ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                    : 'text-gray-400 hover:bg-white/8 hover:text-white'
-                }`}
-                title={collapsed ? label : ''}
-              >
-                <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
-                {!collapsed && <span className="text-xs">{label}</span>}
-                {!collapsed && badge && (
-                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                    {badge}
-                  </span>
-                )}
-                {collapsed && badge && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </Link>
-            );
-          })}
+        {/* Legacy pages — disabled */}
+        <div className="space-y-0.5 opacity-40 pointer-events-none select-none">
+          {legacyNav.map(({ label, path, icon: Icon, badge }) => (
+            <div
+              key={path}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-500 relative"
+            >
+              <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
+              {!collapsed && <span className="text-xs">{label}</span>}
+              {collapsed && badge && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500/50 rounded-full" />
+              )}
+            </div>
+          ))}
         </div>
       </nav>
 
