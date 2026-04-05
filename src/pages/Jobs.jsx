@@ -190,6 +190,7 @@ export default function Jobs() {
       job_type: job.job_type || "",
       status: "interesting",
       source: job.source || "other",
+      match_score: job.match_score ?? null,
     }),
     onSuccess: (saved, job) => {
       setSavedUrls((prev) => new Set([...prev, job.url]));
