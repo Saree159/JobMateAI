@@ -1,7 +1,6 @@
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import Jobs from './pages/Jobs';
-import Applications from './pages/Applications';
 import Profile from './pages/Profile';
 import JobDetails from './pages/JobDetails';
 import Pricing from './pages/Pricing';
@@ -15,7 +14,6 @@ export const PAGES = {
     "dashboard": Dashboard,
     "onboarding": Onboarding,
     "jobs": Jobs,
-    "applications": Applications,
     "analytics": Analytics,
     "profile": Profile,
     "jobdetails": JobDetails,

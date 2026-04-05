@@ -21,7 +21,6 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { title: t('nav.dashboard'),    url: createPageUrl("Dashboard"),    icon: LayoutDashboard },
     { title: t('nav.jobs'),         url: createPageUrl("Jobs"),         icon: Briefcase       },
-    { title: t('nav.applications'), url: createPageUrl("Applications"), icon: FileText        },
     { title: t('nav.analytics'),    url: createPageUrl("Analytics"),    icon: BarChart3       },
     { title: t('nav.profile'),      url: createPageUrl("Profile"),      icon: User            },
     { title: t('nav.pricing'),      url: createPageUrl("Pricing"),      icon: CreditCard      },

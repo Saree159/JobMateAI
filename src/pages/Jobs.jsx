@@ -188,13 +188,13 @@ export default function Jobs() {
       description: job.description || "",
       url: job.url || "",
       job_type: job.job_type || "",
-      status: "saved",
+      status: "interesting",
       source: job.source || "other",
     }),
     onSuccess: (saved, job) => {
       setSavedUrls((prev) => new Set([...prev, job.url]));
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      toast.success(`"${saved.title}" saved to your applications`);
+      toast.success(`"${saved.title}" added to Saved Jobs`);
     },
     onError: () => toast.error("Failed to save job"),
   });
@@ -247,7 +247,7 @@ export default function Jobs() {
           <p className="text-sm text-gray-500 mt-1">
             {tab === "discover"
               ? `${filteredDiscoverJobs.length} jobs from LinkedIn · Drushim · TechMap, ranked by match`
-              : `${filteredMyJobs.length} tracked applications`}
+              : `${filteredMyJobs.length} saved jobs`}
           </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700 shrink-0">
@@ -272,8 +272,8 @@ export default function Jobs() {
             tab === "my" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Briefcase className="w-3.5 h-3.5 inline mr-1.5" />
-          My Applications
+          <Bookmark className="w-3.5 h-3.5 inline mr-1.5" />
+          Saved Jobs
         </button>
       </div>
 
@@ -411,12 +411,12 @@ export default function Jobs() {
             <Card className="border border-gray-100">
               <CardContent className="text-center py-20">
                 <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-500 mb-2">{t("jobs.noJobsYet")}</h3>
+                <h3 className="text-xl font-semibold text-gray-500 mb-2">No saved jobs yet</h3>
                 <p className="text-gray-500 mb-6">
-                  {searchQuery || filters.location ? t("jobs.adjustFilters") : t("jobs.startAdding")}
+                  {searchQuery || filters.location ? t("jobs.adjustFilters") : "Save interesting jobs from Discover to find them here."}
                 </p>
-                <Button variant="outline" onClick={() => setShowAddDialog(true)}>
-                  <Plus className="w-4 h-4 mr-2" /> {t("jobs.addFirstJob")}
+                <Button variant="outline" onClick={() => setTab("discover")}>
+                  <Zap className="w-4 h-4 mr-2" /> Browse Jobs
                 </Button>
               </CardContent>
             </Card>
