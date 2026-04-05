@@ -787,9 +787,11 @@ class LinkedInJobSearchScraper(JobScraper):
         proxy = self._get_proxy()
         jobs: List[Dict] = []
         offset = start
+        max_pages = 6  # cap at 6 requests regardless of limit
 
         try:
-            while len(jobs) < limit:
+            pages_fetched = 0
+            while len(jobs) < limit and pages_fetched < max_pages:
                 raw_search_url = self._SEARCH_URL.format(
                     keywords=quote_plus(role),
                     location=quote_plus(location),
@@ -821,10 +823,8 @@ class LinkedInJobSearchScraper(JobScraper):
                         break  # LinkedIn has no more results
 
                     jobs.extend(page_jobs)
-                    offset += self.PAGE_SIZE
-
-                    if len(page_jobs) < self.PAGE_SIZE:
-                        break  # last page — fewer results than requested
+                    offset += len(page_jobs)  # advance by actual returned count, not PAGE_SIZE
+                    pages_fetched += 1
 
             jobs = jobs[:limit]
 
