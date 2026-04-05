@@ -433,7 +433,7 @@ export const analyticsApi = {
 
 export const waitlistApi = {
   join: (email, fullName) =>
-    apiRequest('/api/waitlist', {
+    apiRequest('/api/users/waitlist', {
       method: 'POST',
       body: JSON.stringify({ email, full_name: fullName }),
     }),
