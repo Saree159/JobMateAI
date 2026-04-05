@@ -103,6 +103,7 @@ export default function AdminWaitlist() {
                       <td className="px-4 py-3 text-blue-400">{e.email}</td>
                       <td className="px-4 py-3 text-gray-400">
                         {new Date(e.joined_at).toLocaleDateString("en-GB", {
+                          timeZone: "Asia/Jerusalem",
                           day: "2-digit", month: "short", year: "numeric",
                           hour: "2-digit", minute: "2-digit",
                         })}

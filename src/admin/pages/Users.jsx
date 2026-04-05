@@ -170,7 +170,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3.5 text-right text-gray-300">{u.skills_count}</td>
                     <td className="px-5 py-3.5 text-right text-gray-500 text-xs">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }) : '—'}
                     </td>
                   </tr>
                 ))}

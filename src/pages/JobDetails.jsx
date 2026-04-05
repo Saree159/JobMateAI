@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDateIL } from '@/utils/dateIL';
 import { useAuth } from "@/lib/AuthContext";
 import { jobApi, resumeApi } from "@/api/jobmate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1011,7 +1012,7 @@ export default function JobDetails() {
                 {job?.created_at && (
                   <div>
                     <p className="text-xs text-gray-400 mb-1">{jd.added}</p>
-                    <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
+                    <p className="font-medium text-sm">{formatDateIL(job.created_at)}</p>
                   </div>
                 )}
                 <div className="space-y-1">

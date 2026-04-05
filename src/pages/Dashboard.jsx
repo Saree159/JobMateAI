@@ -20,9 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentActivity from "../components/dashboard/RecentActivity";
 
+import { hoursIL } from '@/utils/dateIL';
+
 // Derive a time-aware greeting without needing an i18n key
 function getGreeting(firstName) {
-  const h = new Date().getHours();
+  const h = hoursIL();
   const salutation =
     h < 12 ? "Good morning" :
     h < 17 ? "Good afternoon" :

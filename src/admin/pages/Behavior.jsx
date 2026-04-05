@@ -169,7 +169,7 @@ export default function Behavior() {
                     <td className="py-2 text-gray-300 truncate max-w-[180px]">{u.email || `#${u.user_id}`}</td>
                     <td className="py-2 text-right text-blue-400 font-semibold">{u.event_count}</td>
                     <td className="py-2 text-right text-gray-500">
-                      {u.last_seen ? new Date(u.last_seen).toLocaleDateString() : '—'}
+                      {u.last_seen ? new Date(u.last_seen).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }) : '—'}
                     </td>
                   </tr>
                 ))}
@@ -191,7 +191,7 @@ export default function Behavior() {
                 <span className="text-gray-400 truncate">{ev.user_email || 'anon'}</span>
                 {ev.page && <span className="text-gray-600 text-[10px] shrink-0">/{ev.page}</span>}
                 <span className="text-gray-600 ml-auto shrink-0 tabular-nums">
-                  {new Date(ev.created_at).toLocaleTimeString()}
+                  {new Date(ev.created_at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             ))}

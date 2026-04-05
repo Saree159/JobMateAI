@@ -38,9 +38,11 @@ const EVENT_COLOR = {
   page_time:      'bg-gray-500/20 text-gray-400',
 };
 
+import { formatDateTimeIL, formatDateIL, formatTimeIL, agoIL } from '@/utils/dateIL';
+
 function fmtTime2(dt) {
   if (!dt) return '—';
-  return new Date(dt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(dt).toLocaleString('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function ActivityTab({ userId }) {
@@ -138,21 +140,9 @@ const FEATURE_LABEL = {
   match_score: 'Match Score',
 };
 
-function fmt(dt) {
-  if (!dt) return '—';
-  return new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function fmtTime(dt) {
-  if (!dt) return '—';
-  return new Date(dt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-function ago(dt) {
-  if (!dt) return '—';
-  const diff = (Date.now() - new Date(dt)) / 1000;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
+function fmt(dt)     { return formatDateIL(dt, { day: '2-digit', month: 'short', year: 'numeric' }) || '—'; }
+function fmtTime(dt) { return formatDateTimeIL(dt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) || '—'; }
+function ago(dt)     { return agoIL(dt) || '—'; }
 
 function Pill({ children, color = 'gray' }) {
   const styles = {

@@ -40,19 +40,14 @@ const STATUS_ICON = {
   skipped: '—',
 };
 
+import { formatDateTimeIL, agoIL } from '@/utils/dateIL';
+
 function fmtDt(dt) {
   if (!dt) return '—';
-  return new Date(dt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(dt).toLocaleString('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-function ago(dt) {
-  if (!dt) return 'Never';
-  const diff = (Date.now() - new Date(dt)) / 1000;
-  if (diff < 60) return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
+function ago(dt) { return agoIL(dt) || 'Never'; }
 
 function pad(n) { return String(n).padStart(2, '0'); }
 

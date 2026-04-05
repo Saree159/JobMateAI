@@ -423,7 +423,7 @@ export default function Profile() {
             </div>
             {isPro && user.subscription_end_date && (
               <p className="text-xs text-gray-500">
-                Renews on {new Date(user.subscription_end_date).toLocaleDateString()}
+                Renews on {new Date(user.subscription_end_date).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' })}
               </p>
             )}
           </CardContent>
