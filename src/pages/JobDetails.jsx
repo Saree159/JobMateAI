@@ -185,7 +185,7 @@ export default function JobDetails() {
   const { data: usageData } = useQuery({
     queryKey: ['usage-today'],
     queryFn: usageApi.getToday,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const FREE_LIMIT = 5;

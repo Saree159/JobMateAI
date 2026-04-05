@@ -89,33 +89,56 @@ async def get_current_user(
 FREE_DAILY_LIMIT = 5
 
 
+def _quota_increment(db: Session, user_id: int, feature: str) -> int:
+    """
+    Atomically increment today's usage count for (user_id, feature).
+    Returns the NEW count after incrementing.
+    Uses an upsert pattern that works on both SQLite and PostgreSQL.
+    """
+    from datetime import date as _date
+    from app.models import UsageQuota
+    today = _date.today().isoformat()
+    row = (
+        db.query(UsageQuota)
+        .filter(
+            UsageQuota.user_id == user_id,
+            UsageQuota.feature == feature,
+            UsageQuota.date == today,
+        )
+        .with_for_update()
+        .first()
+    )
+    if row:
+        row.count += 1
+    else:
+        row = UsageQuota(user_id=user_id, feature=feature, date=today, count=1)
+        db.add(row)
+    db.commit()
+    return row.count
+
+
 def make_usage_gate(feature: str):
     """
-    FastAPI dependency factory — enforces a daily per-feature usage cap for
-    free-tier users (FREE_DAILY_LIMIT uses/day).  Pro users are unlimited.
-    Uses the cache with key  usage:{user_id}:{feature}:{YYYY-MM-DD}.
+    FastAPI dependency factory.
+    Free users: enforces FREE_DAILY_LIMIT uses/day tracked in the DB.
+    Pro users: unlimited.
+    Increments the counter BEFORE calling the AI endpoint so partial failures
+    still count (prevents abuse via repeated retries).
     """
-    async def _check(current_user: User = Depends(get_current_user)) -> User:
+    async def _check(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
         if getattr(current_user, "subscription_tier", "free") == "pro":
             return current_user
-        from datetime import date as _date
-        from app.services.cache import get_cache
-        cache = get_cache()
-        today = _date.today().isoformat()
-        key = f"usage:{current_user.id}:{feature}:{today}"
-        count = cache.get(key) or 0
-        if count >= FREE_DAILY_LIMIT:
+        new_count = _quota_increment(db, current_user.id, feature)
+        if new_count > FREE_DAILY_LIMIT:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"daily_limit_reached:{feature}",
             )
-        cache.set(key, count + 1, ttl=86400 * 2)  # 48 h TTL
         return current_user
     return _check
-
-
-# Named aliases so importers don't need to call the factory directly
-require_pro = make_usage_gate   # kept for backward-compat import name
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -432,21 +455,29 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/users/me/usage-today")
 async def get_usage_today(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Return today's AI feature usage counts for the calling user."""
+    """Return today's AI feature usage counts for the calling user (DB-backed)."""
     from datetime import date
-    from app.services.cache import get_cache
-    cache = get_cache()
+    from app.models import UsageQuota
     today = date.today().isoformat()
     features = ["cover_letter", "interview_questions", "salary_estimate", "resume_gaps", "resume_rewrite"]
-    result = {}
-    for f in features:
-        key = f"usage:{current_user.id}:{f}:{today}"
-        result[f] = cache.get(key) or 0
+    rows = (
+        db.query(UsageQuota)
+        .filter(
+            UsageQuota.user_id == current_user.id,
+            UsageQuota.date == today,
+            UsageQuota.feature.in_(features),
+        )
+        .all()
+    )
+    usage = {f: 0 for f in features}
+    for row in rows:
+        usage[row.feature] = row.count
     return {
         "tier": current_user.subscription_tier,
         "limit": None if current_user.subscription_tier == "pro" else FREE_DAILY_LIMIT,
-        "usage": result,
+        "usage": usage,
     }
 
 

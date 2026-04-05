@@ -409,3 +409,23 @@ class WaitlistEntry(Base):
     full_name  = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+
+class UsageQuota(Base):
+    """
+    Tracks per-user, per-feature, per-day AI usage for quota enforcement.
+    One row per (user_id, feature, date).  count is incremented atomically.
+    """
+    __tablename__ = "usage_quota"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    feature    = Column(String(50), nullable=False, index=True)
+    date       = Column(String(10), nullable=False, index=True)   # YYYY-MM-DD (UTC)
+    count      = Column(Integer, nullable=False, default=0)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        __import__("sqlalchemy").UniqueConstraint("user_id", "feature", "date", name="uq_quota_user_feature_date"),
+    )
+
