@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '@/api/admin';
 import {
-  RefreshCw, Play, PlayCircle, Clock, CheckCircle2,
-  XCircle, Zap, AlertTriangle, Settings,
+  RefreshCw, Play, Clock, CheckCircle2,
+  XCircle, Zap, AlertTriangle, Settings, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
 const SOURCE_META = {
@@ -26,6 +26,25 @@ const SOURCE_META = {
   },
 };
 
+const STATUS_STYLE = {
+  success: 'text-emerald-400',
+  error:   'text-red-400',
+  running: 'text-amber-400 animate-pulse',
+  skipped: 'text-gray-500',
+};
+
+const STATUS_ICON = {
+  success: '✓',
+  error:   '✗',
+  running: '⟳',
+  skipped: '—',
+};
+
+function fmtDt(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 function ago(dt) {
   if (!dt) return 'Never';
   const diff = (Date.now() - new Date(dt)) / 1000;
@@ -36,6 +55,73 @@ function ago(dt) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+function LogRow({ log }) {
+  return (
+    <div className="flex items-start gap-2 py-1.5 border-b border-white/5 text-xs last:border-0">
+      <span className={`shrink-0 w-12 font-medium ${STATUS_STYLE[log.status] || 'text-gray-400'}`}>
+        {STATUS_ICON[log.status]} {log.status}
+      </span>
+      <span className="text-gray-500 shrink-0 w-32 tabular-nums">{fmtDt(log.started_at)}</span>
+      <span className="text-gray-400 shrink-0">
+        {log.job_count != null ? `${log.job_count} jobs` : '—'}
+        {log.duration_s != null && <span className="text-gray-600 ml-1">{log.duration_s}s</span>}
+      </span>
+      <span className="text-gray-600 shrink-0 ml-1">{log.trigger === 'manual' ? '🖱 manual' : '⏰ scheduler'}</span>
+      {log.error_msg && (
+        <span className="text-red-400 truncate ml-1" title={log.error_msg}>{log.error_msg.slice(0, 80)}</span>
+      )}
+    </div>
+  );
+}
+
+function LogsPanel({ source }) {
+  const [open, setOpen] = useState(false);
+  const [logs, setLogs] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  function load() {
+    setLoading(true);
+    adminApi.getSourceLogs(source)
+      .then(setLogs)
+      .catch(() => setLogs([]))
+      .finally(() => setLoading(false));
+  }
+
+  function toggle() {
+    if (!open && logs === null) load();
+    setOpen(o => !o);
+  }
+
+  return (
+    <div>
+      <button
+        onClick={toggle}
+        className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+      >
+        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        Fetch logs
+        {logs !== null && <span className="text-gray-600">({logs.length})</span>}
+      </button>
+      {open && (
+        <div className="mt-2 bg-black/20 rounded-xl p-3 max-h-48 overflow-auto">
+          {loading ? (
+            <p className="text-xs text-gray-600 text-center py-4">Loading…</p>
+          ) : logs?.length === 0 ? (
+            <p className="text-xs text-gray-600 italic text-center py-4">No fetch history yet for this source.</p>
+          ) : (
+            logs?.map(log => <LogRow key={log.id} log={log} />)
+          )}
+          {!loading && logs?.length > 0 && (
+            <button onClick={load} className="mt-2 text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1">
+              <RefreshCw className="w-2.5 h-2.5" /> Refresh
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Toggle({ checked, onChange, disabled }) {
   return (
@@ -218,6 +304,80 @@ function SourceCard({ source, onUpdate }) {
           <span className="text-xs text-red-400">Failed</span>
         )}
       </div>
+
+      {/* Fetch logs */}
+      <LogsPanel source={source.source} />
+    </div>
+  );
+}
+
+function GlobalLogFeed() {
+  const [logs, setLogs] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  function load() {
+    setLoading(true);
+    adminApi.getAllSourceLogs(100)
+      .then(setLogs)
+      .catch(() => setLogs([]))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, []);
+
+  return (
+    <div className="bg-white/3 border border-white/5 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm font-semibold text-white">All Fetch Logs</p>
+          <p className="text-xs text-gray-500 mt-0.5">Complete history across all sources — newest first</p>
+        </div>
+        <button
+          onClick={load}
+          className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+      ) : logs?.length === 0 ? (
+        <p className="text-xs text-gray-600 italic text-center py-8">
+          No fetch history yet. Logs appear after the first scheduled or manual fetch runs.
+        </p>
+      ) : (
+        <div className="overflow-auto max-h-80">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-1 mb-1 border-b border-white/5 text-[10px] text-gray-600 uppercase tracking-wider">
+            <span className="w-12">Status</span>
+            <span className="w-6">Src</span>
+            <span className="w-32">Time</span>
+            <span>Jobs · Duration · Trigger</span>
+          </div>
+          {logs.map(log => (
+            <div key={log.id} className="flex items-start gap-2 py-1.5 border-b border-white/5 text-xs last:border-0">
+              <span className={`shrink-0 w-12 font-medium ${STATUS_STYLE[log.status] || 'text-gray-400'}`}>
+                {STATUS_ICON[log.status]} {log.status}
+              </span>
+              <span className={`shrink-0 w-6 font-medium ${SOURCE_META[log.source]?.color?.split(' ')[2] || 'text-gray-400'}`}>
+                {log.source.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="text-gray-500 shrink-0 w-32 tabular-nums">{fmtDt(log.started_at)}</span>
+              <span className="text-gray-400">
+                {log.job_count != null ? `${log.job_count} jobs` : '—'}
+                {log.duration_s != null && <span className="text-gray-600 ml-1">{log.duration_s}s</span>}
+                <span className="text-gray-600 ml-1">{log.trigger === 'manual' ? '🖱' : '⏰'}</span>
+              </span>
+              {log.error_msg && (
+                <span className="text-red-400 truncate ml-1" title={log.error_msg}>{log.error_msg.slice(0, 60)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -312,6 +472,9 @@ export default function Sources() {
           ))}
         </div>
       )}
+
+      {/* Global log feed */}
+      <GlobalLogFeed />
     </div>
   );
 }

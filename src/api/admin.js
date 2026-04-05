@@ -44,6 +44,8 @@ export const adminApi = {
   },
   triggerSource: (source) => post(`/api/admin/sources/${source}/trigger`),
   triggerAllSources: () => post('/api/admin/sources/trigger-all'),
+  getSourceLogs: (source, limit = 50) => get(`/api/admin/sources/${source}/logs?limit=${limit}`),
+  getAllSourceLogs: (limit = 100) => get(`/api/admin/sources/logs/all?limit=${limit}`),
   getBehaviorSummary: (days = 30) => get(`/api/admin/behavior/summary?days=${days}`),
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),

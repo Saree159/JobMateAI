@@ -12,7 +12,9 @@ from typing import Optional
 
 import json as _json
 from app.database import get_db
-from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent, SourceConfig
+from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent, SourceConfig, FetchLog
+import logging
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from app.config import settings
 from app.routers.users import get_current_user
@@ -1095,8 +1097,20 @@ def update_source(
     row = db.query(SourceConfig).filter(SourceConfig.source == source).first()
     if not row:
         raise HTTPException(status_code=404, detail=f"Source '{source}' not found")
+    was_enabled = row.enabled
     if body.enabled is not None:
         row.enabled = body.enabled
+        # When disabling a source, immediately clear its cache AND all per-user caches
+        # so users stop seeing jobs from the disabled source right away.
+        if was_enabled and not body.enabled:
+            from app.services.cache import get_cache
+            from app.services.scrape_scheduler import user_cache_key
+            cache = get_cache()
+            cleared_role = cache.delete_pattern(f"jobs:{source}:")
+            user_ids = [u.id for u in db.query(User.id).all()]
+            for uid in user_ids:
+                cache.delete(user_cache_key(uid))
+            logger.info(f"[admin] disabled {source} — cleared {cleared_role} role caches + {len(user_ids)} user caches")
     if body.schedule_hour is not None:
         if not (0 <= body.schedule_hour <= 23):
             raise HTTPException(status_code=422, detail="schedule_hour must be 0-23")
@@ -1164,3 +1178,65 @@ async def trigger_all_sources(
         "user_caches_cleared": len(user_ids),
         "message": "All caches cleared. Jobs will be re-fetched on next user request.",
     }
+
+
+@router.get("/sources/{source}/logs")
+def get_source_logs(
+    source: str,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Return recent fetch logs for a source, newest first."""
+    rows = (
+        db.query(FetchLog)
+        .filter(FetchLog.source == source)
+        .order_by(FetchLog.started_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id":          r.id,
+            "source":      r.source,
+            "started_at":  r.started_at.isoformat() if r.started_at else None,
+            "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+            "duration_s":  round((r.finished_at - r.started_at).total_seconds(), 1)
+                           if r.finished_at and r.started_at else None,
+            "status":      r.status,
+            "job_count":   r.job_count,
+            "error_msg":   r.error_msg,
+            "trigger":     r.trigger,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/sources/logs/all")
+def get_all_logs(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Return recent fetch logs across all sources, newest first."""
+    rows = (
+        db.query(FetchLog)
+        .order_by(FetchLog.started_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id":          r.id,
+            "source":      r.source,
+            "started_at":  r.started_at.isoformat() if r.started_at else None,
+            "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+            "duration_s":  round((r.finished_at - r.started_at).total_seconds(), 1)
+                           if r.finished_at and r.started_at else None,
+            "status":      r.status,
+            "job_count":   r.job_count,
+            "error_msg":   r.error_msg,
+            "trigger":     r.trigger,
+        }
+        for r in rows
+    ]

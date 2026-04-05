@@ -116,6 +116,40 @@ def _run_migrations():
         # Seed default source rows (LinkedIn enabled, Drushim + TechMap disabled)
         _seed_source_configs(conn, is_sqlite)
 
+        # ── fetch_logs table ──────────────────────────────────────────────────
+        try:
+            if is_sqlite:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS fetch_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source VARCHAR(50) NOT NULL,
+                        started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        finished_at DATETIME,
+                        status VARCHAR(20) NOT NULL DEFAULT 'running',
+                        job_count INTEGER,
+                        error_msg TEXT,
+                        trigger VARCHAR(20) NOT NULL DEFAULT 'scheduler'
+                    )
+                """))
+            else:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS fetch_logs (
+                        id SERIAL PRIMARY KEY,
+                        source VARCHAR(50) NOT NULL,
+                        started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        finished_at TIMESTAMP,
+                        status VARCHAR(20) NOT NULL DEFAULT 'running',
+                        job_count INTEGER,
+                        error_msg TEXT,
+                        trigger VARCHAR(20) NOT NULL DEFAULT 'scheduler'
+                    )
+                """))
+            conn.commit()
+            print("✓ Migration: ensured fetch_logs table exists")
+        except Exception as e:
+            conn.rollback()
+            print(f"  (fetch_logs migration skipped: {e})")
+
         # ── user_job_feed_status table ────────────────────────────────────────
         # SQLAlchemy's create_all already handles this for fresh DBs via models.py,
         # but we guard here for pre-existing databases that pre-date this table.

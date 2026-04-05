@@ -371,6 +371,20 @@ class SourceConfig(Base):
     updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
+class FetchLog(Base):
+    """Records every job-fetch attempt per source for admin monitoring."""
+    __tablename__ = "fetch_logs"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    source      = Column(String(50), nullable=False, index=True)
+    started_at  = Column(DateTime, nullable=False, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)
+    status      = Column(String(20), nullable=False, default="running")  # running / success / error / skipped
+    job_count   = Column(Integer, nullable=True)
+    error_msg   = Column(Text, nullable=True)
+    trigger     = Column(String(20), nullable=False, default="scheduler")  # scheduler / manual
+
+
 class UserEvent(Base):
     """Tracks individual user actions for product analytics."""
     __tablename__ = "user_events"

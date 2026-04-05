@@ -127,6 +127,47 @@ def _load_source_configs() -> dict:
         db.close()
 
 
+def _log_fetch_start(source: str, trigger: str = "scheduler") -> int:
+    """Insert a fetch_logs row with status=running. Returns the new row id."""
+    from app.database import SessionLocal
+    from app.models import FetchLog
+    db = SessionLocal()
+    try:
+        row = FetchLog(source=source, started_at=datetime.utcnow(), status="running", trigger=trigger)
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return row.id
+    except Exception as e:
+        logger.warning(f"[scheduler] _log_fetch_start {source}: {e}")
+        db.rollback()
+        return 0
+    finally:
+        db.close()
+
+
+def _log_fetch_end(log_id: int, status: str, job_count: int = 0, error_msg: str = None):
+    """Update a fetch_logs row with the final status."""
+    if not log_id:
+        return
+    from app.database import SessionLocal
+    from app.models import FetchLog
+    db = SessionLocal()
+    try:
+        row = db.query(FetchLog).filter(FetchLog.id == log_id).first()
+        if row:
+            row.finished_at = datetime.utcnow()
+            row.status = status
+            row.job_count = job_count
+            row.error_msg = error_msg
+            db.commit()
+    except Exception as e:
+        logger.warning(f"[scheduler] _log_fetch_end {log_id}: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _update_source_run(source: str, job_count: int):
     """Persist last_run_at and last_job_count for a source after a successful fetch."""
     from app.database import SessionLocal
@@ -250,6 +291,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             drushim_jobs = cache.get(cache_key_drushim)
             fresh_drushim = False
             if not drushim_jobs:
+                log_id = _log_fetch_start("drushim")
                 logger.info(f"[scheduler] drushim scrape for user {user_id} role={user.target_role} category={category}")
                 try:
                     scraper = DrushimScraper()
@@ -258,8 +300,12 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                         cache.set(cache_key_drushim, drushim_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_drushim = True
                         _update_source_run("drushim", len(drushim_jobs))
+                        _log_fetch_end(log_id, "success", len(drushim_jobs))
+                    else:
+                        _log_fetch_end(log_id, "success", 0)
                 except Exception as e:
                     logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
+                    _log_fetch_end(log_id, "error", 0, str(e))
                     drushim_jobs = []
             drushim_jobs = drushim_jobs or []
             for j in drushim_jobs:
@@ -279,6 +325,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             cache_key_li = make_jobs_cache_key("linkedin", li_role_key)
             linkedin_jobs = cache.get(cache_key_li)
             if not linkedin_jobs:
+                log_id = _log_fetch_start("linkedin")
                 logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role}")
                 try:
                     li_scraper = LinkedInJobSearchScraper()
@@ -287,8 +334,12 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                         cache.set(cache_key_li, linkedin_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_linkedin = True
                         _update_source_run("linkedin", len(linkedin_jobs))
+                        _log_fetch_end(log_id, "success", len(linkedin_jobs))
+                    else:
+                        _log_fetch_end(log_id, "success", 0)
                 except Exception as e:
                     logger.warning(f"[scheduler] linkedin scrape failed for user {user_id}: {e}")
+                    _log_fetch_end(log_id, "error", 0, str(e))
                     linkedin_jobs = []
         linkedin_jobs = linkedin_jobs or []
         for j in linkedin_jobs:
@@ -336,6 +387,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             techmap_jobs = cache.get(cache_key_techmap)
             fresh_techmap = False
             if not techmap_jobs:
+                log_id = _log_fetch_start("techmap")
                 logger.info(f"[scheduler] techmap fetch for user {user_id} role={user.target_role}")
                 try:
                     techmap_jobs = await techmap_fetch(user.target_role)
@@ -343,8 +395,12 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                         cache.set(cache_key_techmap, techmap_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_techmap = True
                         _update_source_run("techmap", len(techmap_jobs))
+                        _log_fetch_end(log_id, "success", len(techmap_jobs))
+                    else:
+                        _log_fetch_end(log_id, "success", 0)
                 except Exception as e:
                     logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
+                    _log_fetch_end(log_id, "error", 0, str(e))
                     techmap_jobs = []
             techmap_jobs = techmap_jobs or []
             for j in techmap_jobs:
