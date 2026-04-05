@@ -669,6 +669,111 @@ def behavior_per_user(
     ]
 
 
+# ── Historical event backfill ────────────────────────────────────────────────
+
+@router.post("/backfill-events")
+def backfill_events(
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """
+    One-time (idempotent) backfill: synthesise UserEvent rows from existing
+    Job, AIUsageLog, UserSession, and User records so that the Activity tab
+    shows meaningful history for all users, not just recent ones.
+
+    Safe to call multiple times — skips users who already have events.
+    """
+    users = db.query(User).all()
+
+    # Index existing user_ids that already have at least one event so we
+    # don't double-insert.
+    existing = set(
+        r[0] for r in db.query(UserEvent.user_id)
+        .filter(UserEvent.user_id.isnot(None))
+        .distinct()
+        .all()
+    )
+
+    created = 0
+    skipped = 0
+
+    for user in users:
+        if user.id in existing:
+            skipped += 1
+            continue
+
+        events_to_add = []
+
+        # 1. Registration event
+        events_to_add.append(UserEvent(
+            user_id=user.id,
+            event="registration_complete",
+            page="register",
+            properties=_json.dumps({}),
+            created_at=user.created_at,
+        ))
+
+        # 2. One login event per UserSession row
+        sessions = db.query(UserSession).filter(UserSession.user_id == user.id).all()
+        for s in sessions:
+            events_to_add.append(UserEvent(
+                user_id=user.id,
+                event="login",
+                page="login",
+                properties=_json.dumps({}),
+                created_at=s.created_at,
+            ))
+
+        # 3. Job events
+        jobs = db.query(Job).filter(Job.user_id == user.id).all()
+        for job in jobs:
+            props = _json.dumps({"job_title": job.title, "company": job.company})
+            # Saved
+            events_to_add.append(UserEvent(
+                user_id=user.id,
+                event="job_save",
+                page="dashboard",
+                properties=props,
+                created_at=job.created_at,
+            ))
+            # Applied (only if status progressed past saved)
+            if job.status and job.status.value in ("applied", "interview", "offer", "rejected"):
+                apply_time = job.applied_date or job.updated_at or job.created_at
+                events_to_add.append(UserEvent(
+                    user_id=user.id,
+                    event="job_apply",
+                    page="dashboard",
+                    properties=props,
+                    created_at=apply_time,
+                ))
+
+        # 4. AI usage events
+        ai_logs = db.query(AIUsageLog).filter(AIUsageLog.user_id == user.id).all()
+        for log in ai_logs:
+            events_to_add.append(UserEvent(
+                user_id=user.id,
+                event=f"ai_{log.feature}",
+                page="dashboard",
+                properties=_json.dumps({
+                    "feature": log.feature,
+                    "tokens": log.tokens_in + log.tokens_out,
+                    "cost_usd": log.cost_usd,
+                }),
+                created_at=log.created_at,
+            ))
+
+        db.add_all(events_to_add)
+        created += len(events_to_add)
+
+    db.commit()
+    return {
+        "ok": True,
+        "users_backfilled": len(users) - skipped,
+        "users_skipped": skipped,
+        "events_created": created,
+    }
+
+
 # ── Per-user activity timeline ───────────────────────────────────────────────
 
 @router.get("/users/{user_id}/activity")

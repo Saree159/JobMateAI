@@ -329,6 +329,22 @@ export default function UserLogs() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sortBy, setSortBy] = useState('joined');
   const [sortDir, setSortDir] = useState('desc');
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
+
+  async function runBackfill() {
+    setBackfilling(true);
+    setBackfillResult(null);
+    try {
+      const result = await adminApi.backfillEvents();
+      setBackfillResult(result);
+      setRefreshKey(k => k + 1);
+    } catch {
+      setBackfillResult({ error: true });
+    } finally {
+      setBackfilling(false);
+    }
+  }
 
   const PER_PAGE = 50;
 
@@ -400,13 +416,32 @@ export default function UserLogs() {
           </p>
           <p className="text-xs text-gray-600 mt-1">Full roster of registered users. Click any row to see profile details, application pipeline, AI usage, and behavioral activity.</p>
         </div>
-        <button
-          onClick={() => setRefreshKey(k => k + 1)}
-          className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-gray-300 transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {backfillResult && !backfillResult.error && (
+            <span className="text-xs text-emerald-400">
+              ✓ Backfilled {backfillResult.events_created} events for {backfillResult.users_backfilled} users
+            </span>
+          )}
+          {backfillResult?.error && (
+            <span className="text-xs text-red-400">Backfill failed</span>
+          )}
+          <button
+            onClick={runBackfill}
+            disabled={backfilling}
+            className="flex items-center gap-2 px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-xs transition-colors disabled:opacity-50"
+            title="Synthesise events from existing Job, AI usage, and login history for users who have no tracked events yet"
+          >
+            <Activity className={`w-3.5 h-3.5 ${backfilling ? 'animate-spin' : ''}`} />
+            {backfilling ? 'Backfilling…' : 'Backfill History'}
+          </button>
+          <button
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-gray-300 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Summary pills */}

@@ -9,6 +9,15 @@ async function get(endpoint) {
   return res.json();
 }
 
+async function post(endpoint) {
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'X-Admin-Key': ADMIN_KEY },
+  });
+  if (!res.ok) throw new Error(`Admin API error: ${res.status}`);
+  return res.json();
+}
+
 export const adminApi = {
   getStats: () => get('/api/admin/stats'),
   getUsersList: (limit = 50, offset = 0) => get(`/api/admin/users/list?limit=${limit}&offset=${offset}`),
@@ -19,6 +28,7 @@ export const adminApi = {
   },
   getUserAnalytics: () => get('/api/admin/user-analytics'),
   getUserActivity: (userId, limit = 150) => get(`/api/admin/users/${userId}/activity?limit=${limit}`),
+  backfillEvents: () => post('/api/admin/backfill-events'),
   getBehaviorSummary: (days = 30) => get(`/api/admin/behavior/summary?days=${days}`),
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),
