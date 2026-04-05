@@ -543,7 +543,7 @@ def admin_users_detail(
 def behavior_summary(
     days: int = 30,
     db: Session = Depends(get_db),
-    _: User = Depends(verify_admin_user),
+    _: None = Depends(verify_admin),
 ):
     """Aggregated behavior stats: event counts, top pages, daily trend."""
     cutoff = datetime.utcnow() - timedelta(days=days)
@@ -609,7 +609,7 @@ def behavior_stream(
     limit: int = 100,
     event: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: User = Depends(verify_admin_user),
+    _: None = Depends(verify_admin),
 ):
     """Recent event stream with user info."""
     q = db.query(UserEvent, User.email, User.full_name).outerjoin(
@@ -638,7 +638,7 @@ def behavior_stream(
 def behavior_per_user(
     days: int = 30,
     db: Session = Depends(get_db),
-    _: User = Depends(verify_admin_user),
+    _: None = Depends(verify_admin),
 ):
     """Per-user event counts and last seen, sorted by activity."""
     cutoff = datetime.utcnow() - timedelta(days=days)

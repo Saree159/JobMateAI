@@ -7,30 +7,10 @@ import {
 import { RefreshCw, MousePointerClick, Users, Activity, Eye } from 'lucide-react';
 import ChartCard from '../components/ChartCard';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { adminApi } from '@/api/admin';
+
 const TT = { contentStyle: { background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: 12 } };
 const AXIS = { fill: '#64748b', fontSize: 11 };
-
-function jwtHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-  return { Authorization: `Bearer ${token}` };
-}
-
-async function fetchSummary(days) {
-  const r = await fetch(`${API_BASE}/api/admin/behavior/summary?days=${days}`, { headers: jwtHeaders() });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
-async function fetchStream() {
-  const r = await fetch(`${API_BASE}/api/admin/behavior/stream?limit=60`, { headers: jwtHeaders() });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
-async function fetchPerUser() {
-  const r = await fetch(`${API_BASE}/api/admin/behavior/per-user?days=30`, { headers: jwtHeaders() });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
 
 const EVENT_LABELS = {
   page_view:       'Page View',
@@ -64,18 +44,18 @@ export default function Behavior() {
 
   const { data: summary, isLoading, refetch } = useQuery({
     queryKey: ['admin-behavior', days],
-    queryFn: () => fetchSummary(days),
+    queryFn: () => adminApi.getBehaviorSummary(days),
     staleTime: 60_000,
   });
   const { data: stream = [] } = useQuery({
     queryKey: ['admin-stream'],
-    queryFn: fetchStream,
+    queryFn: () => adminApi.getBehaviorStream(60),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
   const { data: perUser = [] } = useQuery({
     queryKey: ['admin-per-user'],
-    queryFn: fetchPerUser,
+    queryFn: () => adminApi.getBehaviorPerUser(30),
     staleTime: 60_000,
   });
 
