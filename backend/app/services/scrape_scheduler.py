@@ -98,13 +98,51 @@ def profile_hash(user) -> str:
     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
-def seconds_until_daily_refresh() -> float:
-    """Seconds until the next 07:30 Israel time."""
+def seconds_until_next_run(hour: int = 7, minute: int = 30) -> float:
+    """Seconds until the next HH:MM Israel time."""
     now_il = datetime.now(IL_TZ)
-    target = now_il.replace(hour=7, minute=30, second=0, microsecond=0)
+    target = now_il.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if now_il >= target:
         target += timedelta(days=1)
     return (target - now_il).total_seconds()
+
+
+# Keep old name for backward compat (used nowhere externally but just in case)
+def seconds_until_daily_refresh() -> float:
+    return seconds_until_next_run(7, 30)
+
+
+def _load_source_configs() -> dict:
+    """Read source on/off flags and schedule from DB. Returns dict keyed by source name."""
+    from app.database import SessionLocal
+    from app.models import SourceConfig
+    db = SessionLocal()
+    try:
+        rows = db.query(SourceConfig).all()
+        return {r.source: r for r in rows}
+    except Exception as e:
+        logger.warning(f"[scheduler] could not load source_configs: {e}")
+        return {}
+    finally:
+        db.close()
+
+
+def _update_source_run(source: str, job_count: int):
+    """Persist last_run_at and last_job_count for a source after a successful fetch."""
+    from app.database import SessionLocal
+    from app.models import SourceConfig
+    db = SessionLocal()
+    try:
+        row = db.query(SourceConfig).filter(SourceConfig.source == source).first()
+        if row:
+            row.last_run_at = datetime.utcnow()
+            row.last_job_count = job_count
+            db.commit()
+    except Exception as e:
+        logger.warning(f"[scheduler] _update_source_run {source}: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 async def _persist_scraped_jobs(jobs: list, source: str) -> int:
@@ -202,34 +240,40 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         drushim_url = f"https://www.drushim.co.il/jobs/subcat/{category}"
         cache = get_cache()
 
-        # ── Drushim ──────────────────────────────────────────────────────────
-        drushim_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{category}").lower().strip('_')
-        cache_key_drushim = make_jobs_cache_key("drushim", drushim_role_key)
-        drushim_jobs = cache.get(cache_key_drushim)
-        fresh_drushim = False
-        if not drushim_jobs:
-            logger.info(f"[scheduler] drushim scrape for user {user_id} role={user.target_role} category={category}")
-            try:
-                scraper = DrushimScraper()
-                drushim_jobs = await scraper.scrape_listing_async(drushim_url)
-                if drushim_jobs:
-                    cache.set(cache_key_drushim, drushim_jobs, ttl=CACHE_TTL_ROLE)
-                    fresh_drushim = True
-            except Exception as e:
-                logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
-                drushim_jobs = []
-        drushim_jobs = drushim_jobs or []
-        for j in drushim_jobs:
-            j.setdefault("source", "drushim")
+        source_cfg = _load_source_configs()
 
-        if fresh_drushim and drushim_jobs:
-            n = await _persist_scraped_jobs(drushim_jobs, source="drushim")
-            logger.info(f"[scheduler] persisted {n} new drushim jobs")
+        # ── Drushim ──────────────────────────────────────────────────────────
+        drushim_jobs = []
+        if source_cfg.get("drushim", type("_", (), {"enabled": False})()).enabled:
+            drushim_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{category}").lower().strip('_')
+            cache_key_drushim = make_jobs_cache_key("drushim", drushim_role_key)
+            drushim_jobs = cache.get(cache_key_drushim)
+            fresh_drushim = False
+            if not drushim_jobs:
+                logger.info(f"[scheduler] drushim scrape for user {user_id} role={user.target_role} category={category}")
+                try:
+                    scraper = DrushimScraper()
+                    drushim_jobs = await scraper.scrape_listing_async(drushim_url)
+                    if drushim_jobs:
+                        cache.set(cache_key_drushim, drushim_jobs, ttl=CACHE_TTL_ROLE)
+                        fresh_drushim = True
+                        _update_source_run("drushim", len(drushim_jobs))
+                except Exception as e:
+                    logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
+                    drushim_jobs = []
+            drushim_jobs = drushim_jobs or []
+            for j in drushim_jobs:
+                j.setdefault("source", "drushim")
+            if fresh_drushim and drushim_jobs:
+                n = await _persist_scraped_jobs(drushim_jobs, source="drushim")
+                logger.info(f"[scheduler] persisted {n} new drushim jobs")
+        else:
+            logger.info("[scheduler] drushim disabled — skipping")
 
         # ── LinkedIn ─────────────────────────────────────────────────────────
         linkedin_jobs = []
         fresh_linkedin = False
-        if user.target_role:
+        if source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role:
             li_at = user.linkedin_li_at
             li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
             cache_key_li = make_jobs_cache_key("linkedin", li_role_key)
@@ -242,6 +286,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                     if linkedin_jobs:
                         cache.set(cache_key_li, linkedin_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_linkedin = True
+                        _update_source_run("linkedin", len(linkedin_jobs))
                 except Exception as e:
                     logger.warning(f"[scheduler] linkedin scrape failed for user {user_id}: {e}")
                     linkedin_jobs = []
@@ -283,28 +328,32 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from ingest_jobs fallback")
 
         # ── TechMap ──────────────────────────────────────────────────────────
-        from app.services.techmap import fetch_for_role as techmap_fetch
-        techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')
-        cache_key_techmap = make_jobs_cache_key("techmap", techmap_role_key)
-        techmap_jobs = cache.get(cache_key_techmap)
-        fresh_techmap = False
-        if not techmap_jobs:
-            logger.info(f"[scheduler] techmap fetch for user {user_id} role={user.target_role}")
-            try:
-                techmap_jobs = await techmap_fetch(user.target_role)
-                if techmap_jobs:
-                    cache.set(cache_key_techmap, techmap_jobs, ttl=CACHE_TTL_ROLE)
-                    fresh_techmap = True
-            except Exception as e:
-                logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
-                techmap_jobs = []
-        techmap_jobs = techmap_jobs or []
-        for j in techmap_jobs:
-            j.setdefault("source", "techmap")
-
-        if fresh_techmap and techmap_jobs:
-            n = await _persist_scraped_jobs(techmap_jobs, source="techmap")
-            logger.info(f"[scheduler] persisted {n} new techmap jobs")
+        techmap_jobs = []
+        if source_cfg.get("techmap", type("_", (), {"enabled": False})()).enabled:
+            from app.services.techmap import fetch_for_role as techmap_fetch
+            techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')
+            cache_key_techmap = make_jobs_cache_key("techmap", techmap_role_key)
+            techmap_jobs = cache.get(cache_key_techmap)
+            fresh_techmap = False
+            if not techmap_jobs:
+                logger.info(f"[scheduler] techmap fetch for user {user_id} role={user.target_role}")
+                try:
+                    techmap_jobs = await techmap_fetch(user.target_role)
+                    if techmap_jobs:
+                        cache.set(cache_key_techmap, techmap_jobs, ttl=CACHE_TTL_ROLE)
+                        fresh_techmap = True
+                        _update_source_run("techmap", len(techmap_jobs))
+                except Exception as e:
+                    logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
+                    techmap_jobs = []
+            techmap_jobs = techmap_jobs or []
+            for j in techmap_jobs:
+                j.setdefault("source", "techmap")
+            if fresh_techmap and techmap_jobs:
+                n = await _persist_scraped_jobs(techmap_jobs, source="techmap")
+                logger.info(f"[scheduler] persisted {n} new techmap jobs")
+        else:
+            logger.info("[scheduler] techmap disabled — skipping")
 
         jobs = drushim_jobs + linkedin_jobs + techmap_jobs
         if not jobs:
@@ -373,7 +422,13 @@ async def run_scheduler():
     logger.info("[scheduler] started — daily refresh at 07:30 Israel time")
 
     while True:
-        wait = seconds_until_daily_refresh()
+        # Read schedule time from DB (defaults to 07:30 if table not yet populated)
+        cfg = _load_source_configs()
+        li_cfg = cfg.get("linkedin")
+        sched_hour   = li_cfg.schedule_hour   if li_cfg else 7
+        sched_minute = li_cfg.schedule_minute if li_cfg else 30
+
+        wait = seconds_until_next_run(sched_hour, sched_minute)
         next_run_il = datetime.now(IL_TZ) + timedelta(seconds=wait)
         logger.info(
             f"[scheduler] next run in {wait/3600:.1f}h "
@@ -397,10 +452,20 @@ async def run_scheduler():
 
         cache = get_cache()
 
-        # Clear shared role-level caches so each source is re-scraped fresh today
-        for prefix in ("jobs:drushim:", "jobs:linkedin:", "jobs:techmap:"):
-            deleted = cache.delete_pattern(prefix)
-            logger.info(f"[scheduler] cleared {deleted} '{prefix}' cache entries")
+        # Reload config after waking to pick up any admin changes made during sleep
+        source_cfg_run = _load_source_configs()
+
+        # Clear shared role-level caches for enabled sources
+        source_prefixes = {
+            "linkedin": "jobs:linkedin:",
+            "drushim":  "jobs:drushim:",
+            "techmap":  "jobs:techmap:",
+        }
+        for src, prefix in source_prefixes.items():
+            row = source_cfg_run.get(src)
+            if row and row.enabled:
+                deleted = cache.delete_pattern(prefix)
+                logger.info(f"[scheduler] cleared {deleted} '{prefix}' cache entries")
 
         # Clear per-user top-matches caches
         for uid in user_ids:

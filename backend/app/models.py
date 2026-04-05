@@ -356,6 +356,21 @@ class UserJobFeedStatus(Base):
         return f"<UserJobFeedStatus(user={self.user_id}, job={self.ingest_job_id}, status='{self.status}')>"
 
 
+class SourceConfig(Base):
+    """Admin-controlled configuration for each job-fetch source."""
+    __tablename__ = "source_configs"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    source          = Column(String(50), unique=True, nullable=False, index=True)
+    enabled         = Column(Boolean, default=True, nullable=False)
+    schedule_hour   = Column(Integer, default=7,  nullable=False)   # Israel time
+    schedule_minute = Column(Integer, default=30, nullable=False)
+    last_run_at     = Column(DateTime, nullable=True)
+    last_job_count  = Column(Integer, default=0, nullable=False)
+    notes           = Column(String(500), nullable=True)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
 class UserEvent(Base):
     """Tracks individual user actions for product analytics."""
     __tablename__ = "user_events"

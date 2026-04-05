@@ -32,6 +32,18 @@ export const adminApi = {
   getUserAnalytics: () => get('/api/admin/user-analytics'),
   getUserActivity: (userId, limit = 150) => get(`/api/admin/users/${userId}/activity?limit=${limit}`),
   backfillEvents: () => post('/api/admin/backfill-events'),
+
+  // Source management
+  getSources: () => get('/api/admin/sources'),
+  updateSource: (source, body) => {
+    return fetch(`${API_BASE_URL}/api/admin/sources/${source}`, {
+      method: 'PATCH',
+      headers: { 'X-Admin-Key': ADMIN_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  },
+  triggerSource: (source) => post(`/api/admin/sources/${source}/trigger`),
+  triggerAllSources: () => post('/api/admin/sources/trigger-all'),
   getBehaviorSummary: (days = 30) => get(`/api/admin/behavior/summary?days=${days}`),
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),

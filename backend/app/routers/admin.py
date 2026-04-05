@@ -12,7 +12,8 @@ from typing import Optional
 
 import json as _json
 from app.database import get_db
-from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent
+from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent, SourceConfig
+from pydantic import BaseModel
 from app.config import settings
 from app.routers.users import get_current_user
 
@@ -1034,4 +1035,115 @@ def get_user_analytics(
         ),
         "avg_time_per_page_seconds": avg_time_per_page,
         "top_flows": [{"path": k, "count": v} for k, v in top_flows],
+    }
+
+
+# ── Source Management ─────────────────────────────────────────────────────────
+
+class SourceUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    schedule_hour: Optional[int] = None
+    schedule_minute: Optional[int] = None
+    notes: Optional[str] = None
+
+
+def _source_row(row: "SourceConfig") -> dict:
+    return {
+        "source":          row.source,
+        "enabled":         row.enabled,
+        "schedule_hour":   row.schedule_hour,
+        "schedule_minute": row.schedule_minute,
+        "last_run_at":     row.last_run_at.isoformat() if row.last_run_at else None,
+        "last_job_count":  row.last_job_count,
+        "notes":           row.notes,
+        "updated_at":      row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@router.get("/sources")
+def list_sources(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Return all source configs with their current state."""
+    rows = db.query(SourceConfig).order_by(SourceConfig.source).all()
+    return [_source_row(r) for r in rows]
+
+
+@router.patch("/sources/{source}")
+def update_source(
+    source: str,
+    body: SourceUpdate,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Toggle a source on/off, update schedule time, or update notes."""
+    row = db.query(SourceConfig).filter(SourceConfig.source == source).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Source '{source}' not found")
+    if body.enabled is not None:
+        row.enabled = body.enabled
+    if body.schedule_hour is not None:
+        if not (0 <= body.schedule_hour <= 23):
+            raise HTTPException(status_code=422, detail="schedule_hour must be 0-23")
+        row.schedule_hour = body.schedule_hour
+    if body.schedule_minute is not None:
+        if not (0 <= body.schedule_minute <= 59):
+            raise HTTPException(status_code=422, detail="schedule_minute must be 0-59")
+        row.schedule_minute = body.schedule_minute
+    if body.notes is not None:
+        row.notes = body.notes
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return _source_row(row)
+
+
+@router.post("/sources/{source}/trigger")
+async def trigger_source(
+    source: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """
+    Manually trigger a cache-clear + re-scrape for a single source.
+    Clears the role-level cache for that source so the next user request
+    re-scrapes immediately.  Does NOT wait for the scrape to finish.
+    """
+    row = db.query(SourceConfig).filter(SourceConfig.source == source).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Source '{source}' not found")
+
+    from app.services.cache import get_cache
+    cache = get_cache()
+    prefix = f"jobs:{source}:"
+    deleted = cache.delete_pattern(prefix)
+
+    return {"ok": True, "source": source, "cache_entries_cleared": deleted,
+            "message": f"Cleared {deleted} cached entries for '{source}'. "
+                       "Jobs will be re-fetched on the next user request."}
+
+
+@router.post("/sources/trigger-all")
+async def trigger_all_sources(
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Clear role-level caches for all ENABLED sources and all per-user caches."""
+    from app.services.cache import get_cache
+    from app.services.scrape_scheduler import user_cache_key
+    cache = get_cache()
+
+    rows = db.query(SourceConfig).filter(SourceConfig.enabled == True).all()  # noqa: E712
+    cleared = {}
+    for row in rows:
+        n = cache.delete_pattern(f"jobs:{row.source}:")
+        cleared[row.source] = n
+
+    # Clear per-user caches too
+    user_ids = [u.id for u in db.query(User.id).all()]
+    for uid in user_ids:
+        cache.delete(user_cache_key(uid))
+
+    return {
+        "ok": True,
+        "role_caches_cleared": cleared,
+        "user_caches_cleared": len(user_ids),
+        "message": "All caches cleared. Jobs will be re-fetched on next user request.",
     }

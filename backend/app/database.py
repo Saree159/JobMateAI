@@ -77,6 +77,48 @@ def _run_migrations():
         # ── user_job_feed_status table ────────────────────────────────────────
         # SQLAlchemy's create_all already handles this for fresh DBs via models.py,
         # but we guard here for pre-existing databases that pre-date this table.
+        # ── source_configs table ─────────────────────────────────────────────
+        try:
+            if is_sqlite:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS source_configs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source VARCHAR(50) NOT NULL UNIQUE,
+                        enabled BOOLEAN NOT NULL DEFAULT 1,
+                        schedule_hour INTEGER NOT NULL DEFAULT 7,
+                        schedule_minute INTEGER NOT NULL DEFAULT 30,
+                        last_run_at DATETIME,
+                        last_job_count INTEGER NOT NULL DEFAULT 0,
+                        notes VARCHAR(500),
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+            else:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS source_configs (
+                        id SERIAL PRIMARY KEY,
+                        source VARCHAR(50) NOT NULL UNIQUE,
+                        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                        schedule_hour INTEGER NOT NULL DEFAULT 7,
+                        schedule_minute INTEGER NOT NULL DEFAULT 30,
+                        last_run_at TIMESTAMP,
+                        last_job_count INTEGER NOT NULL DEFAULT 0,
+                        notes VARCHAR(500),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+            conn.commit()
+            print("✓ Migration: ensured source_configs table exists")
+        except Exception as e:
+            conn.rollback()
+            print(f"  (source_configs migration skipped: {e})")
+
+        # Seed default source rows (LinkedIn enabled, Drushim + TechMap disabled)
+        _seed_source_configs(conn, is_sqlite)
+
+        # ── user_job_feed_status table ────────────────────────────────────────
+        # SQLAlchemy's create_all already handles this for fresh DBs via models.py,
+        # but we guard here for pre-existing databases that pre-date this table.
         try:
             if is_sqlite:
                 conn.execute(text("""
@@ -105,6 +147,34 @@ def _run_migrations():
         except Exception as e:
             conn.rollback()
             print(f"  (user_job_feed_status migration skipped: {e})")
+
+
+def _seed_source_configs(conn, is_sqlite: bool):
+    """Insert default source rows if they don't exist yet."""
+    defaults = [
+        ("linkedin", True,  7, 30, "LinkedIn guest API — main source"),
+        ("drushim",  False, 7, 30, "Drushim RSS feed — disabled by default"),
+        ("techmap",  False, 7, 30, "TechMap GitHub CSV — disabled by default"),
+    ]
+    for source, enabled, hour, minute, notes in defaults:
+        try:
+            existing = conn.execute(
+                text("SELECT id FROM source_configs WHERE source = :s"),
+                {"s": source}
+            ).fetchone()
+            if not existing:
+                conn.execute(
+                    text(
+                        "INSERT INTO source_configs (source, enabled, schedule_hour, schedule_minute, notes, updated_at) "
+                        "VALUES (:s, :e, :h, :m, :n, CURRENT_TIMESTAMP)"
+                    ),
+                    {"s": source, "e": enabled, "h": hour, "m": minute, "n": notes},
+                )
+                conn.commit()
+                print(f"✓ Seeded source_configs: {source} (enabled={enabled})")
+        except Exception as ex:
+            conn.rollback()
+            print(f"  (seed source_configs {source} skipped: {ex})")
 
 
 def get_db():
