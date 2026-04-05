@@ -840,16 +840,8 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-400">
-                  Connect via LinkedIn's official OAuth — no password shared with us. We'll auto-fill your name and use your account for job searches.
+                  Paste your LinkedIn session cookie to enable authenticated job searches.
                 </p>
-
-                <Button
-                  onClick={handleLinkedInOAuth}
-                  className="w-full bg-[#0A66C2] hover:bg-[#004182] text-white"
-                >
-                  <Linkedin className="w-4 h-4 mr-2" />
-                  Sign in with LinkedIn
-                </Button>
 
                 <details className="group" open={showManualCookie} onToggle={(e) => setShowManualCookie(e.target.open)}>
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
