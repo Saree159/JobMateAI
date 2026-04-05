@@ -19,13 +19,15 @@ export function useAdminStats() {
 export function useAdminUsersList(limit = 50) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
     adminApi.getUsersList(limit)
       .then(setUsers)
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
-  }, [limit]);
+  }, [limit, tick]);
 
-  return { users, loading };
+  return { users, loading, refetch: () => setTick(t => t + 1) };
 }

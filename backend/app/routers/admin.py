@@ -421,6 +421,7 @@ def admin_users_list(
             "subscription_status": u.subscription_status,
             "skills_count": len(u.skills_list) if u.skills else 0,
             "created_at": u.created_at.isoformat() if u.created_at else None,
+            "is_blocked": bool(getattr(u, "is_blocked", False)),
         }
         for u in users
     ]
@@ -538,6 +539,54 @@ def admin_users_detail(
     total = total_q.scalar() or 0
 
     return {"users": result, "total": total}
+
+
+# ── User moderation ───────────────────────────────────────────────────────────
+
+@router.post("/users/{user_id}/block")
+def admin_block_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Block a user — they will be prevented from logging in."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_blocked = True
+    db.commit()
+    return {"message": f"User {user.email} has been blocked"}
+
+
+@router.post("/users/{user_id}/unblock")
+def admin_unblock_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Unblock a previously blocked user."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_blocked = False
+    db.commit()
+    return {"message": f"User {user.email} has been unblocked"}
+
+
+@router.delete("/users/{user_id}")
+def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Permanently delete a user and all their data."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    email = user.email
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {email} permanently deleted"}
 
 
 # ── Behavior / user-event analytics (JWT-based, admin emails only) ────────────

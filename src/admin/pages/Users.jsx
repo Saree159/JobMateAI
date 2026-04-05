@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ChartCard from '../components/ChartCard';
 import KPICard from '../components/KPICard';
 import { useAdminStats, useAdminUsersList } from '../useAdminStats';
 import { spark7 } from '../mockData';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { Users, UserPlus, Calendar, Zap, Star } from 'lucide-react';
+import { Users, UserPlus, Calendar, Zap, Star, Ban, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
+import { adminApi } from '@/api/admin';
 
 const TT = { contentStyle: { background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', fontSize: 12 } };
 const AXIS = { tick: { fill: '#64748b', fontSize: 11 }, axisLine: false, tickLine: false };
@@ -17,7 +18,37 @@ const TIER_COLORS = { free: '#334155', pro: '#22c55e' };
 
 export default function UsersPage() {
   const { stats, loading } = useAdminStats();
-  const { users, loading: usersLoading } = useAdminUsersList(20);
+  const { users, loading: usersLoading, refetch } = useAdminUsersList(20);
+  const [pending, setPending] = useState({}); // userId → 'block'|'unblock'|'delete'
+  const [confirmDelete, setConfirmDelete] = useState(null); // user obj
+
+  const handleBlock = async (u) => {
+    setPending(p => ({ ...p, [u.id]: 'block' }));
+    try {
+      await adminApi.blockUser(u.id);
+      refetch?.();
+    } catch (e) { alert(e.message); }
+    finally { setPending(p => { const n = { ...p }; delete n[u.id]; return n; }); }
+  };
+
+  const handleUnblock = async (u) => {
+    setPending(p => ({ ...p, [u.id]: 'unblock' }));
+    try {
+      await adminApi.unblockUser(u.id);
+      refetch?.();
+    } catch (e) { alert(e.message); }
+    finally { setPending(p => { const n = { ...p }; delete n[u.id]; return n; }); }
+  };
+
+  const handleDelete = async (u) => {
+    setConfirmDelete(null);
+    setPending(p => ({ ...p, [u.id]: 'delete' }));
+    try {
+      await adminApi.deleteUser(u.id);
+      refetch?.();
+    } catch (e) { alert(e.message); }
+    finally { setPending(p => { const n = { ...p }; delete n[u.id]; return n; }); }
+  };
 
   const u = stats?.users ?? {};
   const monthlySignups = u.monthly_signups ?? [];
@@ -153,14 +184,22 @@ export default function UsersPage() {
                   <th className="text-center px-4 py-3 font-medium">Plan</th>
                   <th className="text-right px-4 py-3 font-medium">Skills</th>
                   <th className="text-right px-5 py-3 font-medium">Joined</th>
+                  <th className="text-center px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-white/3 transition-colors">
+                  <tr key={u.id} className={`hover:bg-white/3 transition-colors ${u.is_blocked ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3.5">
-                      <p className="font-medium text-white">{u.full_name || '—'}</p>
-                      <p className="text-xs text-gray-500">{u.email}</p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium text-white">{u.full_name || '—'}</p>
+                          <p className="text-xs text-gray-500">{u.email}</p>
+                        </div>
+                        {u.is_blocked && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/20 shrink-0">Blocked</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3.5 text-gray-400 text-xs">{u.target_role || '—'}</td>
                     <td className="px-4 py-3.5 text-center">
@@ -172,6 +211,37 @@ export default function UsersPage() {
                     <td className="px-5 py-3.5 text-right text-gray-500 text-xs">
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }) : '—'}
                     </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {pending[u.id] ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                        ) : u.is_blocked ? (
+                          <button
+                            onClick={() => handleUnblock(u)}
+                            title="Unblock user"
+                            className="p-1.5 rounded-md text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleBlock(u)}
+                            title="Block user"
+                            className="p-1.5 rounded-md text-amber-400 hover:bg-amber-500/10 transition-colors"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setConfirmDelete(u)}
+                          title="Delete user"
+                          disabled={!!pending[u.id]}
+                          className="p-1.5 rounded-md text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -179,6 +249,41 @@ export default function UsersPage() {
           )}
         </div>
       </div>
+
+      {/* Confirm delete modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Delete user?</p>
+                <p className="text-xs text-gray-400 mt-0.5">This permanently removes the account and all data.</p>
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-lg px-3 py-2 text-sm">
+              <p className="text-white font-medium">{confirmDelete.full_name || '—'}</p>
+              <p className="text-gray-400 text-xs">{confirmDelete.email}</p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete)}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors"
+              >
+                Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

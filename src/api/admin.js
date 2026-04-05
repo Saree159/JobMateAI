@@ -49,4 +49,14 @@ export const adminApi = {
   getBehaviorSummary: (days = 30) => get(`/api/admin/behavior/summary?days=${days}`),
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),
+
+  // User moderation
+  blockUser:   (userId) => post(`/api/admin/users/${userId}/block`),
+  unblockUser: (userId) => post(`/api/admin/users/${userId}/unblock`),
+  deleteUser:  (userId) => {
+    return fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Key': ADMIN_KEY },
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  },
 };

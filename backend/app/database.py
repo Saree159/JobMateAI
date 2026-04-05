@@ -51,6 +51,7 @@ def _run_migrations():
             ("job_type_preference", "VARCHAR(100)"),
             ("availability", "VARCHAR(100)"),
             ("linkedin_oauth_token", "TEXT"),
+            ("is_blocked", "BOOLEAN DEFAULT FALSE"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))

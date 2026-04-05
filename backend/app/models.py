@@ -69,6 +69,9 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     verification_token = Column(String(64), nullable=True, unique=True, index=True)
 
+    # Admin moderation
+    is_blocked = Column(Boolean, default=False, nullable=False)
+
     # LinkedIn integration
     linkedin_li_at = Column(Text, nullable=True)        # li_at session cookie for authenticated scraping
     linkedin_oauth_token = Column(Text, nullable=True)  # OAuth 2.0 access token (profile import)
