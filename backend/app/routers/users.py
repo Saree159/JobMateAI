@@ -241,9 +241,18 @@ def update_user(
     # affects job matching has changed.
     from app.services.scrape_scheduler import PROFILE_CACHE_FIELDS, user_cache_key
     from app.services.cache import get_cache
-    if any(f in update_data for f in PROFILE_CACHE_FIELDS):
-        get_cache().delete(user_cache_key(user_id))
-        logger.info(f"Invalidated top-matches cache for user {user_id}")
+    cache_fields_changed = [f for f in PROFILE_CACHE_FIELDS if f in update_data]
+    if cache_fields_changed:
+        cache = get_cache()
+        cache.delete(user_cache_key(user_id))
+        logger.info(f"Invalidated top-matches cache for user {user_id} (changed: {cache_fields_changed})")
+        # When the fields that determine the LinkedIn/Drushim search query change,
+        # also wipe the shared role-level caches so the next scrape uses the new role/location.
+        if "target_role" in cache_fields_changed or "location_preference" in cache_fields_changed:
+            for source in ("linkedin", "drushim", "techmap"):
+                cleared = cache.delete_pattern(f"jobs:{source}:")
+                if cleared:
+                    logger.info(f"Cleared {cleared} role-level cache entries for source '{source}' due to profile change by user {user_id}")
 
     response = UserResponse.model_validate(user)
     response.skills = user.skills_list

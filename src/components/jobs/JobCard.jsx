@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Bookmark, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Building2, MapPin, Bookmark, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobApi } from "@/api/jobmate";
 
@@ -113,13 +113,31 @@ export default function JobCard({ job, onView }) {
             <CheckCircle2 className="w-3 h-3" /> Applied
           </span>
         ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-auto h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 -mr-1 group-hover:translate-x-0.5 transition-transform"
-        >
-          View <ArrowRight className="w-3 h-3 ml-1" />
-        </Button>
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="ml-auto shrink-0"
+          >
+            <Button
+              size="sm"
+              className="h-6 px-2 text-[11px] bg-blue-600 hover:bg-blue-700 text-white -mr-1"
+            >
+              <ExternalLink className="w-3 h-3 mr-1" /> Apply
+            </Button>
+          </a>
+        )}
+        {!job.url && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 -mr-1 group-hover:translate-x-0.5 transition-transform"
+          >
+            View <ArrowRight className="w-3 h-3 ml-1" />
+          </Button>
+        )}
       </div>
     </div>
   );

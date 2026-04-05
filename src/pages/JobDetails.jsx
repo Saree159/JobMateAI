@@ -774,8 +774,20 @@ export default function JobDetails() {
             </CardHeader>
             <CardContent className="space-y-3">
               {effectiveJob.url && (
-                <a href={effectiveJob.url} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full">View Original Listing</Button>
+                <a
+                  href={effectiveJob.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                  onClick={() => {
+                    if (trackedJobId) {
+                      jobApi.update(parseInt(trackedJobId), { status: 'applied' })
+                        .then(() => queryClient.invalidateQueries({ queryKey: ['job', trackedJobId] }))
+                        .catch(() => {});
+                    }
+                  }}
+                >
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Apply Now</Button>
                 </a>
               )}
               <Button variant="outline" className="w-full" onClick={() => navigate(createPageUrl("Applications"))}>

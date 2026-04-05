@@ -209,15 +209,24 @@ export default function Profile() {
     }
   };
 
+  const JOB_MATCH_FIELDS = ['target_role', 'location_preference', 'work_mode_preference', 'skills'];
+
   const updateUserMutation = useMutation({
     mutationFn: (data) => userApi.update(user.id, data),
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedUser, variables) => {
       updateUser(updatedUser);
       queryClient.setQueryData(['currentUser'], updatedUser);
       setIsEditing(false);
       setSuccess(true);
       toast.success(t('profile.profileUpdated'));
       setTimeout(() => setSuccess(false), 3000);
+      // Notify user if job-matching fields changed so they know their feed will refresh
+      const matchFieldChanged = JOB_MATCH_FIELDS.some(f => f in variables);
+      if (matchFieldChanged) {
+        setTimeout(() => {
+          toast.info('Your job matches will refresh automatically with the new profile.');
+        }, 600);
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update profile');

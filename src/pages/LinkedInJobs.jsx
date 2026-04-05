@@ -304,12 +304,11 @@ export default function LinkedInJobs() {
                       {job.url && (
                         <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex-1">
                           <Button
-                            variant="outline"
                             size="sm"
-                            className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                            View
+                            Apply
                           </Button>
                         </a>
                       )}
