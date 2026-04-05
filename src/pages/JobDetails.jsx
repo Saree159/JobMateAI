@@ -538,7 +538,7 @@ export default function JobDetails() {
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {t('jobdetails.gapAnalysisPlaceholder')
+                  {t('jobdetails.gapAnalysisPlaceholder')}
                 </p>
               )}
             </CardContent>
