@@ -24,7 +24,7 @@ function Bar({ value, max, color = 'bg-blue-500' }) {
   );
 }
 
-function KPI({ label, value, sub, icon: Icon, color = 'text-blue-400' }) {
+function KPI({ label, value, sub, desc, icon: Icon, color = 'text-blue-400' }) {
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
       <div className="flex items-start justify-between mb-3">
@@ -33,6 +33,7 @@ function KPI({ label, value, sub, icon: Icon, color = 'text-blue-400' }) {
       </div>
       <p className={`text-3xl font-bold ${color}`}>{value ?? '—'}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+      {desc && <p className="text-[11px] text-gray-600 mt-2 leading-snug">{desc}</p>}
     </div>
   );
 }
@@ -88,6 +89,7 @@ export default function UserAnalytics() {
           value={data?.total_users?.toLocaleString()}
           icon={Users}
           color="text-blue-400"
+          desc="Total accounts ever created in the system"
         />
         <KPI
           label="Funnel Starts"
@@ -95,6 +97,7 @@ export default function UserAnalytics() {
           sub="visited /register"
           icon={TrendingDown}
           color="text-emerald-400"
+          desc="Users who landed on the registration page at least once"
         />
         <KPI
           label="Conversion"
@@ -102,6 +105,7 @@ export default function UserAnalytics() {
           sub="start → complete"
           icon={BarChart2}
           color="text-purple-400"
+          desc="% of users who started registration and finished creating an account"
         />
         <KPI
           label="Avg. Signup Time"
@@ -109,15 +113,17 @@ export default function UserAnalytics() {
           sub="start to complete"
           icon={Clock}
           color="text-amber-400"
+          desc="Median time between first page visit and successful account creation"
         />
       </div>
 
       {/* ── Registration Funnel ── */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
           <TrendingDown className="w-4 h-4 text-blue-400" />
           Registration Funnel — Drop-off by Step
         </h3>
+        <p className="text-xs text-gray-500 mb-5">How many users reach each step of the signup flow. A big drop between steps highlights friction points.</p>
         <div className="space-y-3">
           {funnel.map((step, i) => {
             const dropPct = i > 0 && funnel[i - 1].count > 0
@@ -157,10 +163,11 @@ export default function UserAnalytics() {
 
       {/* ── First page after registration ── */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
           <ArrowRight className="w-4 h-4 text-emerald-400" />
           First Page After Registration
         </h3>
+        <p className="text-xs text-gray-500 mb-5">Where new users navigate immediately after completing signup — reveals what they're most eager to try first.</p>
         {firstPages.length === 0 ? (
           <p className="text-xs text-gray-600 italic">No data yet.</p>
         ) : (
@@ -178,10 +185,11 @@ export default function UserAnalytics() {
 
       {/* ── Time per section ── */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
           <Clock className="w-4 h-4 text-amber-400" />
           Avg. Time Spent per Section
         </h3>
+        <p className="text-xs text-gray-500 mb-5">Average seconds a user stays on each page before navigating away. Inferred from consecutive page_view events in the same session.</p>
         {pageTimes.length === 0 ? (
           <p className="text-xs text-gray-600 italic">No data yet — collects after users navigate between pages.</p>
         ) : (
@@ -200,10 +208,11 @@ export default function UserAnalytics() {
       {/* ── Signup Trend ── */}
       {data?.signups_by_day?.length > 0 && (
         <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-blue-400" />
             Daily Signups — Last 30 Days
           </h3>
+          <p className="text-xs text-gray-500 mb-5">New account registrations per day. Hover a bar to see the exact date and count.</p>
           <div className="flex items-end gap-1 h-20">
             {(() => {
               const days = data.signups_by_day;
@@ -233,10 +242,11 @@ export default function UserAnalytics() {
       {/* ── Profile Completion ── */}
       {data?.profile_completion && (
         <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             Post-Registration Profile Completion
           </h3>
+          <p className="text-xs text-gray-500 mb-5">% of registered users who completed each onboarding step. Low numbers here indicate drop-off before the app is useful to them.</p>
           <div className="space-y-2.5">
             {[
               { label: 'Set target role', value: data.profile_completion.with_role },
@@ -259,10 +269,11 @@ export default function UserAnalytics() {
 
       {/* ── Navigation Flows ── */}
       <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
           <Navigation className="w-4 h-4 text-purple-400" />
           Top Navigation Flows (last 30 days)
         </h3>
+        <p className="text-xs text-gray-500 mb-5">Most common page-to-page transitions (e.g. dashboard → jobs). Shows how users naturally move through the app.</p>
         {flows.length === 0 ? (
           <p className="text-xs text-gray-600 italic">No flow data yet.</p>
         ) : (

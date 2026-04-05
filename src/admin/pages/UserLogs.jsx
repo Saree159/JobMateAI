@@ -77,7 +77,8 @@ function ActivityTab({ userId }) {
       {/* Pages + Actions breakdown */}
       <div className="grid grid-cols-2 gap-4 pb-3 border-b border-white/5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Pages visited</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-0.5">Pages visited</p>
+          <p className="text-[10px] text-gray-600 mb-2">Sections this user has navigated to</p>
           <div className="space-y-1">
             {data.pages.slice(0, 6).map(({ page, count }) => (
               <div key={page} className="flex justify-between text-xs">
@@ -88,7 +89,8 @@ function ActivityTab({ userId }) {
           </div>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Actions</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-0.5">Actions</p>
+          <p className="text-[10px] text-gray-600 mb-2">Non-navigation interactions (clicks, saves, searches)</p>
           <div className="space-y-1">
             {data.actions.filter(a => a.event !== 'page_view' && a.event !== 'page_time').slice(0, 6).map(({ event, count }) => (
               <div key={event} className="flex justify-between text-xs">
@@ -105,7 +107,8 @@ function ActivityTab({ userId }) {
 
       {/* Event timeline */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Recent timeline</p>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-0.5">Recent timeline</p>
+        <p className="text-[10px] text-gray-600 mb-2">Chronological feed of this user's last 150 tracked events (page_time events hidden for clarity)</p>
         <div className="space-y-0.5 max-h-48 overflow-auto">
           {data.events.filter(ev => ev.event !== 'page_time').map(ev => (
             <div key={ev.id} className="flex items-center gap-2 py-1 text-xs border-b border-white/5">
@@ -210,6 +213,7 @@ function DetailPanel({ user }) {
       {/* Profile */}
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Profile</p>
+        <p className="text-[10px] text-gray-600 -mt-1">Job preferences and skills set by the user in their profile settings</p>
         <div className="space-y-2 text-sm">
           {[
             ['Role', user.target_role],
@@ -244,6 +248,7 @@ function DetailPanel({ user }) {
       {/* Jobs */}
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Applications</p>
+        <p className="text-[10px] text-gray-600 -mt-1">Job applications saved or tracked by the user in their personal pipeline</p>
         <div className="space-y-1.5">
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-500">Total tracked</span>
@@ -279,6 +284,7 @@ function DetailPanel({ user }) {
       {/* AI Usage */}
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">AI Usage</p>
+        <p className="text-[10px] text-gray-600 -mt-1">OpenAI tokens consumed by this user — cover letters, match scores, gap analysis, etc.</p>
         {user.ai.total_calls === 0 ? (
           <p className="text-sm text-gray-600">No AI calls yet</p>
         ) : (
@@ -392,6 +398,7 @@ export default function UserLogs() {
           <p className="text-gray-400 text-sm mt-1">
             {data.total} users · {totalTokens.toLocaleString()} tokens · ${totalCost.toFixed(4)} spent
           </p>
+          <p className="text-xs text-gray-600 mt-1">Full roster of registered users. Click any row to see profile details, application pipeline, AI usage, and behavioral activity.</p>
         </div>
         <button
           onClick={() => setRefreshKey(k => k + 1)}
@@ -403,6 +410,7 @@ export default function UserLogs() {
       </div>
 
       {/* Summary pills */}
+      <p className="text-xs text-gray-600 -mb-1">Counts reflect the current page of results (up to {data.users.length} users shown)</p>
       <div className="flex flex-wrap gap-3">
         {[
           { label: 'Total',       value: data.total,                                              color: 'bg-blue-600   border-blue-700'   },
@@ -437,14 +445,14 @@ export default function UserLogs() {
             <thead>
               <tr className="text-xs text-gray-500 border-b border-white/5">
                 <th className="w-8" />
-                <SortHeader col="email">User</SortHeader>
-                <th className="text-left px-4 py-3 font-medium">Role / Looking For</th>
-                <th className="text-left px-4 py-3 font-medium">Plan</th>
-                <SortHeader col="jobs">Jobs</SortHeader>
-                <SortHeader col="tokens">Tokens</SortHeader>
-                <SortHeader col="cost">Cost</SortHeader>
-                <SortHeader col="lastlogin">Last Login</SortHeader>
-                <SortHeader col="joined">Joined</SortHeader>
+                <SortHeader col="email" title="Name and email address">User</SortHeader>
+                <th className="text-left px-4 py-3 font-medium" title="Target job role, preferred location, work mode, and skill count">Role / Looking For</th>
+                <th className="text-left px-4 py-3 font-medium" title="Subscription tier — free or pro">Plan</th>
+                <SortHeader col="jobs" title="Total job applications tracked in their pipeline">Jobs</SortHeader>
+                <SortHeader col="tokens" title="Total OpenAI tokens consumed by this user across all AI features">Tokens</SortHeader>
+                <SortHeader col="cost" title="Estimated USD cost of AI calls made by this user">Cost</SortHeader>
+                <SortHeader col="lastlogin" title="Most recent login event recorded">Last Login</SortHeader>
+                <SortHeader col="joined" title="Account creation date">Joined</SortHeader>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

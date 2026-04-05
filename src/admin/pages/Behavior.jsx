@@ -25,12 +25,13 @@ const EVENT_LABELS = {
   search:          'Search',
 };
 
-function StatTile({ label, value, icon: Icon, accent = '#3b82f6' }) {
+function StatTile({ label, value, desc, icon: Icon, accent = '#3b82f6' }) {
   return (
     <div className="bg-card border border-white/5 rounded-2xl p-5 flex items-start justify-between hover:border-white/10 transition-colors">
       <div>
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{label}</p>
         <p className="text-2xl font-bold text-white">{value ?? '—'}</p>
+        {desc && <p className="text-[11px] text-gray-600 mt-1.5 leading-snug">{desc}</p>}
       </div>
       <div className="p-2 rounded-xl bg-white/5">
         <Icon className="w-4 h-4" style={{ color: accent }} />
@@ -105,14 +106,14 @@ export default function Behavior() {
 
       {/* KPI tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatTile label="Active Users"  value={summary?.active_users}               icon={Users}            accent="#3b82f6" />
-        <StatTile label="Total Events"  value={summary?.total_events}               icon={Activity}         accent="#a855f7" />
-        <StatTile label="Job Clicks"    value={summary?.by_event?.job_click ?? 0}   icon={MousePointerClick} accent="#22c55e" />
-        <StatTile label="Page Views"    value={summary?.by_event?.page_view  ?? 0}  icon={Eye}              accent="#f97316" />
+        <StatTile label="Active Users"  value={summary?.active_users}               icon={Users}            accent="#3b82f6" desc="Unique users with at least one event in this period" />
+        <StatTile label="Total Events"  value={summary?.total_events}               icon={Activity}         accent="#a855f7" desc="All tracked interactions — clicks, views, searches, saves" />
+        <StatTile label="Job Clicks"    value={summary?.by_event?.job_click ?? 0}   icon={MousePointerClick} accent="#22c55e" desc="Times users opened a job listing to view its details" />
+        <StatTile label="Page Views"    value={summary?.by_event?.page_view  ?? 0}  icon={Eye}              accent="#f97316" desc="Total page navigation events across all sections" />
       </div>
 
       {/* Daily trend */}
-      <ChartCard title="Events per Day" subtitle={`Last ${days} days`}>
+      <ChartCard title="Events per Day" subtitle={`Last ${days} days — daily volume of all user interactions`}>
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={summary?.daily || []}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -126,7 +127,7 @@ export default function Behavior() {
 
       {/* Event breakdown + Page breakdown */}
       <div className="grid lg:grid-cols-2 gap-4">
-        <ChartCard title="Events by Action">
+        <ChartCard title="Events by Action" subtitle="What users do most — sorted by total count">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={eventChart} layout="vertical">
               <XAxis type="number" tick={AXIS} />
@@ -137,7 +138,7 @@ export default function Behavior() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Traffic by Page">
+        <ChartCard title="Traffic by Page" subtitle="Which sections receive the most visits">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={pageChart} layout="vertical">
               <XAxis type="number" tick={AXIS} />
@@ -152,7 +153,7 @@ export default function Behavior() {
       {/* Per-user table + Live stream */}
       <div className="grid lg:grid-cols-2 gap-4">
 
-        <ChartCard title="Most Active Users" subtitle="Last 30 days">
+        <ChartCard title="Most Active Users" subtitle="Users with the highest event count in the last 30 days">
           <div className="overflow-auto max-h-64">
             <table className="w-full text-xs">
               <thead>
@@ -180,7 +181,7 @@ export default function Behavior() {
           </div>
         </ChartCard>
 
-        <ChartCard title="Live Event Stream" subtitle="Auto-refreshes every 30s">
+        <ChartCard title="Live Event Stream" subtitle="Real-time feed of the most recent user interactions — refreshes every 30s">
           <div className="overflow-auto max-h-64 space-y-0.5">
             {stream.map(ev => (
               <div key={ev.id} className="flex items-center gap-2 text-xs py-1.5 border-b border-white/5">
