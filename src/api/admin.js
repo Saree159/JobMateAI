@@ -14,7 +14,10 @@ async function post(endpoint) {
     method: 'POST',
     headers: { 'X-Admin-Key': ADMIN_KEY },
   });
-  if (!res.ok) throw new Error(`Admin API error: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${res.status}: ${text}`);
+  }
   return res.json();
 }
 

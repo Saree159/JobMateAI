@@ -697,75 +697,80 @@ def backfill_events(
     created = 0
     skipped = 0
 
-    for user in users:
-        if user.id in existing:
-            skipped += 1
-            continue
+    try:
+        for user in users:
+            if user.id in existing:
+                skipped += 1
+                continue
 
-        events_to_add = []
+            events_to_add = []
 
-        # 1. Registration event
-        events_to_add.append(UserEvent(
-            user_id=user.id,
-            event="registration_complete",
-            page="register",
-            properties=_json.dumps({}),
-            created_at=user.created_at,
-        ))
-
-        # 2. One login event per UserSession row
-        sessions = db.query(UserSession).filter(UserSession.user_id == user.id).all()
-        for s in sessions:
+            # 1. Registration event
             events_to_add.append(UserEvent(
                 user_id=user.id,
-                event="login",
-                page="login",
+                event="registration_complete",
+                page="register",
                 properties=_json.dumps({}),
-                created_at=s.created_at,
+                created_at=user.created_at,
             ))
 
-        # 3. Job events
-        jobs = db.query(Job).filter(Job.user_id == user.id).all()
-        for job in jobs:
-            props = _json.dumps({"job_title": job.title, "company": job.company})
-            # Saved
-            events_to_add.append(UserEvent(
-                user_id=user.id,
-                event="job_save",
-                page="dashboard",
-                properties=props,
-                created_at=job.created_at,
-            ))
-            # Applied (only if status progressed past saved)
-            if job.status and job.status.value in ("applied", "interview", "offer", "rejected"):
-                apply_time = job.applied_date or job.updated_at or job.created_at
+            # 2. One login event per UserSession row
+            sessions = db.query(UserSession).filter(UserSession.user_id == user.id).all()
+            for s in sessions:
                 events_to_add.append(UserEvent(
                     user_id=user.id,
-                    event="job_apply",
-                    page="dashboard",
-                    properties=props,
-                    created_at=apply_time,
+                    event="login",
+                    page="login",
+                    properties=_json.dumps({}),
+                    created_at=s.created_at,
                 ))
 
-        # 4. AI usage events
-        ai_logs = db.query(AIUsageLog).filter(AIUsageLog.user_id == user.id).all()
-        for log in ai_logs:
-            events_to_add.append(UserEvent(
-                user_id=user.id,
-                event=f"ai_{log.feature}",
-                page="dashboard",
-                properties=_json.dumps({
-                    "feature": log.feature,
-                    "tokens": log.tokens_in + log.tokens_out,
-                    "cost_usd": log.cost_usd,
-                }),
-                created_at=log.created_at,
-            ))
+            # 3. Job events
+            jobs_q = db.query(Job).filter(Job.user_id == user.id).all()
+            for job in jobs_q:
+                props = _json.dumps({"job_title": job.title, "company": job.company})
+                events_to_add.append(UserEvent(
+                    user_id=user.id,
+                    event="job_save",
+                    page="dashboard",
+                    properties=props,
+                    created_at=job.created_at,
+                ))
+                # status may be an enum object or a plain string depending on SQLAlchemy
+                status_val = job.status.value if hasattr(job.status, "value") else str(job.status or "")
+                if status_val in ("applied", "interview", "offer", "rejected"):
+                    apply_time = job.applied_date or job.updated_at or job.created_at
+                    events_to_add.append(UserEvent(
+                        user_id=user.id,
+                        event="job_apply",
+                        page="dashboard",
+                        properties=props,
+                        created_at=apply_time,
+                    ))
 
-        db.add_all(events_to_add)
-        created += len(events_to_add)
+            # 4. AI usage events
+            ai_logs = db.query(AIUsageLog).filter(AIUsageLog.user_id == user.id).all()
+            for log in ai_logs:
+                events_to_add.append(UserEvent(
+                    user_id=user.id,
+                    event=f"ai_{log.feature}",
+                    page="dashboard",
+                    properties=_json.dumps({
+                        "feature": log.feature,
+                        "tokens": (log.tokens_in or 0) + (log.tokens_out or 0),
+                        "cost_usd": log.cost_usd,
+                    }),
+                    created_at=log.created_at,
+                ))
 
-    db.commit()
+            db.add_all(events_to_add)
+            created += len(events_to_add)
+
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc))
+
     return {
         "ok": True,
         "users_backfilled": len(users) - skipped,

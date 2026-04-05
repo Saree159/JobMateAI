@@ -339,8 +339,8 @@ export default function UserLogs() {
       const result = await adminApi.backfillEvents();
       setBackfillResult(result);
       setRefreshKey(k => k + 1);
-    } catch {
-      setBackfillResult({ error: true });
+    } catch (e) {
+      setBackfillResult({ error: true, message: e.message });
     } finally {
       setBackfilling(false);
     }
@@ -423,7 +423,9 @@ export default function UserLogs() {
             </span>
           )}
           {backfillResult?.error && (
-            <span className="text-xs text-red-400">Backfill failed</span>
+            <span className="text-xs text-red-400" title={backfillResult.message}>
+              Backfill failed — {backfillResult.message?.slice(0, 80)}
+            </span>
           )}
           <button
             onClick={runBackfill}
