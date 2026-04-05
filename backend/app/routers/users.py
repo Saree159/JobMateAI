@@ -452,7 +452,7 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 # Usage today
 # ---------------------------------------------------------------------------
 
-@router.get("/users/me/usage-today")
+@router.get("/me/usage-today")
 async def get_usage_today(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
