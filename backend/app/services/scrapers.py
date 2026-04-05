@@ -746,8 +746,9 @@ class LinkedInJobSearchScraper(JobScraper):
     # Guest job detail API — returns HTML with full description (no auth needed)
     _DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 
-    MAX_JOBS = 25
-    MAX_DESCRIPTIONS = 15  # fetch descriptions for top N results
+    PAGE_SIZE = 25           # LinkedIn guest API page size (fixed)
+    FREE_LIMIT = 15          # jobs returned for free-tier users
+    PRO_LIMIT  = 50          # jobs returned for pro users
 
     @staticmethod
     def _scraper_url(target_url: str) -> str:
@@ -768,45 +769,70 @@ class LinkedInJobSearchScraper(JobScraper):
         import os
         return os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or None
 
-    async def search_async(self, role: str, location: str = "", li_at: Optional[str] = None, start: int = 0) -> List[Dict]:
-        """Search LinkedIn via Guest API and enrich with full descriptions."""
+    async def search_async(
+        self,
+        role: str,
+        location: str = "",
+        li_at: Optional[str] = None,
+        start: int = 0,
+        limit: int = FREE_LIMIT,
+    ) -> List[Dict]:
+        """
+        Search LinkedIn via Guest API and enrich ALL returned jobs with full descriptions.
+        Fetches as many pages as needed to reach `limit` results.
+        """
         import httpx
         from urllib.parse import quote_plus
 
         proxy = self._get_proxy()
+        jobs: List[Dict] = []
+        offset = start
 
-        raw_search_url = self._SEARCH_URL.format(
-            keywords=quote_plus(role),
-            location=quote_plus(location),
-            start=start,
-            count=self.MAX_JOBS,
-        )
-        search_url = self._scraper_url(raw_search_url)
         try:
-            client_kwargs = dict(headers=self._HEADERS, timeout=30, follow_redirects=True)
-            if proxy:
-                client_kwargs["proxy"] = proxy
-            async with httpx.AsyncClient(**client_kwargs) as client:
-                resp = await client.get(search_url)
-                if resp.status_code != 200:
-                    logger.warning(f"LinkedIn guest search returned {resp.status_code}")
-                    return []
+            while len(jobs) < limit:
+                raw_search_url = self._SEARCH_URL.format(
+                    keywords=quote_plus(role),
+                    location=quote_plus(location),
+                    start=offset,
+                    count=self.PAGE_SIZE,
+                )
+                search_url = self._scraper_url(raw_search_url)
+                client_kwargs = dict(headers=self._HEADERS, timeout=30, follow_redirects=True)
+                if proxy:
+                    client_kwargs["proxy"] = proxy
 
-                soup = BeautifulSoup(resp.text, "html.parser")
-                cards = soup.select("li")
-                logger.info(f"LinkedIn guest search: {len(cards)} cards for '{role}' in '{location}'")
+                async with httpx.AsyncClient(**client_kwargs) as client:
+                    resp = await client.get(search_url)
+                    if resp.status_code != 200:
+                        logger.warning(f"LinkedIn guest search returned {resp.status_code}")
+                        break
 
-                jobs = []
-                for card in cards:
-                    job = self._parse_card(card)
-                    if job and job.get("title") and job.get("job_id"):
-                        jobs.append(job)
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    cards = soup.select("li")
+                    logger.info(f"LinkedIn page start={offset}: {len(cards)} cards for '{role}' in '{location}'")
+
+                    page_jobs = []
+                    for card in cards:
+                        job = self._parse_card(card)
+                        if job and job.get("title") and job.get("job_id"):
+                            page_jobs.append(job)
+
+                    if not page_jobs:
+                        break  # LinkedIn has no more results
+
+                    jobs.extend(page_jobs)
+                    offset += self.PAGE_SIZE
+
+                    if len(page_jobs) < self.PAGE_SIZE:
+                        break  # last page — fewer results than requested
+
+            jobs = jobs[:limit]
 
             if not jobs:
                 return []
 
-            # Fetch full descriptions concurrently for top results
-            await self._enrich_descriptions(jobs[:self.MAX_DESCRIPTIONS])
+            # Fetch full descriptions for ALL returned jobs
+            await self._enrich_descriptions(jobs)
             return jobs
 
         except Exception as e:

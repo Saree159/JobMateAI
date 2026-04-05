@@ -963,15 +963,18 @@ async def scrape_linkedin_jobs(
         from app.services.scrapers import LinkedInJobSearchScraper
         from app.services.cache import get_cache, make_jobs_cache_key
 
-        # Fetch user's li_at token if available
+        # Fetch user's li_at token and tier if available
         li_at = None
+        job_limit = LinkedInJobSearchScraper.FREE_LIMIT  # default: free tier
         if user_id:
             user = db.query(User).filter(User.id == user_id).first()
             if user:
                 li_at = user.linkedin_li_at
+                if getattr(user, "subscription_tier", "free") == "pro":
+                    job_limit = LinkedInJobSearchScraper.PRO_LIMIT
 
         slug = re.sub(r'\W+', '_', f"{role}_{location}").lower().strip('_')
-        cache_key = make_jobs_cache_key("linkedin", f"{slug}_s{start}")
+        cache_key = make_jobs_cache_key("linkedin", f"{slug}_s{start}_l{job_limit}")
         cache = get_cache()
 
         if not force_refresh:
@@ -985,12 +988,12 @@ async def scrape_linkedin_jobs(
                     "source": "linkedin.com",
                     "cached": True,
                     "start": start,
-                    "has_more": len(cached_data) >= 25,
+                    "has_more": len(cached_data) >= job_limit,
                 }
 
-        logger.info(f"Cache MISS for {cache_key} - scraping LinkedIn start={start} (auth={'yes' if li_at else 'no'})...")
+        logger.info(f"Cache MISS for {cache_key} - scraping LinkedIn start={start} limit={job_limit} (auth={'yes' if li_at else 'no'})...")
         scraper = LinkedInJobSearchScraper()
-        jobs = await scraper.search_async(role, location, li_at=li_at, start=start)
+        jobs = await scraper.search_async(role, location, li_at=li_at, start=start, limit=job_limit)
 
         if not jobs and start == 0:
             raise HTTPException(
@@ -1008,7 +1011,7 @@ async def scrape_linkedin_jobs(
             "source": "linkedin.com",
             "cached": False,
             "start": start,
-            "has_more": len(jobs) >= 25,
+            "has_more": len(jobs) >= job_limit,
         }
 
     except HTTPException:
