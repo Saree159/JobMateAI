@@ -277,8 +277,8 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 category = cat
                 break
 
-        # location_preference may be comma-separated (multiple locations); use the first for search
-        location = (user.location_preference or "").split(",")[0].strip()
+        # location_preference may be comma-separated (multiple locations)
+        locations = [l.strip() for l in (user.location_preference or "").split(",") if l.strip()] or [""]
         drushim_url = f"https://www.drushim.co.il/jobs/subcat/{category}"
         cache = get_cache()
 
@@ -318,35 +318,48 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             logger.info("[scheduler] drushim disabled — skipping")
 
         # ── LinkedIn ─────────────────────────────────────────────────────────
+        # Search each preferred location and merge results (deduplicated by job_id)
         linkedin_jobs = []
         fresh_linkedin = False
         if source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role:
             li_at = user.linkedin_li_at
-            li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
-            cache_key_li = make_jobs_cache_key("linkedin", li_role_key)
-            linkedin_jobs = cache.get(cache_key_li)
-            if not linkedin_jobs:
-                log_id = _log_fetch_start("linkedin")
-                logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role}")
-                try:
-                    li_scraper = LinkedInJobSearchScraper()
-                    li_limit = (
-                        LinkedInJobSearchScraper.PRO_LIMIT
-                        if getattr(user, "subscription_tier", "free") == "pro"
-                        else LinkedInJobSearchScraper.FREE_LIMIT
-                    )
-                    linkedin_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=li_limit)
-                    if linkedin_jobs:
-                        cache.set(cache_key_li, linkedin_jobs, ttl=CACHE_TTL_ROLE)
-                        fresh_linkedin = True
-                        _update_source_run("linkedin", len(linkedin_jobs))
-                        _log_fetch_end(log_id, "success", len(linkedin_jobs))
-                    else:
-                        _log_fetch_end(log_id, "success", 0)
-                except Exception as e:
-                    logger.warning(f"[scheduler] linkedin scrape failed for user {user_id}: {e}")
-                    _log_fetch_end(log_id, "error", 0, str(e))
-                    linkedin_jobs = []
+            li_limit = (
+                LinkedInJobSearchScraper.PRO_LIMIT
+                if getattr(user, "subscription_tier", "free") == "pro"
+                else LinkedInJobSearchScraper.FREE_LIMIT
+            )
+            # Per-location limit keeps total at ~li_limit after dedup
+            per_loc_limit = max(LinkedInJobSearchScraper.FREE_LIMIT, li_limit // max(len(locations), 1))
+            seen_ids: set = set()
+            li_fresh_any = False
+            li_scraper = LinkedInJobSearchScraper()
+            for location in locations:
+                li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
+                cache_key_li = make_jobs_cache_key("linkedin", li_role_key)
+                loc_jobs = cache.get(cache_key_li)
+                if not loc_jobs:
+                    log_id = _log_fetch_start("linkedin")
+                    logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role} location={location!r}")
+                    try:
+                        loc_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=per_loc_limit)
+                        if loc_jobs:
+                            cache.set(cache_key_li, loc_jobs, ttl=CACHE_TTL_ROLE)
+                            li_fresh_any = True
+                            _update_source_run("linkedin", len(loc_jobs))
+                            _log_fetch_end(log_id, "success", len(loc_jobs))
+                        else:
+                            _log_fetch_end(log_id, "success", 0)
+                    except Exception as e:
+                        logger.warning(f"[scheduler] linkedin scrape failed for user {user_id} location={location!r}: {e}")
+                        _log_fetch_end(log_id, "error", 0, str(e))
+                        loc_jobs = []
+                # Deduplicate across locations by job_id
+                for j in (loc_jobs or []):
+                    jid = j.get("job_id") or j.get("url")
+                    if jid and jid not in seen_ids:
+                        seen_ids.add(jid)
+                        linkedin_jobs.append(j)
+            fresh_linkedin = li_fresh_any
         linkedin_jobs = linkedin_jobs or []
         for j in linkedin_jobs:
             j.setdefault("source", "linkedin")
