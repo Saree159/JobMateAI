@@ -1060,10 +1060,27 @@ def _source_row(row: "SourceConfig") -> dict:
     }
 
 
+_DEFAULT_SOURCES = [
+    ("linkedin", True,  7, 30, "LinkedIn guest API — main production source"),
+    ("drushim",  False, 7, 30, "Drushim RSS feed — disabled by default"),
+    ("techmap",  False, 7, 30, "TechMap GitHub CSV — disabled by default"),
+]
+
 @router.get("/sources")
 def list_sources(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
-    """Return all source configs with their current state."""
+    """Return all source configs, auto-seeding defaults if the table is empty."""
     rows = db.query(SourceConfig).order_by(SourceConfig.source).all()
+    if not rows:
+        for source, enabled, hour, minute, notes in _DEFAULT_SOURCES:
+            existing = db.query(SourceConfig).filter(SourceConfig.source == source).first()
+            if not existing:
+                db.add(SourceConfig(
+                    source=source, enabled=enabled,
+                    schedule_hour=hour, schedule_minute=minute,
+                    notes=notes, last_job_count=0,
+                ))
+        db.commit()
+        rows = db.query(SourceConfig).order_by(SourceConfig.source).all()
     return [_source_row(r) for r in rows]
 
 
