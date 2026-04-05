@@ -14,7 +14,11 @@ import base64
 
 from ..database import get_db
 from ..models import User
-from .users import get_current_user
+from .users import get_current_user, make_usage_gate
+
+_gate_rewrite    = make_usage_gate("resume_rewrite")
+_gate_gaps       = make_usage_gate("resume_gaps")
+_gate_rewrite_diff = make_usage_gate("resume_rewrite")
 from app.config import settings
 from app.services.usage_logger import log_ai_usage
 from openai import OpenAI
@@ -510,7 +514,7 @@ def _build_rewritten_docx(sections: list) -> bytes:
 async def rewrite_resume(
     file: UploadFile = File(...),
     job_description: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_rewrite),
 ):
     """
     Rewrite an uploaded resume (PDF or DOCX) tailored to the given job description.
@@ -553,7 +557,7 @@ async def rewrite_resume(
 async def analyze_resume_gaps(
     file: UploadFile = File(...),
     job_description: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_gaps),
 ):
     """
     Compare the candidate's resume against the job description.
@@ -631,7 +635,7 @@ async def rewrite_resume_diff(
     file: UploadFile = File(...),
     job_description: str = Form(...),
     extra_context: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_rewrite_diff),
 ):
     """
     Same 2-pass rewrite as /rewrite but returns JSON instead of a file:

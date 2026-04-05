@@ -431,6 +431,18 @@ export const analyticsApi = {
   getInsights:  () => apiRequest('/api/analytics/insights'),
 };
 
+export const waitlistApi = {
+  join: (email, fullName) =>
+    apiRequest('/api/waitlist', {
+      method: 'POST',
+      body: JSON.stringify({ email, full_name: fullName }),
+    }),
+};
+
+export const usageApi = {
+  getToday: () => apiRequest('/api/users/me/usage-today'),
+};
+
 // Default export with all APIs
 export default {
   user: userApi,

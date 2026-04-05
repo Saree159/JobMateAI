@@ -399,3 +399,13 @@ class UserEvent(Base):
 
     user = relationship("User")
 
+
+class WaitlistEntry(Base):
+    """Pro plan waitlist — stores emails of users who requested early access."""
+    __tablename__ = "waitlist"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    email      = Column(String(255), nullable=False, unique=True, index=True)
+    full_name  = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+

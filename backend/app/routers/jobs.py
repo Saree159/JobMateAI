@@ -15,7 +15,11 @@ from app.models import IngestJob, UserJobFeedStatus
 from app.schemas import JobCreate, JobUpdate, JobResponse, MatchScoreResponse, CoverLetterResponse
 from app.schemas import FeedJobResponse, StatusUpdateRequest
 from app.services.ai import calculate_match_score, generate_cover_letter, generate_opening_sentence
-from app.routers.users import get_current_user
+from app.routers.users import get_current_user, make_usage_gate
+
+_gate_cover_letter       = make_usage_gate("cover_letter")
+_gate_interview          = make_usage_gate("interview_questions")
+_gate_salary             = make_usage_gate("salary_estimate")
 
 logger = logging.getLogger(__name__)
 
@@ -602,7 +606,7 @@ def compute_match_score(
 async def generate_job_cover_letter(
     job_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_cover_letter),
 ):
     """
     Generate an AI-powered cover letter for a job.
@@ -651,7 +655,7 @@ async def generate_interview_questions(
     job_id: int,
     lang: str = "en",
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_interview),
 ):
     """
     Generate AI-powered interview preparation questions for a job.
@@ -696,7 +700,7 @@ async def estimate_job_salary(
     job_id: int,
     lang: str = "en",
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_gate_salary),
 ):
     """
     Generate AI-powered salary estimation for a job.

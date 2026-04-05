@@ -82,8 +82,40 @@ async def get_current_user(
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
-    
+
     return user
+
+
+FREE_DAILY_LIMIT = 5
+
+
+def make_usage_gate(feature: str):
+    """
+    FastAPI dependency factory — enforces a daily per-feature usage cap for
+    free-tier users (FREE_DAILY_LIMIT uses/day).  Pro users are unlimited.
+    Uses the cache with key  usage:{user_id}:{feature}:{YYYY-MM-DD}.
+    """
+    async def _check(current_user: User = Depends(get_current_user)) -> User:
+        if getattr(current_user, "subscription_tier", "free") == "pro":
+            return current_user
+        from datetime import date as _date
+        from app.services.cache import get_cache
+        cache = get_cache()
+        today = _date.today().isoformat()
+        key = f"usage:{current_user.id}:{feature}:{today}"
+        count = cache.get(key) or 0
+        if count >= FREE_DAILY_LIMIT:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"daily_limit_reached:{feature}",
+            )
+        cache.set(key, count + 1, ttl=86400 * 2)  # 48 h TTL
+        return current_user
+    return _check
+
+
+# Named aliases so importers don't need to call the factory directly
+require_pro = make_usage_gate   # kept for backward-compat import name
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -391,3 +423,51 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         db.rollback()
 
     return Token(access_token=access_token)
+
+
+# ---------------------------------------------------------------------------
+# Usage today
+# ---------------------------------------------------------------------------
+
+@router.get("/users/me/usage-today")
+async def get_usage_today(
+    current_user: User = Depends(get_current_user),
+):
+    """Return today's AI feature usage counts for the calling user."""
+    from datetime import date
+    from app.services.cache import get_cache
+    cache = get_cache()
+    today = date.today().isoformat()
+    features = ["cover_letter", "interview_questions", "salary_estimate", "resume_gaps", "resume_rewrite"]
+    result = {}
+    for f in features:
+        key = f"usage:{current_user.id}:{f}:{today}"
+        result[f] = cache.get(key) or 0
+    return {
+        "tier": current_user.subscription_tier,
+        "limit": None if current_user.subscription_tier == "pro" else FREE_DAILY_LIMIT,
+        "usage": result,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Waitlist
+# ---------------------------------------------------------------------------
+
+@router.post("/waitlist", status_code=201)
+def join_waitlist(
+    body: dict,
+    db: Session = Depends(get_db),
+):
+    """Add an email to the Pro waitlist. Idempotent — duplicate emails are ignored."""
+    from app.models import WaitlistEntry
+    email = (body.get("email") or "").strip().lower()
+    name  = (body.get("full_name") or "").strip()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    existing = db.query(WaitlistEntry).filter(WaitlistEntry.email == email).first()
+    if existing:
+        return {"message": "Already on the waitlist", "already_exists": True}
+    db.add(WaitlistEntry(email=email, full_name=name or None))
+    db.commit()
+    return {"message": "You're on the waitlist!", "already_exists": False}

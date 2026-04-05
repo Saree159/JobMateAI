@@ -20,7 +20,10 @@ import {
   Bookmark,
   FileDown,
   Upload,
+  Sparkles,
 } from "lucide-react";
+import WaitlistDialog from "@/components/ui/WaitlistDialog";
+import { usageApi } from "@/api/jobmate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -95,6 +98,9 @@ const JD = {
     actions:              'Actions',
     applyNow:             'Apply Now',
     viewAllApplications:  'View All Applications',
+    upgradeTitle:         'Pro Feature',
+    upgradeDesc:          'Interview prep, salary insights, and resume gap analysis are available on the Pro plan.',
+    upgradeBtn:           'Upgrade to Pro',
   },
   he: {
     backToJobs:           'חזרה למשרות',
@@ -158,6 +164,9 @@ const JD = {
     actions:              'פעולות',
     applyNow:             'הגש עכשיו',
     viewAllApplications:  'כל הבקשות שלי',
+    upgradeTitle:         'תכונת Pro',
+    upgradeDesc:          'הכנה לראיון, תובנות שכר וניתוח פערים זמינים בתוכנית ה-Pro.',
+    upgradeBtn:           'שדרג ל-Pro',
   },
 };
 
@@ -169,6 +178,28 @@ export default function JobDetails() {
   const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
   const jd = isHebrew ? JD.he : JD.en;
+  const isPro = user?.subscription_tier === 'pro';
+  const [showWaitlist, setShowWaitlist] = React.useState(false);
+  const [limitHit, setLimitHit] = React.useState({});   // { feature: true }
+
+  const { data: usageData } = useQuery({
+    queryKey: ['usage-today'],
+    queryFn: usageApi.getToday,
+    staleTime: 60_000,
+  });
+
+  const FREE_LIMIT = 5;
+  const usageLeft = (feature) => {
+    if (isPro) return null;
+    const used = usageData?.usage?.[feature] ?? 0;
+    return Math.max(0, FREE_LIMIT - used);
+  };
+
+  const handleLimitError = (err, feature) => {
+    if (err?.message?.includes('daily_limit_reached') || String(err).includes('429')) {
+      setLimitHit(prev => ({ ...prev, [feature]: true }));
+    }
+  };
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
 
@@ -233,7 +264,12 @@ export default function JobDetails() {
       setShowGapAnalysis(true);
       toast.success(isHebrew ? 'ניתוח הפערים הושלם!' : 'Gap analysis complete!');
     },
-    onError: (err) => toast.error(err.message || 'Failed to analyze resume gaps'),
+    onError: (err) => {
+      handleLimitError(err, 'resume_gaps');
+      if (!err?.message?.includes('daily_limit_reached') && !String(err).includes('429')) {
+        toast.error(err.message || 'Failed to analyze resume gaps');
+      }
+    },
   });
 
   const generateTailoredCvMutation = useMutation({
@@ -270,7 +306,10 @@ export default function JobDetails() {
         `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/salary-estimate${langParam}`,
         { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
       );
-      if (!response.ok) throw new Error('Failed to estimate salary');
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error(response.status === 429 ? `daily_limit_reached:salary_estimate` : (d.detail || 'Failed to estimate salary'));
+      }
       return response.json();
     },
     onSuccess: (data) => {
@@ -278,7 +317,10 @@ export default function JobDetails() {
       setShowSalaryEstimate(true);
       toast.success(isHebrew ? 'הערכת שכר הושלמה!' : 'Salary estimate generated!');
     },
-    onError: () => toast.error('Failed to estimate salary'),
+    onError: (err) => {
+      handleLimitError(err, 'salary_estimate');
+      if (!String(err?.message).includes('daily_limit_reached')) toast.error('Failed to estimate salary');
+    },
   });
 
   const generateQuestionsMutation = useMutation({
@@ -289,7 +331,10 @@ export default function JobDetails() {
         `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/interview-questions${langParam}`,
         { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
       );
-      if (!response.ok) throw new Error('Failed to generate questions');
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error(response.status === 429 ? `daily_limit_reached:interview_questions` : (d.detail || 'Failed to generate questions'));
+      }
       return response.json();
     },
     onSuccess: (data) => {
@@ -297,7 +342,10 @@ export default function JobDetails() {
       setShowInterviewQuestions(true);
       toast.success(isHebrew ? 'שאלות הכנה לראיון נוצרו!' : 'Interview questions generated!');
     },
-    onError: () => toast.error('Failed to generate interview questions'),
+    onError: (err) => {
+      handleLimitError(err, 'interview_questions');
+      if (!String(err?.message).includes('daily_limit_reached')) toast.error('Failed to generate interview questions');
+    },
   });
 
   const { data: job, isLoading: jobLoading } = useQuery({
@@ -385,6 +433,7 @@ export default function JobDetails() {
 
   return (
     <div className="p-4 md:p-10 max-w-5xl mx-auto">
+      <WaitlistDialog open={showWaitlist} onClose={() => setShowWaitlist(false)} />
       {/* Back Button */}
       <Button
         variant="ghost"
@@ -525,24 +574,40 @@ export default function JobDetails() {
                   <ScanSearch className="w-5 h-5 text-purple-600" />
                   {jd.resumeGapAnalysis}
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => analyzeGapsMutation.mutate()}
-                  disabled={analyzeGapsMutation.isPending || (gapResumeSource === 'upload' && !gapResumeFile)}
-                  className="text-purple-600 border-purple-300 hover:bg-purple-100"
-                >
-                  {analyzeGapsMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.analyzing}</>
-                  ) : showGapAnalysis ? (
-                    <>{jd.reanalyze}</>
-                  ) : (
-                    <><ScanSearch className="w-4 h-4 mr-2" />{jd.analyzeGaps}</>
+                <div className="flex items-center gap-2">
+                  {!isPro && usageLeft('resume_gaps') !== null && !limitHit.resume_gaps && (
+                    <span className="text-xs text-gray-400">{usageLeft('resume_gaps')}/{FREE_LIMIT} left</span>
                   )}
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => analyzeGapsMutation.mutate()}
+                    disabled={analyzeGapsMutation.isPending || (gapResumeSource === 'upload' && !gapResumeFile)}
+                    className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                  >
+                    {analyzeGapsMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.analyzing}</>
+                    ) : showGapAnalysis ? (
+                      <>{jd.reanalyze}</>
+                    ) : (
+                      <><ScanSearch className="w-4 h-4 mr-2" />{jd.analyzeGaps}</>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
+              {limitHit.resume_gaps ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+                  <Sparkles className="w-8 h-8 text-purple-400" />
+                  <p className="font-semibold text-gray-700">Daily limit reached</p>
+                  <p className="text-sm text-gray-500 max-w-xs">You've used all 5 free gap analyses for today. Join the waitlist for unlimited access.</p>
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white mt-1" onClick={() => setShowWaitlist(true)}>
+                    {jd.upgradeBtn}
+                  </Button>
+                </div>
+              ) : (
+              <>
               {/* Resume source picker */}
               <div className="mb-4 space-y-2">
                 <div className="flex gap-2">
@@ -671,6 +736,8 @@ export default function JobDetails() {
                   {jd.gapAnalysisPlaceholder}
                 </p>
               )}
+              </>
+              )}
             </CardContent>
           </Card>
 
@@ -735,24 +802,38 @@ export default function JobDetails() {
                   {jd.interviewPrep}
                 </CardTitle>
                 {!showInterviewQuestions && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateQuestionsMutation.mutate()}
-                    disabled={generateQuestionsMutation.isPending}
-                    className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
-                  >
-                    {generateQuestionsMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.generating}</>
-                    ) : (
-                      <><Lightbulb className="w-4 h-4 mr-2" />{jd.generateQuestions}</>
+                  <div className="flex items-center gap-2">
+                    {!isPro && usageLeft('interview_questions') !== null && !limitHit.interview_questions && (
+                      <span className="text-xs text-gray-400">{usageLeft('interview_questions')}/{FREE_LIMIT} left</span>
                     )}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateQuestionsMutation.mutate()}
+                      disabled={generateQuestionsMutation.isPending}
+                      className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
+                    >
+                      {generateQuestionsMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.generating}</>
+                      ) : (
+                        <><Lightbulb className="w-4 h-4 mr-2" />{jd.generateQuestions}</>
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {showInterviewQuestions && interviewQuestions ? (
+              {limitHit.interview_questions ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+                  <Sparkles className="w-8 h-8 text-blue-400" />
+                  <p className="font-semibold text-gray-700">Daily limit reached</p>
+                  <p className="text-sm text-gray-500 max-w-xs">You've used all 5 free interview prep sessions for today. Join the waitlist for unlimited access.</p>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white mt-1" onClick={() => setShowWaitlist(true)}>
+                    {jd.upgradeBtn}
+                  </Button>
+                </div>
+              ) : showInterviewQuestions && interviewQuestions ? (
                 <div className="space-y-6">
                   {interviewQuestions.behavioral && (
                     <div>
@@ -796,6 +877,7 @@ export default function JobDetails() {
             </CardContent>
           </Card>
 
+
           {/* Salary Insights */}
           <Card className="border border-green-200 bg-green-50/50">
             <CardHeader>
@@ -805,24 +887,38 @@ export default function JobDetails() {
                   {jd.salaryInsights}
                 </CardTitle>
                 {!showSalaryEstimate && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateSalaryMutation.mutate()}
-                    disabled={generateSalaryMutation.isPending}
-                    className="text-green-600 border-green-300 hover:bg-green-900/40"
-                  >
-                    {generateSalaryMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.estimating}</>
-                    ) : (
-                      <><TrendingUp className="w-4 h-4 mr-2" />{jd.estimateSalary}</>
+                  <div className="flex items-center gap-2">
+                    {!isPro && usageLeft('salary_estimate') !== null && !limitHit.salary_estimate && (
+                      <span className="text-xs text-gray-400">{usageLeft('salary_estimate')}/{FREE_LIMIT} left</span>
                     )}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateSalaryMutation.mutate()}
+                      disabled={generateSalaryMutation.isPending}
+                      className="text-green-600 border-green-300 hover:bg-green-900/40"
+                    >
+                      {generateSalaryMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.estimating}</>
+                      ) : (
+                        <><TrendingUp className="w-4 h-4 mr-2" />{jd.estimateSalary}</>
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {showSalaryEstimate && salaryEstimate ? (
+              {limitHit.salary_estimate ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+                  <Sparkles className="w-8 h-8 text-green-400" />
+                  <p className="font-semibold text-gray-700">Daily limit reached</p>
+                  <p className="text-sm text-gray-500 max-w-xs">You've used all 5 free salary estimates for today. Join the waitlist for unlimited access.</p>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white mt-1" onClick={() => setShowWaitlist(true)}>
+                    {jd.upgradeBtn}
+                  </Button>
+                </div>
+              ) : showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   <div className="bg-white p-4 rounded-lg border border-green-200">
                     <h4 className="font-semibold text-gray-900 mb-3">{jd.estimatedRange}</h4>
