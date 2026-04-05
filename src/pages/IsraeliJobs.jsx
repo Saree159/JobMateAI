@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Search, Globe, AlertCircle, MapPin, Building2, Briefcase, Award } from "lucide-react";
+import ScraperLoader from "@/components/jobs/ScraperLoader";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,12 +179,7 @@ export default function IsraeliJobs() {
         </Card>
 
         {/* Results */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ltr:ml-3 rtl:mr-3 text-gray-400">{t('israeliJobs.loading')}</span>
-          </div>
-        )}
+        {isLoading && <ScraperLoader message={t('israeliJobs.loading')} />}
 
         {error && (
           <Alert variant="destructive">

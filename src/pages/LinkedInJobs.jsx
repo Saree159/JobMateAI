@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Linkedin, AlertCircle, MapPin, Building2, ExternalLink, Briefcase, Bookmark, CheckCircle2 } from "lucide-react";
+import ScraperLoader from "@/components/jobs/ScraperLoader";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -191,12 +192,7 @@ export default function LinkedInJobs() {
         </Card>
 
         {/* Loading */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="ml-3 text-gray-400">Searching LinkedIn… this may take a moment</span>
-          </div>
-        )}
+        {isLoading && <ScraperLoader message="Searching LinkedIn… this may take a moment" />}
 
         {/* Error */}
         {error && !isLoading && (
