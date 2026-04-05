@@ -10,6 +10,7 @@ import {
   Bookmark, CheckCircle2, ExternalLink, Building2, MapPin,
   Linkedin, Globe, Zap,
 } from "lucide-react";
+import ScraperLoader from "@/components/jobs/ScraperLoader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -295,27 +296,7 @@ export default function Jobs() {
           </div>
 
           {discoverLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="border border-gray-100">
-                  <CardContent className="p-5 space-y-3">
-                    <div className="flex justify-between">
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-3 w-1/2" />
-                      </div>
-                      <Skeleton className="h-6 w-12 rounded-full" />
-                    </div>
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-5/6" />
-                    <div className="flex gap-2 pt-2">
-                      <Skeleton className="h-8 flex-1" />
-                      <Skeleton className="h-8 flex-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ScraperLoader message="Finding your top job matches…" />
           ) : filteredDiscoverJobs.length === 0 ? (
             <Card className="border border-gray-100">
               <CardContent className="text-center py-20">
