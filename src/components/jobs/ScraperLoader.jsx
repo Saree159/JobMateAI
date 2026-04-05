@@ -22,9 +22,9 @@ export default function ScraperLoader({ message }) {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 select-none">
+    <div className="flex flex-col items-center justify-center py-16 select-none w-full">
       {/* Scene */}
-      <div className="relative w-72 h-44">
+      <div className="relative mx-auto w-72 h-44">
 
         {/* Ground line */}
         <div className="absolute bottom-8 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-200 to-transparent rounded-full" />
@@ -116,15 +116,10 @@ export default function ScraperLoader({ message }) {
 
 function BotFigure() {
   return (
-    <div
-      className="absolute"
-      style={{
-        left: '50%', bottom: '8px',
-        transform: 'translateX(-50%)',
-        animation: 'botBounce 1.1s ease-in-out infinite',
-        width: 54,
-      }}
-    >
+    /* Centering wrapper — no animation so transform is stable */
+    <div className="absolute" style={{ left: '50%', bottom: '8px', transform: 'translateX(-50%)', width: 54 }}>
+    {/* Animated inner wrapper */}
+    <div style={{ animation: 'botBounce 1.1s ease-in-out infinite' }}>
       {/* Head */}
       <div className="relative mx-auto w-11 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-400/40 flex items-center justify-center">
         {/* Antenna */}
@@ -175,7 +170,8 @@ function BotFigure() {
         <div className="w-3 h-4 rounded-b-lg bg-indigo-600"
           style={{ animation: 'botBounce 1.1s ease-in-out 0.6s infinite', transformOrigin: 'top' }} />
       </div>
-    </div>
+    </div>{/* end animated inner */}
+    </div>{/* end centering wrapper */}
   );
 }
 
