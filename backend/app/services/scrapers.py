@@ -739,9 +739,10 @@ class LinkedInJobSearchScraper(JobScraper):
     }
 
     # Guest search API — returns HTML with job cards (no auth needed)
+    # sortBy=DD sorts by date posted (most recent first)
     _SEARCH_URL = (
         "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
-        "?keywords={keywords}&location={location}&start={start}&count={count}"
+        "?keywords={keywords}&location={location}&start={start}&count={count}&sortBy=DD"
     )
     # Guest job detail API — returns HTML with full description (no auth needed)
     _DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
