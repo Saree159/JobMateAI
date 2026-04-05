@@ -19,6 +19,7 @@ import {
   Calendar,
   Bookmark,
   FileDown,
+  Upload,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,15 @@ import { Label } from "@/components/ui/label";
 import CoverLetterGenerator from "../components/jobdetails/CoverLetterGenerator";
 import SaveJobButton from "../components/jobdetails/SaveJobButton";
 import { toast } from 'sonner';
+import { useTranslation } from "react-i18next";
 
 export default function JobDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, getToken } = useAuth();
   const queryClient = useQueryClient();
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.language === 'he';
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
 
@@ -52,6 +56,9 @@ export default function JobDetails() {
   const [showGapAnalysis, setShowGapAnalysis] = React.useState(false);
   const [gapAnswers, setGapAnswers] = React.useState({});
   const [tailoredCv, setTailoredCv] = React.useState(null);
+  // Resume source for gap analysis: 'saved' or 'upload'
+  const [gapResumeSource, setGapResumeSource] = React.useState(user?.resume_filename ? 'saved' : 'upload');
+  const [gapResumeFile, setGapResumeFile] = React.useState(null);
 
   // Lazily save a feed job to the tracker the first time an AI feature is used
   const lazyTrackMutation = useMutation({
@@ -81,7 +88,12 @@ export default function JobDetails() {
   const analyzeGapsMutation = useMutation({
     mutationFn: async () => {
       const token = getToken();
-      const resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      let resumeFile;
+      if (gapResumeSource === 'upload' && gapResumeFile) {
+        resumeFile = gapResumeFile;
+      } else {
+        resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      }
       return resumeApi.analyzeGaps(resumeFile, effectiveJob.description, token);
     },
     onSuccess: (data) => {
@@ -89,7 +101,7 @@ export default function JobDetails() {
       setGapAnswers({});
       setTailoredCv(null);
       setShowGapAnalysis(true);
-      toast.success('Gap analysis complete!');
+      toast.success(isHebrew ? 'ניתוח הפערים הושלם!' : 'Gap analysis complete!');
     },
     onError: (err) => toast.error(err.message || 'Failed to analyze resume gaps'),
   });
@@ -97,7 +109,12 @@ export default function JobDetails() {
   const generateTailoredCvMutation = useMutation({
     mutationFn: async () => {
       const token = getToken();
-      const resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      let resumeFile;
+      if (gapResumeSource === 'upload' && gapResumeFile) {
+        resumeFile = gapResumeFile;
+      } else {
+        resumeFile = await resumeApi.getSavedFile(token, user.resume_filename || 'resume.pdf');
+      }
       const answersText = (gapAnalysis?.gaps || [])
         .map((gap, i) =>
           gapAnswers[i]?.trim()
@@ -110,7 +127,7 @@ export default function JobDetails() {
     },
     onSuccess: (data) => {
       setTailoredCv(data);
-      toast.success('Tailored CV generated!');
+      toast.success(isHebrew ? 'קורות חיים מותאמים נוצרו!' : 'Tailored CV generated!');
     },
     onError: (err) => toast.error(err.message || 'Failed to generate tailored CV'),
   });
@@ -118,8 +135,9 @@ export default function JobDetails() {
   const generateSalaryMutation = useMutation({
     mutationFn: async () => {
       const id = await ensureTracked();
+      const langParam = isHebrew ? '?lang=he' : '';
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/salary-estimate`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/salary-estimate${langParam}`,
         { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
       );
       if (!response.ok) throw new Error('Failed to estimate salary');
@@ -128,7 +146,7 @@ export default function JobDetails() {
     onSuccess: (data) => {
       setSalaryEstimate(data.salary_estimate);
       setShowSalaryEstimate(true);
-      toast.success('Salary estimate generated!');
+      toast.success(isHebrew ? 'הערכת שכר הושלמה!' : 'Salary estimate generated!');
     },
     onError: () => toast.error('Failed to estimate salary'),
   });
@@ -136,8 +154,9 @@ export default function JobDetails() {
   const generateQuestionsMutation = useMutation({
     mutationFn: async () => {
       const id = await ensureTracked();
+      const langParam = isHebrew ? '?lang=he' : '';
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/interview-questions`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/interview-questions${langParam}`,
         { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
       );
       if (!response.ok) throw new Error('Failed to generate questions');
@@ -146,7 +165,7 @@ export default function JobDetails() {
     onSuccess: (data) => {
       setInterviewQuestions(data.questions);
       setShowInterviewQuestions(true);
-      toast.success('Interview questions generated!');
+      toast.success(isHebrew ? 'שאלות הכנה לראיון נוצרו!' : 'Interview questions generated!');
     },
     onError: () => toast.error('Failed to generate interview questions'),
   });
@@ -243,7 +262,7 @@ export default function JobDetails() {
         className="mb-4 md:mb-6 -ml-2"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Jobs
+        {isHebrew ? t('jobdetails.backToJobs') : 'Back to Jobs'}
       </Button>
 
       {/* Job Header */}
@@ -280,24 +299,24 @@ export default function JobDetails() {
                 }`}>
                   {matchScore}%
                 </div>
-                <p className="text-xs text-gray-500">Match</p>
+                <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.match') : 'Match'}</p>
               </div>
               <div className="hidden md:block border-t border-gray-200 pt-3 space-y-2.5">
                 {user?.target_role && (
                   <div>
-                    <p className="text-xs text-gray-500">Your Role</p>
+                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.yourRole') : 'Your Role'}</p>
                     <p className="text-sm text-gray-900 font-medium truncate">{user.target_role}</p>
                   </div>
                 )}
                 {user?.years_of_experience != null && (
                   <div>
-                    <p className="text-xs text-gray-500">Your Experience</p>
-                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} yrs</p>
+                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.yourExperience') : 'Your Experience'}</p>
+                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} {isHebrew ? t('jobdetails.yrs') : 'yrs'}</p>
                   </div>
                 )}
                 {requiredYears && (
                   <div>
-                    <p className="text-xs text-gray-500">Required</p>
+                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.required') : 'Required'}</p>
                     <p className={`text-sm font-medium ${
                       user?.years_of_experience != null
                         ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
@@ -336,7 +355,7 @@ export default function JobDetails() {
           {/* Description */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold">Job Description</CardTitle>
+              <CardTitle className="font-semibold">{isHebrew ? t('jobdetails.jobDescription') : 'Job Description'}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{effectiveJob.description}</p>
@@ -349,11 +368,11 @@ export default function JobDetails() {
           ) : (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold">AI Cover Letter Generator</CardTitle>
+                <CardTitle className="font-semibold">{isHebrew ? t('jobdetails.aiCoverLetter') : 'AI Cover Letter Generator'}</CardTitle>
               </CardHeader>
               <CardContent className="text-center py-6">
                 <p className="text-sm text-gray-400 mb-4">
-                  Save this job to generate a personalized cover letter.
+                  {isHebrew ? t('jobdetails.saveJobFirstDesc') : 'Save this job to generate a personalized cover letter.'}
                 </p>
                 <Button
                   variant="outline"
@@ -361,138 +380,171 @@ export default function JobDetails() {
                   disabled={lazyTrackMutation.isPending}
                 >
                   {lazyTrackMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
-                    : <><Bookmark className="w-4 h-4 mr-2" />Save Job First</>}
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.saving') : 'Saving…'}</>
+                    : <><Bookmark className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.saveJobFirst') : 'Save Job First'}</>}
                 </Button>
               </CardContent>
             </Card>
           )}
 
           {/* Resume Gap Analysis */}
-          {user?.resume_filename && (
-            <Card className="border border-purple-200 bg-purple-50/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="font-semibold flex items-center gap-2">
-                    <ScanSearch className="w-5 h-5 text-purple-600" />
-                    Resume Gap Analysis
-                  </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => analyzeGapsMutation.mutate()}
-                    disabled={analyzeGapsMutation.isPending}
-                    className="text-purple-600 border-purple-300 hover:bg-purple-100"
+          <Card className="border border-purple-200 bg-purple-50/50">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-semibold flex items-center gap-2">
+                  <ScanSearch className="w-5 h-5 text-purple-600" />
+                  {isHebrew ? t('jobdetails.resumeGapAnalysis') : 'Resume Gap Analysis'}
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => analyzeGapsMutation.mutate()}
+                  disabled={analyzeGapsMutation.isPending || (gapResumeSource === 'upload' && !gapResumeFile)}
+                  className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                >
+                  {analyzeGapsMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.analyzing') : 'Analyzing…'}</>
+                  ) : showGapAnalysis ? (
+                    <>{isHebrew ? t('jobdetails.reanalyze') : '🔄 Re-analyze'}</>
+                  ) : (
+                    <><ScanSearch className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.analyzeGaps') : 'Analyze Gaps'}</>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Resume source picker */}
+              <div className="mb-4 space-y-2">
+                <div className="flex gap-2">
+                  {user?.resume_filename && (
+                    <button
+                      onClick={() => setGapResumeSource('saved')}
+                      className={`flex-1 text-xs px-3 py-2 rounded-lg border transition-colors ${
+                        gapResumeSource === 'saved'
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
+                      }`}
+                    >
+                      {isHebrew ? t('jobdetails.useSavedResume') : '📄 Use Saved Resume'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setGapResumeSource('upload')}
+                    className={`flex-1 text-xs px-3 py-2 rounded-lg border transition-colors ${
+                      gapResumeSource === 'upload'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
+                    }`}
                   >
-                    {analyzeGapsMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analyzing…</>
-                    ) : showGapAnalysis ? (
-                      <>🔄 Re-analyze</>
-                    ) : (
-                      <><ScanSearch className="w-4 h-4 mr-2" />Analyze Gaps</>
-                    )}
-                  </Button>
+                    {isHebrew ? t('jobdetails.uploadNewResume') : '⬆️ Upload New Resume'}
+                  </button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {showGapAnalysis && gapAnalysis ? (
-                  <div className="space-y-5">
-                    {/* Summary */}
-                    {gapAnalysis.summary && (
-                      <p className="text-sm text-gray-700 bg-white rounded-lg border border-purple-100 p-3">
-                        {gapAnalysis.summary}
+                {gapResumeSource === 'upload' && (
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-purple-200 rounded-lg px-3 py-2 hover:bg-purple-50 transition-colors">
+                    <Upload className="w-4 h-4 text-purple-500 shrink-0" />
+                    <span className="text-xs text-purple-700 truncate">
+                      {gapResumeFile ? gapResumeFile.name : (isHebrew ? 'בחר קובץ PDF / DOCX' : 'Choose PDF or DOCX')}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx"
+                      className="hidden"
+                      onChange={(e) => setGapResumeFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {showGapAnalysis && gapAnalysis ? (
+                <div className="space-y-5">
+                  {gapAnalysis.summary && (
+                    <p className="text-sm text-gray-700 bg-white rounded-lg border border-purple-100 p-3">
+                      {gapAnalysis.summary}
+                    </p>
+                  )}
+
+                  {gapAnalysis.gaps?.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                        {isHebrew ? t('jobdetails.answerToTailor') : 'Answer these to tailor your CV:'}
                       </p>
-                    )}
-
-                    {/* Gap Q&A — answer to fill in your CV */}
-                    {gapAnalysis.gaps?.length > 0 && (
-                      <div className="space-y-4">
-                        <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                          Answer these to tailor your CV:
-                        </p>
-                        {gapAnalysis.gaps.map((gap, i) => (
-                          <div key={i} className="bg-white rounded-lg border border-purple-100 p-4 space-y-3">
-                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                              Missing: {gap.requirement}
-                            </p>
-                            <p className="text-sm text-gray-700">💬 {gap.question}</p>
-                            <Textarea
-                              placeholder="Your answer…"
-                              value={gapAnswers[i] || ''}
-                              onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
-                              className="min-h-[72px] text-sm resize-none bg-gray-50 border-purple-100 focus:border-purple-400"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Tailored CV */}
-                    {!tailoredCv ? (
-                      <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                        onClick={() => generateTailoredCvMutation.mutate()}
-                        disabled={generateTailoredCvMutation.isPending || !hasAnswers}
-                      >
-                        {generateTailoredCvMutation.isPending ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating Tailored CV…</>
-                        ) : (
-                          <>✨ Generate Tailored CV</>
-                        )}
-                      </Button>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between bg-white rounded-lg border border-purple-100 p-3">
-                          <p className="text-sm font-semibold text-purple-700">Tailored CV ready!</p>
-                          <Button
-                            size="sm"
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={downloadCV}
-                          >
-                            <FileDown className="w-4 h-4 mr-2" /> Download .docx
-                          </Button>
+                      {gapAnalysis.gaps.map((gap, i) => (
+                        <div key={i} className="bg-white rounded-lg border border-purple-100 p-4 space-y-3">
+                          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                            {isHebrew ? t('jobdetails.missing') : 'Missing:'} {gap.requirement}
+                          </p>
+                          <p className="text-sm text-gray-700">💬 {gap.question}</p>
+                          <Textarea
+                            placeholder={isHebrew ? t('jobdetails.answerPlaceholder') : 'Your answer…'}
+                            value={gapAnswers[i] || ''}
+                            onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                            className="min-h-[72px] text-sm resize-none bg-gray-50 border-purple-100 focus:border-purple-400"
+                          />
                         </div>
+                      ))}
+                    </div>
+                  )}
 
-                        {/* Diff view */}
-                        {tailoredCv.diff?.length > 0 && (
-                          <div className="bg-gray-900 rounded-lg p-4 max-h-72 overflow-y-auto text-xs font-mono space-y-0.5">
-                            {tailoredCv.diff.map((chunk, i) => (
-                              <div
-                                key={i}
-                                className={
-                                  chunk.type === 'insert' ? 'text-green-400' :
-                                  chunk.type === 'delete' ? 'text-red-400 line-through opacity-70' :
-                                  'text-gray-500'
-                                }
-                              >
-                                {chunk.type === 'insert' ? '+ ' : chunk.type === 'delete' ? '- ' : '  '}
-                                {chunk.text}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => generateTailoredCvMutation.mutate()}
-                          disabled={generateTailoredCvMutation.isPending}
-                        >
-                          ✨ Regenerate CV
+                  {!tailoredCv ? (
+                    <Button
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => generateTailoredCvMutation.mutate()}
+                      disabled={generateTailoredCvMutation.isPending || !hasAnswers}
+                    >
+                      {generateTailoredCvMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.generatingCV') : 'Generating Tailored CV…'}</>
+                      ) : (
+                        <>{isHebrew ? t('jobdetails.generateTailoredCV') : '✨ Generate Tailored CV'}</>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between bg-white rounded-lg border border-purple-100 p-3">
+                        <p className="text-sm font-semibold text-purple-700">
+                          {isHebrew ? t('jobdetails.tailoredCVReady') : 'Tailored CV ready!'}
+                        </p>
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={downloadCV}>
+                          <FileDown className="w-4 h-4 mr-2" /> {isHebrew ? t('jobdetails.downloadDocx') : 'Download .docx'}
                         </Button>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400 text-center py-4">
-                    Click "Analyze Gaps" to compare your resume against this job and find what's missing.
-                    Answer the questions to generate a tailored CV.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                      {tailoredCv.diff?.length > 0 && (
+                        <div className="bg-gray-900 rounded-lg p-4 max-h-72 overflow-y-auto text-xs font-mono space-y-0.5">
+                          {tailoredCv.diff.map((chunk, i) => (
+                            <div
+                              key={i}
+                              className={
+                                chunk.type === 'insert' ? 'text-green-400' :
+                                chunk.type === 'delete' ? 'text-red-400 line-through opacity-70' :
+                                'text-gray-500'
+                              }
+                            >
+                              {chunk.type === 'insert' ? '+ ' : chunk.type === 'delete' ? '- ' : '  '}
+                              {chunk.text}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => generateTailoredCvMutation.mutate()}
+                        disabled={generateTailoredCvMutation.isPending}
+                      >
+                        {isHebrew ? t('jobdetails.regenerateCV') : '✨ Regenerate CV'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  {isHebrew
+                    ? t('jobdetails.gapAnalysisPlaceholder')
+                    : 'Click "Analyze Gaps" to compare your resume against this job and find what\'s missing. Answer the questions to generate a tailored CV.'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Notes */}
           <Card className="border border-gray-100">
@@ -500,11 +552,11 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <StickyNote className="w-5 h-5 text-blue-600" />
-                  Notes & Reminders
+                  {isHebrew ? t('jobdetails.notes') : 'Notes & Reminders'}
                 </CardTitle>
                 {trackedJobId && !isEditingNotes && (
                   <Button variant="ghost" size="sm" onClick={() => setIsEditingNotes(true)}>
-                    Edit
+                    {isHebrew ? t('common.edit') : 'Edit'}
                   </Button>
                 )}
               </div>
@@ -515,7 +567,7 @@ export default function JobDetails() {
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add interview notes, follow-up reminders, or any other information..."
+                    placeholder={isHebrew ? t('jobdetails.notesPlaceholder') : 'Add interview notes, follow-up reminders, or any other information...'}
                     className="min-h-[120px]"
                   />
                   <div className="flex gap-2">
@@ -525,10 +577,10 @@ export default function JobDetails() {
                       className="flex items-center gap-2"
                     >
                       {updateNotesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      Save
+                      {isHebrew ? t('jobdetails.saveNotes') : 'Save'}
                     </Button>
                     <Button variant="outline" onClick={() => { setNotes(job?.notes || ''); setIsEditingNotes(false); }}>
-                      Cancel
+                      {isHebrew ? t('common.cancel') : 'Cancel'}
                     </Button>
                   </div>
                 </div>
@@ -537,9 +589,9 @@ export default function JobDetails() {
                   {notes ? (
                     <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{notes}</p>
                   ) : trackedJobId ? (
-                    <p className="text-gray-400 italic text-sm">No notes yet. Click Edit to add notes.</p>
+                    <p className="text-gray-400 italic text-sm">{isHebrew ? t('jobdetails.noNotesYet') : "No notes yet. Click Edit to add notes."}</p>
                   ) : (
-                    <p className="text-gray-400 italic text-sm">Save this job to your tracker to add notes.</p>
+                    <p className="text-gray-400 italic text-sm">{isHebrew ? t('jobdetails.saveJobToAddNotes') : 'Save this job to your tracker to add notes.'}</p>
                   )}
                 </div>
               )}
@@ -552,7 +604,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-blue-600" />
-                  Interview Preparation
+                  {isHebrew ? t('jobdetails.interviewPrep') : 'Interview Preparation'}
                 </CardTitle>
                 {!showInterviewQuestions && (
                   <Button
@@ -563,9 +615,9 @@ export default function JobDetails() {
                     className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
                   >
                     {generateQuestionsMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Generating...</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.generating') : 'Generating...'}</>
                     ) : (
-                      <><Lightbulb className="w-4 h-4 mr-2" />Generate Questions</>
+                      <><Lightbulb className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.generateQuestions') : 'Generate Questions'}</>
                     )}
                   </Button>
                 )}
@@ -576,7 +628,7 @@ export default function JobDetails() {
                 <div className="space-y-6">
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">💼 Behavioral Questions</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.behavioralQuestions') : '💼 Behavioral Questions'}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -586,7 +638,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">⚙️ Technical Questions</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.technicalQuestions') : '⚙️ Technical Questions'}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -596,7 +648,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">🏢 Questions to Ask Them</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.questionsToAsk') : '🏢 Questions to Ask Them'}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -605,12 +657,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateQuestionsMutation.mutate()} className="w-full">
-                    🔄 Regenerate Questions
+                    {isHebrew ? t('jobdetails.regenerateQuestions') : '🔄 Regenerate Questions'}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.
+                  {isHebrew ? t('jobdetails.interviewPrepPlaceholder') : 'Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.'}
                 </p>
               )}
             </CardContent>
@@ -622,7 +674,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-600" />
-                  Salary Insights
+                  {isHebrew ? t('jobdetails.salaryInsights') : 'Salary Insights'}
                 </CardTitle>
                 {!showSalaryEstimate && (
                   <Button
@@ -633,9 +685,9 @@ export default function JobDetails() {
                     className="text-green-600 border-green-300 hover:bg-green-900/40"
                   >
                     {generateSalaryMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Estimating...</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.estimating') : 'Estimating...'}</>
                     ) : (
-                      <><TrendingUp className="w-4 h-4 mr-2" />Estimate Salary</>
+                      <><TrendingUp className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.estimateSalary') : 'Estimate Salary'}</>
                     )}
                   </Button>
                 )}
@@ -645,25 +697,25 @@ export default function JobDetails() {
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">💰 Estimated Range</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.estimatedRange') : '💰 Estimated Range'}</h4>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
-                        <p className="text-sm text-gray-400">Minimum</p>
+                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.minimum') : 'Minimum'}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Median</p>
+                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.median') : 'Median'}</p>
                         <p className="text-2xl font-bold text-green-600">${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Maximum</p>
+                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.maximum') : 'Maximum'}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">💡 Key Insights</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.keyInsights') : '💡 Key Insights'}</h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">{insight}</li>
@@ -673,7 +725,7 @@ export default function JobDetails() {
                   )}
                   {salaryEstimate.factors && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">📊 Salary Factors</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.salaryFactors') : '📊 Salary Factors'}</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
@@ -685,12 +737,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateSalaryMutation.mutate()} className="w-full">
-                    🔄 Recalculate Estimate
+                    {isHebrew ? t('jobdetails.recalculate') : '🔄 Recalculate Estimate'}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  Click "Estimate Salary" to get AI-powered salary insights for this position.
+                  {isHebrew ? t('jobdetails.salaryPlaceholder') : 'Click "Estimate Salary" to get AI-powered salary insights for this position.'}
                 </p>
               )}
             </CardContent>
@@ -713,8 +765,8 @@ export default function JobDetails() {
               disabled={lazyTrackMutation.isPending}
             >
               {lazyTrackMutation.isPending
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
-                : <><Bookmark className="w-4 h-4 mr-2" />Save to My Jobs</>}
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.saving') : 'Saving…'}</>
+                : <><Bookmark className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.saveToMyJobs') : 'Save to My Jobs'}</>}
             </Button>
           )}
 
@@ -722,22 +774,22 @@ export default function JobDetails() {
           {trackedJobId && (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold text-sm">Application Status</CardTitle>
+                <CardTitle className="font-semibold text-sm">{isHebrew ? t('jobdetails.applicationStatus') : 'Application Status'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <p className="text-xs text-gray-400 mb-1">{isHebrew ? t('jobdetails.status') : 'Status'}</p>
                   <p className="font-medium capitalize">{job?.status || 'saved'}</p>
                 </div>
                 {job?.created_at && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Added</p>
+                    <p className="text-xs text-gray-400 mb-1">{isHebrew ? t('jobdetails.added') : 'Added'}</p>
                     <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
                   </div>
                 )}
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> Applied Date
+                    <Calendar className="w-3.5 h-3.5" /> {isHebrew ? t('jobdetails.appliedDate') : 'Applied Date'}
                   </Label>
                   <Input
                     type="date"
@@ -751,7 +803,7 @@ export default function JobDetails() {
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> Interview Date
+                    <Calendar className="w-3.5 h-3.5" /> {isHebrew ? t('jobdetails.interviewDate') : 'Interview Date'}
                   </Label>
                   <Input
                     type="date"
@@ -770,7 +822,7 @@ export default function JobDetails() {
           {/* Quick Actions */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold text-sm">Actions</CardTitle>
+              <CardTitle className="font-semibold text-sm">{isHebrew ? t('jobdetails.actions') : 'Actions'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {effectiveJob.url && (
@@ -787,11 +839,13 @@ export default function JobDetails() {
                     }
                   }}
                 >
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Apply Now</Button>
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    {isHebrew ? t('jobdetails.applyNow') : 'Apply Now'}
+                  </Button>
                 </a>
               )}
               <Button variant="outline" className="w-full" onClick={() => navigate(createPageUrl("Applications"))}>
-                View All Applications
+                {isHebrew ? t('jobdetails.viewAllApplications') : 'View All Applications'}
               </Button>
             </CardContent>
           </Card>

@@ -227,7 +227,8 @@ async def generate_interview_questions(
     job_title: str,
     company: str,
     job_description: str,
-    user_skills: List[str]
+    user_skills: List[str],
+    language: str = "en",
 ) -> dict:
     """
     Generate AI-powered interview preparation questions.
@@ -280,13 +281,14 @@ Format as JSON with this structure:
   "company_specific": ["question 1", "question 2", ...]
 }}"""
 
+    lang_instruction = " Respond entirely in Hebrew (עברית)." if language == "he" else ""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert interview coach who helps candidates prepare for technical interviews. Generate relevant, realistic questions that interviewers actually ask."
+                    "content": f"You are an expert interview coach who helps candidates prepare for technical interviews. Generate relevant, realistic questions that interviewers actually ask.{lang_instruction}"
                 },
                 {
                     "role": "user",
@@ -297,7 +299,7 @@ Format as JSON with this structure:
             max_tokens=1000,
             response_format={"type": "json_object"}
         )
-        
+
         log_ai_usage(response.usage, feature="interview_questions")
         import json
         questions = json.loads(response.choices[0].message.content)
@@ -334,7 +336,8 @@ async def estimate_salary(
     location: str,
     experience_years: int = None,
     skills: List[str] = None,
-    company_size: str = None
+    company_size: str = None,
+    language: str = "en",
 ) -> dict:
     """
     Estimate salary range using AI based on job details.
@@ -385,20 +388,21 @@ Return your response as JSON with this structure:
   }}
 }}"""
 
+    lang_instruction = " Respond entirely in Hebrew (עברית) — all text fields such as insights and factors should be in Hebrew." if language == "he" else ""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a compensation analysis expert with deep knowledge of tech industry salaries, market trends, and geographic pay differences. Provide realistic, data-driven salary estimates."
+                    "content": f"You are a compensation analysis expert with deep knowledge of tech industry salaries, market trends, and geographic pay differences. Provide realistic, data-driven salary estimates.{lang_instruction}"
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            temperature=0.3,  # Lower temperature for more consistent estimates
+            temperature=0.3,
             max_tokens=800,
             response_format={"type": "json_object"}
         )

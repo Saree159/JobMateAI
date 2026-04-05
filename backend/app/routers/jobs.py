@@ -649,6 +649,7 @@ async def generate_job_cover_letter(
 @router.get("/jobs/{job_id}/interview-questions")
 async def generate_interview_questions(
     job_id: int,
+    lang: str = "en",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -673,6 +674,7 @@ async def generate_interview_questions(
             company=job.company,
             job_description=job.description,
             user_skills=current_user.skills_list,
+            language=lang,
         )
         
         return {
@@ -692,6 +694,7 @@ async def generate_interview_questions(
 @router.get("/jobs/{job_id}/salary-estimate")
 async def estimate_job_salary(
     job_id: int,
+    lang: str = "en",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -717,6 +720,7 @@ async def estimate_job_salary(
             experience_years=current_user.years_of_experience or 5,
             skills=current_user.skills_list,
             company_size="medium",
+            language=lang,
         )
         
         return {
