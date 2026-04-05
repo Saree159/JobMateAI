@@ -6,11 +6,12 @@ import {
   LayoutDashboard, DollarSign, Users, Cpu, Zap, Activity,
   Filter, TrendingUp, Megaphone, Server, Bell, Settings,
   ChevronLeft, ChevronRight, Menu, X, Search, Calendar,
-  ArrowUpRight, LogOut, MousePointerClick, BarChart2, Database
+  ArrowUpRight, LogOut, MousePointerClick, BarChart2, Database, Sparkles
 } from 'lucide-react';
 
 const primaryNav = [
   { label: 'User Analytics', path: '/admin/user-analytics', icon: BarChart2 },
+  { label: 'Waitlist',       path: '/admin/waitlist',       icon: Sparkles },
   { label: 'Behavior',       path: '/admin/behavior',       icon: MousePointerClick },
   { label: 'User Logs',      path: '/admin/user-logs',      icon: Activity },
   { label: 'Sources',        path: '/admin/sources',        icon: Database },

@@ -32,6 +32,7 @@ import AdminUserLogs from './admin/pages/UserLogs';
 import AdminBehavior from './admin/pages/Behavior';
 import AdminUserAnalytics from './admin/pages/UserAnalytics';
 import AdminSources from './admin/pages/Sources';
+import AdminWaitlist from './admin/pages/Waitlist';
 
 // Apply saved language direction on every page load
 const lang = localStorage.getItem('hirematex_lang') || 'en';
@@ -119,6 +120,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/behavior" element={adminEl(<AdminLayout><AdminBehavior /></AdminLayout>)} />
           <Route path="/admin/user-analytics" element={adminEl(<AdminLayout><AdminUserAnalytics /></AdminLayout>)} />
           <Route path="/admin/sources" element={adminEl(<AdminLayout><AdminSources /></AdminLayout>)} />
+          <Route path="/admin/waitlist" element={adminEl(<AdminLayout><AdminWaitlist /></AdminLayout>)} />
         </>;
       })()}
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
-import { billingApi, userApi } from "@/api/jobmate";
+import { userApi } from "@/api/jobmate";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import WaitlistDialog from "@/components/ui/WaitlistDialog";
 
 const MONTHLY_PRICE = 69;
 const ANNUAL_PRICE = 588; // ₪49/mo × 12
@@ -53,22 +54,11 @@ export default function Pricing() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [billingPeriod, setBillingPeriod] = useState("monthly");
-  const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingCancel, setLoadingCancel] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
 
   const currentPlan = user?.subscription_tier || "free";
   const isPro = currentPlan === "pro";
-
-  const handleUpgradeToPro = async () => {
-    setLoadingCheckout(true);
-    try {
-      const { url } = await billingApi.getCheckoutUrl(billingPeriod);
-      window.location.href = url;
-    } catch (err) {
-      toast.error(err.message || "Could not start checkout. Please try again.");
-      setLoadingCheckout(false);
-    }
-  };
 
   const handleCancelSubscription = async () => {
     if (!window.confirm("Are you sure you want to cancel your Pro subscription?")) return;
@@ -88,6 +78,7 @@ export default function Pricing() {
 
   return (
     <div className="p-4 md:p-10 overflow-x-hidden">
+      <WaitlistDialog open={showWaitlist} onClose={() => setShowWaitlist(false)} />
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
@@ -226,14 +217,10 @@ export default function Pricing() {
                       ) : (
                         <Button
                           className="w-full bg-blue-600 hover:bg-blue-700 text-gray-900 font-medium py-6 text-lg"
-                          onClick={handleUpgradeToPro}
-                          disabled={loadingCheckout}
+                          onClick={() => setShowWaitlist(true)}
                         >
-                          {loadingCheckout ? (
-                            <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{t('pricing.redirecting')}</>
-                          ) : (
-                            <><Crown className="w-5 h-5 mr-2" />{t('pricing.upgradeToPro')}</>
-                          )}
+                          <Crown className="w-5 h-5 mr-2" />
+                          Join Pro Waitlist
                         </Button>
                       )
                     )}

@@ -1240,3 +1240,45 @@ def get_all_logs(
         }
         for r in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Waitlist
+# ---------------------------------------------------------------------------
+
+@router.get("/waitlist")
+def get_waitlist(
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin_user),
+):
+    """Return all waitlist entries ordered by sign-up date (newest first)."""
+    from app.models import WaitlistEntry, UsageQuota
+    from datetime import date
+
+    today = date.today().isoformat()
+    entries = db.query(WaitlistEntry).order_by(WaitlistEntry.created_at.desc()).all()
+
+    result = []
+    for e in entries:
+        # Look up usage for this user if they have an account
+        user_row = db.query(User).filter(User.email == e.email).first()
+        usage_today = {}
+        if user_row:
+            rows = (
+                db.query(UsageQuota)
+                .filter(UsageQuota.user_id == user_row.id, UsageQuota.date == today)
+                .all()
+            )
+            usage_today = {r.feature: r.count for r in rows}
+
+        result.append({
+            "id":          e.id,
+            "email":       e.email,
+            "full_name":   e.full_name,
+            "joined_at":   e.created_at.isoformat(),
+            "has_account": user_row is not None,
+            "tier":        user_row.subscription_tier if user_row else None,
+            "usage_today": usage_today,
+        })
+
+    return {"total": len(result), "entries": result}
