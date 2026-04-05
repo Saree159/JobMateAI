@@ -170,8 +170,8 @@ function BotFigure() {
         <div className="w-3 h-4 rounded-b-lg bg-indigo-600"
           style={{ animation: 'botBounce 1.1s ease-in-out 0.6s infinite', transformOrigin: 'top' }} />
       </div>
-    </div>{/* end animated inner */}
-    </div>{/* end centering wrapper */}
+    </div>
+    </div>
   );
 }
 
