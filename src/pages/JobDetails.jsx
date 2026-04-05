@@ -262,6 +262,7 @@ export default function JobDetails() {
       setGapAnswers({});
       setTailoredCv(null);
       setShowGapAnalysis(true);
+      queryClient.invalidateQueries({ queryKey: ['usage-today'] });
       toast.success(isHebrew ? 'ניתוח הפערים הושלם!' : 'Gap analysis complete!');
     },
     onError: (err) => {
@@ -315,6 +316,7 @@ export default function JobDetails() {
     onSuccess: (data) => {
       setSalaryEstimate(data.salary_estimate);
       setShowSalaryEstimate(true);
+      queryClient.invalidateQueries({ queryKey: ['usage-today'] });
       toast.success(isHebrew ? 'הערכת שכר הושלמה!' : 'Salary estimate generated!');
     },
     onError: (err) => {
@@ -340,6 +342,7 @@ export default function JobDetails() {
     onSuccess: (data) => {
       setInterviewQuestions(data.questions);
       setShowInterviewQuestions(true);
+      queryClient.invalidateQueries({ queryKey: ['usage-today'] });
       toast.success(isHebrew ? 'שאלות הכנה לראיון נוצרו!' : 'Interview questions generated!');
     },
     onError: (err) => {
