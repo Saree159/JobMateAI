@@ -495,6 +495,37 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-400">{t('profile.uploadSubtitle')}</p>
 
+            {user?.resume_filename && (
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-blue-950/30 border border-blue-500/20">
+                <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                <span className="text-sm text-gray-300 flex-1 truncate">{user.resume_filename}</span>
+                <a
+                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/resume/saved`}
+                  download={user.resume_filename}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const token = getToken();
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/resume/saved`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    })
+                      .then(r => r.blob())
+                      .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = user.resume_filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      })
+                      .catch(() => toast.error('Failed to download resume'));
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
               <input
                 type="file"
