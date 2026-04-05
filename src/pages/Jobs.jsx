@@ -21,7 +21,7 @@ import AddJobDialog from "../components/jobs/AddJobDialog";
 import JobCard from "../components/jobs/JobCard";
 import JobFilters from "../components/jobs/JobFilters";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 // ── Match score ring ────────────────────────────────────────────────────────
 function MatchBadge({ score }) {

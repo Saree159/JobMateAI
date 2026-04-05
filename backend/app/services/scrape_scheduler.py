@@ -329,7 +329,12 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role}")
                 try:
                     li_scraper = LinkedInJobSearchScraper()
-                    linkedin_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at)
+                    li_limit = (
+                        LinkedInJobSearchScraper.PRO_LIMIT
+                        if getattr(user, "subscription_tier", "free") == "pro"
+                        else LinkedInJobSearchScraper.FREE_LIMIT
+                    )
+                    linkedin_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=li_limit)
                     if linkedin_jobs:
                         cache.set(cache_key_li, linkedin_jobs, ttl=CACHE_TTL_ROLE)
                         fresh_linkedin = True
