@@ -12,13 +12,14 @@ import {
 const primaryNav = [
   { label: 'User Analytics', path: '/admin/user-analytics', icon: BarChart2 },
   { label: 'Behavior',       path: '/admin/behavior',       icon: MousePointerClick },
+  { label: 'User Logs',      path: '/admin/user-logs',      icon: Activity },
 ];
 
 const legacyNav = [
   { label: 'Overview',       path: '/admin',              icon: LayoutDashboard },
   { label: 'Revenue',        path: '/admin/revenue',      icon: DollarSign },
   { label: 'Users',          path: '/admin/users',        icon: Users },
-  { label: 'User Logs',      path: '/admin/user-logs',    icon: Activity },
+  { label: 'User Logs',      path: '/admin/user-logs',    icon: Activity, hidden: true },
   { label: 'Behavior',       path: '/admin/behavior',     icon: MousePointerClick, hidden: true },
   { label: 'AI Usage',       path: '/admin/ai-usage',     icon: Cpu },
   { label: 'Token Costs',    path: '/admin/token-costs',  icon: Zap },
