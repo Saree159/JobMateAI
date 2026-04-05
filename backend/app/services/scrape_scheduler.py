@@ -454,6 +454,11 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             "user_skills":   deduped_skills,
             "category":      category,
             "total_scraped": len(jobs),
+            "source_counts": {
+                "linkedin": len(linkedin_jobs),
+                "drushim":  len(drushim_jobs),
+                "techmap":  len(techmap_jobs),
+            },
             "cached_at":     datetime.utcnow().isoformat(),
             "profile_hash":  profile_hash(user),
         }

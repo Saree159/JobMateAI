@@ -170,6 +170,14 @@ export default function Jobs() {
     queryFn: () => jobApi.topMatches(user.id),
     enabled: !!user?.id,
     staleTime: 30 * 60 * 1000,
+    onSuccess: (data) => {
+      // Auto force-refresh if cached result has suspiciously few jobs
+      if (data?.cached && (data?.total_scraped ?? 0) < 5) {
+        jobApi.topMatches(user.id, true).then(() =>
+          refetchDiscover()
+        ).catch(() => {});
+      }
+    },
   });
 
   const saveJobMutation = useMutation({
@@ -314,6 +322,32 @@ export default function Jobs() {
             </Card>
           ) : (
             <>
+              {/* Source breakdown */}
+              {discoverData?.source_counts && (
+                <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-gray-400">
+                  <span className="font-medium text-gray-500">
+                    {discoverData.total_scraped} jobs fetched
+                    {discoverData.cached ? " (cached)" : " (fresh)"}
+                  </span>
+                  {Object.entries(discoverData.source_counts)
+                    .filter(([, n]) => n > 0)
+                    .map(([src, n]) => (
+                      <span key={src} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        {src} · {n}
+                      </span>
+                    ))}
+                  {discoverData.total_scraped < 10 && (
+                    <button
+                      className="text-blue-500 underline"
+                      onClick={() => {
+                        jobApi.topMatches(user.id, true).then(() => refetchDiscover());
+                      }}
+                    >
+                      Low results — force refresh
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {visibleJobs.map((job, idx) => (
                   <DiscoverCard
