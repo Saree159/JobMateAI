@@ -18,6 +18,7 @@ export const adminApi = {
     return get(`/api/admin/users/detail?${params}`);
   },
   getUserAnalytics: () => get('/api/admin/user-analytics'),
+  getUserActivity: (userId, limit = 150) => get(`/api/admin/users/${userId}/activity?limit=${limit}`),
   getBehaviorSummary: (days = 30) => get(`/api/admin/behavior/summary?days=${days}`),
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),

@@ -669,6 +669,56 @@ def behavior_per_user(
     ]
 
 
+# ── Per-user activity timeline ───────────────────────────────────────────────
+
+@router.get("/users/{user_id}/activity")
+def get_user_activity(
+    user_id: int,
+    limit: int = 150,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Return recent events + summary for a single user."""
+    events = (
+        db.query(UserEvent)
+        .filter(UserEvent.user_id == user_id)
+        .order_by(UserEvent.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    # Per-page counts
+    page_counts: dict = defaultdict(int)
+    action_counts: dict = defaultdict(int)
+    for ev in events:
+        if ev.page:
+            page_counts[ev.page] += 1
+        action_counts[ev.event] += 1
+
+    first_seen = events[-1].created_at if events else None
+    last_seen  = events[0].created_at  if events else None
+
+    return {
+        "user_id": user_id,
+        "total_events": len(events),
+        "first_seen": first_seen.isoformat() if first_seen else None,
+        "last_seen":  last_seen.isoformat()  if last_seen  else None,
+        "pages": [{"page": p, "count": c} for p, c in sorted(page_counts.items(), key=lambda x: -x[1])],
+        "actions": [{"event": e, "count": c} for e, c in sorted(action_counts.items(), key=lambda x: -x[1])],
+        "events": [
+            {
+                "id":         ev.id,
+                "event":      ev.event,
+                "page":       ev.page,
+                "properties": _json.loads(ev.properties or "{}"),
+                "session_id": ev.session_id,
+                "created_at": ev.created_at.isoformat(),
+            }
+            for ev in events
+        ],
+    }
+
+
 # ── User Analytics (registration funnel + behavior) ──────────────────────────
 
 @router.get("/user-analytics")

@@ -4,8 +4,125 @@ import {
   Search, ChevronDown, ChevronRight, RefreshCw,
   User, Briefcase, MapPin, Zap, DollarSign,
   CheckCircle2, XCircle, Clock, Linkedin, FileText,
-  Mail, Calendar, Shield, TrendingUp, Activity,
+  Mail, Calendar, Shield, TrendingUp, Activity, MousePointerClick,
 } from 'lucide-react';
+
+const EVENT_LABELS = {
+  page_view:       'Page View',
+  job_click:       'Job Click',
+  job_save:        'Job Save',
+  job_apply:       'Job Apply',
+  refresh_matches: 'Refresh',
+  load_more:       'Load More',
+  filter_change:   'Filter',
+  profile_update:  'Profile Update',
+  resume_upload:   'Resume Upload',
+  search:          'Search',
+  page_time:       'Time on Page',
+  registration_start:          'Reg Start',
+  registration_field_email:    'Reg Email',
+  registration_field_password: 'Reg Password',
+  registration_submit_attempt: 'Reg Submit',
+  registration_complete:       'Reg Complete',
+};
+
+const EVENT_COLOR = {
+  page_view:      'bg-blue-500/20 text-blue-300',
+  job_click:      'bg-emerald-500/20 text-emerald-300',
+  job_save:       'bg-teal-500/20 text-teal-300',
+  job_apply:      'bg-green-500/20 text-green-300',
+  profile_update: 'bg-purple-500/20 text-purple-300',
+  resume_upload:  'bg-purple-500/20 text-purple-300',
+  search:         'bg-amber-500/20 text-amber-300',
+  filter_change:  'bg-amber-500/20 text-amber-300',
+  page_time:      'bg-gray-500/20 text-gray-400',
+};
+
+function fmtTime2(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function ActivityTab({ userId }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminApi.getUserActivity(userId)
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!data || data.total_events === 0) {
+    return <p className="text-xs text-gray-600 italic py-6 text-center">No events tracked for this user yet.</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary row */}
+      <div className="flex flex-wrap gap-4 pb-3 border-b border-white/5 text-xs">
+        <div><span className="text-gray-500">Total events</span> <span className="text-white font-semibold ml-1">{data.total_events}</span></div>
+        <div><span className="text-gray-500">First seen</span> <span className="text-gray-300 ml-1">{fmtTime2(data.first_seen)}</span></div>
+        <div><span className="text-gray-500">Last seen</span> <span className="text-gray-300 ml-1">{fmtTime2(data.last_seen)}</span></div>
+      </div>
+
+      {/* Pages + Actions breakdown */}
+      <div className="grid grid-cols-2 gap-4 pb-3 border-b border-white/5">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Pages visited</p>
+          <div className="space-y-1">
+            {data.pages.slice(0, 6).map(({ page, count }) => (
+              <div key={page} className="flex justify-between text-xs">
+                <span className="text-gray-400 capitalize">{page}</span>
+                <span className="text-white font-medium">{count}×</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Actions</p>
+          <div className="space-y-1">
+            {data.actions.filter(a => a.event !== 'page_view' && a.event !== 'page_time').slice(0, 6).map(({ event, count }) => (
+              <div key={event} className="flex justify-between text-xs">
+                <span className="text-gray-400">{EVENT_LABELS[event] || event}</span>
+                <span className="text-white font-medium">{count}×</span>
+              </div>
+            ))}
+            {data.actions.filter(a => a.event !== 'page_view' && a.event !== 'page_time').length === 0 && (
+              <span className="text-xs text-gray-600 italic">Only page views so far</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Event timeline */}
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">Recent timeline</p>
+        <div className="space-y-0.5 max-h-48 overflow-auto">
+          {data.events.filter(ev => ev.event !== 'page_time').map(ev => (
+            <div key={ev.id} className="flex items-center gap-2 py-1 text-xs border-b border-white/5">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${EVENT_COLOR[ev.event] || 'bg-indigo-500/20 text-indigo-300'}`}>
+                {EVENT_LABELS[ev.event] || ev.event}
+              </span>
+              {ev.page && <span className="text-gray-500 shrink-0">/{ev.page}</span>}
+              {ev.properties?.job_title && <span className="text-gray-400 truncate">{ev.properties.job_title}</span>}
+              {ev.properties?.query && <span className="text-gray-400 truncate">"{ev.properties.query}"</span>}
+              <span className="text-gray-600 ml-auto shrink-0 tabular-nums">{fmtTime2(ev.created_at)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const FEATURE_LABEL = {
   cover_letter: 'Cover Letter',
@@ -60,8 +177,35 @@ const STATUS_META = {
 };
 
 function DetailPanel({ user }) {
+  const [tab, setTab] = useState('details');
+  const TABS = [
+    { id: 'details',  label: 'Details' },
+    { id: 'activity', label: 'Activity' },
+  ];
+
   return (
-    <div className="px-5 pb-5 pt-3 bg-[#0b1120] border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-[#0b1120] border-t border-white/5">
+      {/* Tab bar */}
+      <div className="flex gap-1 px-5 pt-3 border-b border-white/5">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors ${
+              tab === t.id ? 'text-white border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="px-5 pb-5 pt-4">
+        {tab === 'activity' ? (
+          <ActivityTab userId={user.id} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
 
       {/* Profile */}
       <div className="space-y-3">
@@ -160,6 +304,9 @@ function DetailPanel({ user }) {
               ))}
             </div>
           </div>
+        )}
+          </div>
+        </div>
         )}
       </div>
     </div>
