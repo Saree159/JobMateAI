@@ -17,6 +17,8 @@ i18n.use(initReactI18next).init({
   lng: savedLang,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
+  initImmediate: false,   // force synchronous init so t() is ready before first render
+  react: { useSuspense: false },  // don't suspend — render immediately with resolved keys
 });
 
 export default i18n;
