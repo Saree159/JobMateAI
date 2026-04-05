@@ -32,13 +32,143 @@ import SaveJobButton from "../components/jobdetails/SaveJobButton";
 import { toast } from 'sonner';
 import { useTranslation } from "react-i18next";
 
+const JD = {
+  en: {
+    backToJobs:           'Back to Jobs',
+    match:                'Match',
+    yourRole:             'Your Role',
+    yourExperience:       'Your Experience',
+    required:             'Required',
+    yrs:                  'yrs',
+    jobDescription:       'Job Description',
+    aiCoverLetter:        'AI Cover Letter Generator',
+    saveJobFirstDesc:     'Save this job to generate a personalized cover letter.',
+    saveJobFirst:         'Save Job First',
+    saving:               'Saving…',
+    resumeGapAnalysis:    'Resume Gap Analysis',
+    analyzing:            'Analyzing…',
+    reanalyze:            '🔄 Re-analyze',
+    analyzeGaps:          'Analyze Gaps',
+    useSavedResume:       '📄 Use Saved Resume',
+    uploadNewResume:      '⬆️ Upload New Resume',
+    answerToTailor:       'Answer these to tailor your CV:',
+    missing:              'Missing:',
+    answerPlaceholder:    'Your answer…',
+    generateTailoredCV:   '✨ Generate Tailored CV',
+    generatingCV:         'Generating Tailored CV…',
+    tailoredCVReady:      'Tailored CV ready!',
+    downloadDocx:         'Download .docx',
+    regenerateCV:         '✨ Regenerate CV',
+    gapAnalysisPlaceholder: 'Click "Analyze Gaps" to compare your resume against this job and find what\'s missing. Answer the questions to generate a tailored CV.',
+    notes:                'Notes & Reminders',
+    notesPlaceholder:     'Add interview notes, follow-up reminders, or any other information...',
+    saveNotes:            'Save',
+    noNotesYet:           'No notes yet. Click Edit to add notes.',
+    saveJobToAddNotes:    'Save this job to your tracker to add notes.',
+    edit:                 'Edit',
+    cancel:               'Cancel',
+    interviewPrep:        'Interview Preparation',
+    generating:           'Generating...',
+    generateQuestions:    'Generate Questions',
+    behavioralQuestions:  '💼 Behavioral Questions',
+    technicalQuestions:   '⚙️ Technical Questions',
+    questionsToAsk:       '🏢 Questions to Ask Them',
+    regenerateQuestions:  '🔄 Regenerate Questions',
+    interviewPrepPlaceholder: 'Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.',
+    salaryInsights:       'Salary Insights',
+    estimating:           'Estimating...',
+    estimateSalary:       'Estimate Salary',
+    estimatedRange:       '💰 Estimated Range',
+    minimum:              'Minimum',
+    median:               'Median',
+    maximum:              'Maximum',
+    keyInsights:          '💡 Key Insights',
+    salaryFactors:        '📊 Salary Factors',
+    recalculate:          '🔄 Recalculate Estimate',
+    salaryPlaceholder:    'Click "Estimate Salary" to get AI-powered salary insights for this position.',
+    saveToMyJobs:         'Save to My Jobs',
+    applicationStatus:    'Application Status',
+    status:               'Status',
+    added:                'Added',
+    appliedDate:          'Applied Date',
+    interviewDate:        'Interview Date',
+    actions:              'Actions',
+    applyNow:             'Apply Now',
+    viewAllApplications:  'View All Applications',
+  },
+  he: {
+    backToJobs:           'חזרה למשרות',
+    match:                'התאמה',
+    yourRole:             'התפקיד שלך',
+    yourExperience:       'הניסיון שלך',
+    required:             'נדרש',
+    yrs:                  'שנים',
+    jobDescription:       'תיאור המשרה',
+    aiCoverLetter:        'יצירת מכתב מקדים עם AI',
+    saveJobFirstDesc:     'שמור את המשרה ראשון כדי ליצור מכתב מקדים מותאם אישית.',
+    saveJobFirst:         'שמור משרה ראשון',
+    saving:               'שומר…',
+    resumeGapAnalysis:    'ניתוח פערים בקורות חיים',
+    analyzing:            'מנתח…',
+    reanalyze:            '🔄 נתח מחדש',
+    analyzeGaps:          'נתח פערים',
+    useSavedResume:       '📄 השתמש בקורות חיים שמורים',
+    uploadNewResume:      '⬆️ העלה קורות חיים חדשים',
+    answerToTailor:       'ענה על שאלות אלה כדי להתאים את קורות החיים שלך:',
+    missing:              'חסר:',
+    answerPlaceholder:    'התשובה שלך…',
+    generateTailoredCV:   '✨ צור קורות חיים מותאמים',
+    generatingCV:         'יוצר קורות חיים מותאמים…',
+    tailoredCVReady:      'קורות חיים מותאמים מוכנים!',
+    downloadDocx:         'הורד .docx',
+    regenerateCV:         '✨ צור מחדש',
+    gapAnalysisPlaceholder: 'לחץ על "נתח פערים" להשוות את קורות החיים למשרה ולמצוא מה חסר. ענה על השאלות כדי ליצור קורות חיים מותאמים.',
+    notes:                'הערות ותזכורות',
+    notesPlaceholder:     'הוסף הערות על ראיון, תזכורות מעקב, או מידע נוסף...',
+    saveNotes:            'שמור',
+    noNotesYet:           'אין הערות עדיין. לחץ "ערוך" להוסיף.',
+    saveJobToAddNotes:    'שמור את המשרה כדי להוסיף הערות.',
+    edit:                 'ערוך',
+    cancel:               'ביטול',
+    interviewPrep:        'הכנה לראיון',
+    generating:           'מייצר...',
+    generateQuestions:    'צור שאלות',
+    behavioralQuestions:  '💼 שאלות התנהגותיות',
+    technicalQuestions:   '⚙️ שאלות טכניות',
+    questionsToAsk:       '🏢 שאלות לשאול אותם',
+    regenerateQuestions:  '🔄 צור שאלות מחדש',
+    interviewPrepPlaceholder: 'לחץ על "צור שאלות" לקבל שאלות הכנה לראיון מבוסס AI המותאמות למשרה זו.',
+    salaryInsights:       'תובנות שכר',
+    estimating:           'מעריך...',
+    estimateSalary:       'הערכת שכר',
+    estimatedRange:       '💰 טווח משוער',
+    minimum:              'מינימום',
+    median:               'חציון',
+    maximum:              'מקסימום',
+    keyInsights:          '💡 תובנות מפתח',
+    salaryFactors:        '📊 גורמי שכר',
+    recalculate:          '🔄 חשב מחדש',
+    salaryPlaceholder:    'לחץ על "הערכת שכר" לקבל תובנות שכר מבוסס AI לתפקיד זה.',
+    saveToMyJobs:         'שמור למשרות שלי',
+    applicationStatus:    'סטטוס בקשה',
+    status:               'סטטוס',
+    added:                'נוסף',
+    appliedDate:          'תאריך הגשה',
+    interviewDate:        'תאריך ראיון',
+    actions:              'פעולות',
+    applyNow:             'הגש עכשיו',
+    viewAllApplications:  'כל הבקשות שלי',
+  },
+};
+
 export default function JobDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, getToken } = useAuth();
   const queryClient = useQueryClient();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const isHebrew = i18n.language === 'he';
+  const jd = isHebrew ? JD.he : JD.en;
   const urlParams = new URLSearchParams(window.location.search);
   const jobId = urlParams.get('id');
 
@@ -262,7 +392,7 @@ export default function JobDetails() {
         className="mb-4 md:mb-6 -ml-2"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
-        {t('jobdetails.backToJobs')}
+        {jd.backToJobs}
       </Button>
 
       {/* Job Header */}
@@ -299,24 +429,24 @@ export default function JobDetails() {
                 }`}>
                   {matchScore}%
                 </div>
-                <p className="text-xs text-gray-500">{t('jobdetails.match')}</p>
+                <p className="text-xs text-gray-500">{jd.match}</p>
               </div>
               <div className="hidden md:block border-t border-gray-200 pt-3 space-y-2.5">
                 {user?.target_role && (
                   <div>
-                    <p className="text-xs text-gray-500">{t('jobdetails.yourRole')}</p>
+                    <p className="text-xs text-gray-500">{jd.yourRole}</p>
                     <p className="text-sm text-gray-900 font-medium truncate">{user.target_role}</p>
                   </div>
                 )}
                 {user?.years_of_experience != null && (
                   <div>
-                    <p className="text-xs text-gray-500">{t('jobdetails.yourExperience')}</p>
-                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} {t('jobdetails.yrs')}</p>
+                    <p className="text-xs text-gray-500">{jd.yourExperience}</p>
+                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} {jd.yrs}</p>
                   </div>
                 )}
                 {requiredYears && (
                   <div>
-                    <p className="text-xs text-gray-500">{t('jobdetails.required')}</p>
+                    <p className="text-xs text-gray-500">{jd.required}</p>
                     <p className={`text-sm font-medium ${
                       user?.years_of_experience != null
                         ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
@@ -355,7 +485,7 @@ export default function JobDetails() {
           {/* Description */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold">{t('jobdetails.jobDescription')}</CardTitle>
+              <CardTitle className="font-semibold">{jd.jobDescription}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{effectiveJob.description}</p>
@@ -368,11 +498,11 @@ export default function JobDetails() {
           ) : (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold">{t('jobdetails.aiCoverLetter')}</CardTitle>
+                <CardTitle className="font-semibold">{jd.aiCoverLetter}</CardTitle>
               </CardHeader>
               <CardContent className="text-center py-6">
                 <p className="text-sm text-gray-400 mb-4">
-                  {t('jobdetails.saveJobFirstDesc')}
+                  {jd.saveJobFirstDesc}
                 </p>
                 <Button
                   variant="outline"
@@ -380,8 +510,8 @@ export default function JobDetails() {
                   disabled={lazyTrackMutation.isPending}
                 >
                   {lazyTrackMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.saving')}</>
-                    : <><Bookmark className="w-4 h-4 mr-2" />{t('jobdetails.saveJobFirst')}</>}
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{jd.saving}</>
+                    : <><Bookmark className="w-4 h-4 mr-2" />{jd.saveJobFirst}</>}
                 </Button>
               </CardContent>
             </Card>
@@ -393,7 +523,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <ScanSearch className="w-5 h-5 text-purple-600" />
-                  {t('jobdetails.resumeGapAnalysis')}
+                  {jd.resumeGapAnalysis}
                 </CardTitle>
                 <Button
                   variant="outline"
@@ -403,11 +533,11 @@ export default function JobDetails() {
                   className="text-purple-600 border-purple-300 hover:bg-purple-100"
                 >
                   {analyzeGapsMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.analyzing')}</>
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.analyzing}</>
                   ) : showGapAnalysis ? (
-                    <>{t('jobdetails.reanalyze')}</>
+                    <>{jd.reanalyze}</>
                   ) : (
-                    <><ScanSearch className="w-4 h-4 mr-2" />{t('jobdetails.analyzeGaps')}</>
+                    <><ScanSearch className="w-4 h-4 mr-2" />{jd.analyzeGaps}</>
                   )}
                 </Button>
               </div>
@@ -425,7 +555,7 @@ export default function JobDetails() {
                           : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
                       }`}
                     >
-                      {t('jobdetails.useSavedResume')}
+                      {jd.useSavedResume}
                     </button>
                   )}
                   <button
@@ -436,7 +566,7 @@ export default function JobDetails() {
                         : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
                     }`}
                   >
-                    {t('jobdetails.uploadNewResume')}
+                    {jd.uploadNewResume}
                   </button>
                 </div>
                 {gapResumeSource === 'upload' && (
@@ -466,16 +596,16 @@ export default function JobDetails() {
                   {gapAnalysis.gaps?.length > 0 && (
                     <div className="space-y-4">
                       <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                        {t('jobdetails.answerToTailor')}
+                        {jd.answerToTailor}
                       </p>
                       {gapAnalysis.gaps.map((gap, i) => (
                         <div key={i} className="bg-white rounded-lg border border-purple-100 p-4 space-y-3">
                           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                            {t('jobdetails.missing')} {gap.requirement}
+                            {jd.missing} {gap.requirement}
                           </p>
                           <p className="text-sm text-gray-700">💬 {gap.question}</p>
                           <Textarea
-                            placeholder={t('jobdetails.answerPlaceholder')}
+                            placeholder={jd.answerPlaceholder}
                             value={gapAnswers[i] || ''}
                             onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
                             className="min-h-[72px] text-sm resize-none bg-gray-50 border-purple-100 focus:border-purple-400"
@@ -492,19 +622,19 @@ export default function JobDetails() {
                       disabled={generateTailoredCvMutation.isPending || !hasAnswers}
                     >
                       {generateTailoredCvMutation.isPending ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.generatingCV')}</>
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{jd.generatingCV}</>
                       ) : (
-                        <>{t('jobdetails.generateTailoredCV')}</>
+                        <>{jd.generateTailoredCV}</>
                       )}
                     </Button>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between bg-white rounded-lg border border-purple-100 p-3">
                         <p className="text-sm font-semibold text-purple-700">
-                          {t('jobdetails.tailoredCVReady')}
+                          {jd.tailoredCVReady}
                         </p>
                         <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={downloadCV}>
-                          <FileDown className="w-4 h-4 mr-2" /> {t('jobdetails.downloadDocx')}
+                          <FileDown className="w-4 h-4 mr-2" /> {jd.downloadDocx}
                         </Button>
                       </div>
                       {tailoredCv.diff?.length > 0 && (
@@ -531,14 +661,14 @@ export default function JobDetails() {
                         onClick={() => generateTailoredCvMutation.mutate()}
                         disabled={generateTailoredCvMutation.isPending}
                       >
-                        {t('jobdetails.regenerateCV')}
+                        {jd.regenerateCV}
                       </Button>
                     </div>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {t('jobdetails.gapAnalysisPlaceholder')}
+                  {jd.gapAnalysisPlaceholder}
                 </p>
               )}
             </CardContent>
@@ -550,11 +680,11 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <StickyNote className="w-5 h-5 text-blue-600" />
-                  {t('jobdetails.notes')}
+                  {jd.notes}
                 </CardTitle>
                 {trackedJobId && !isEditingNotes && (
                   <Button variant="ghost" size="sm" onClick={() => setIsEditingNotes(true)}>
-                    {t('common.edit')}
+                    {jd.edit}
                   </Button>
                 )}
               </div>
@@ -565,7 +695,7 @@ export default function JobDetails() {
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder={t('jobdetails.notesPlaceholder')}
+                    placeholder={jd.notesPlaceholder}
                     className="min-h-[120px]"
                   />
                   <div className="flex gap-2">
@@ -575,10 +705,10 @@ export default function JobDetails() {
                       className="flex items-center gap-2"
                     >
                       {updateNotesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      {t('jobdetails.saveNotes')}
+                      {jd.saveNotes}
                     </Button>
                     <Button variant="outline" onClick={() => { setNotes(job?.notes || ''); setIsEditingNotes(false); }}>
-                      {t('common.cancel')}
+                      {jd.cancel}
                     </Button>
                   </div>
                 </div>
@@ -587,9 +717,9 @@ export default function JobDetails() {
                   {notes ? (
                     <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{notes}</p>
                   ) : trackedJobId ? (
-                    <p className="text-gray-400 italic text-sm">{t('jobdetails.noNotesYet')}</p>
+                    <p className="text-gray-400 italic text-sm">{jd.noNotesYet}</p>
                   ) : (
-                    <p className="text-gray-400 italic text-sm">{t('jobdetails.saveJobToAddNotes')}</p>
+                    <p className="text-gray-400 italic text-sm">{jd.saveJobToAddNotes}</p>
                   )}
                 </div>
               )}
@@ -602,7 +732,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-blue-600" />
-                  {t('jobdetails.interviewPrep')}
+                  {jd.interviewPrep}
                 </CardTitle>
                 {!showInterviewQuestions && (
                   <Button
@@ -613,9 +743,9 @@ export default function JobDetails() {
                     className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
                   >
                     {generateQuestionsMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.generating')}</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.generating}</>
                     ) : (
-                      <><Lightbulb className="w-4 h-4 mr-2" />{t('jobdetails.generateQuestions')}</>
+                      <><Lightbulb className="w-4 h-4 mr-2" />{jd.generateQuestions}</>
                     )}
                   </Button>
                 )}
@@ -626,7 +756,7 @@ export default function JobDetails() {
                 <div className="space-y-6">
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.behavioralQuestions')}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{jd.behavioralQuestions}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -636,7 +766,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.technicalQuestions')}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{jd.technicalQuestions}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -646,7 +776,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.questionsToAsk')}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{jd.questionsToAsk}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -655,12 +785,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateQuestionsMutation.mutate()} className="w-full">
-                    {t('jobdetails.regenerateQuestions')}
+                    {jd.regenerateQuestions}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {t('jobdetails.interviewPrepPlaceholder')}
+                  {jd.interviewPrepPlaceholder}
                 </p>
               )}
             </CardContent>
@@ -672,7 +802,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-600" />
-                  {t('jobdetails.salaryInsights')}
+                  {jd.salaryInsights}
                 </CardTitle>
                 {!showSalaryEstimate && (
                   <Button
@@ -683,9 +813,9 @@ export default function JobDetails() {
                     className="text-green-600 border-green-300 hover:bg-green-900/40"
                   >
                     {generateSalaryMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.estimating')}</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{jd.estimating}</>
                     ) : (
-                      <><TrendingUp className="w-4 h-4 mr-2" />{t('jobdetails.estimateSalary')}</>
+                      <><TrendingUp className="w-4 h-4 mr-2" />{jd.estimateSalary}</>
                     )}
                   </Button>
                 )}
@@ -695,25 +825,25 @@ export default function JobDetails() {
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.estimatedRange')}</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">{jd.estimatedRange}</h4>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
-                        <p className="text-sm text-gray-400">{t('jobdetails.minimum')}</p>
+                        <p className="text-sm text-gray-400">{jd.minimum}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">{t('jobdetails.median')}</p>
+                        <p className="text-sm text-gray-400">{jd.median}</p>
                         <p className="text-2xl font-bold text-green-600">${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">{t('jobdetails.maximum')}</p>
+                        <p className="text-sm text-gray-400">{jd.maximum}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.keyInsights')}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{jd.keyInsights}</h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">{insight}</li>
@@ -723,7 +853,7 @@ export default function JobDetails() {
                   )}
                   {salaryEstimate.factors && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.salaryFactors')}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{jd.salaryFactors}</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
@@ -735,12 +865,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateSalaryMutation.mutate()} className="w-full">
-                    {t('jobdetails.recalculate')}
+                    {jd.recalculate}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {t('jobdetails.salaryPlaceholder')}
+                  {jd.salaryPlaceholder}
                 </p>
               )}
             </CardContent>
@@ -763,8 +893,8 @@ export default function JobDetails() {
               disabled={lazyTrackMutation.isPending}
             >
               {lazyTrackMutation.isPending
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.saving')}</>
-                : <><Bookmark className="w-4 h-4 mr-2" />{t('jobdetails.saveToMyJobs')}</>}
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{jd.saving}</>
+                : <><Bookmark className="w-4 h-4 mr-2" />{jd.saveToMyJobs}</>}
             </Button>
           )}
 
@@ -772,22 +902,22 @@ export default function JobDetails() {
           {trackedJobId && (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold text-sm">{t('jobdetails.applicationStatus')}</CardTitle>
+                <CardTitle className="font-semibold text-sm">{jd.applicationStatus}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('jobdetails.status')}</p>
+                  <p className="text-xs text-gray-400 mb-1">{jd.status}</p>
                   <p className="font-medium capitalize">{job?.status || 'saved'}</p>
                 </div>
                 {job?.created_at && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">{t('jobdetails.added')}</p>
+                    <p className="text-xs text-gray-400 mb-1">{jd.added}</p>
                     <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
                   </div>
                 )}
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> {t('jobdetails.appliedDate')}
+                    <Calendar className="w-3.5 h-3.5" /> {jd.appliedDate}
                   </Label>
                   <Input
                     type="date"
@@ -801,7 +931,7 @@ export default function JobDetails() {
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> {t('jobdetails.interviewDate')}
+                    <Calendar className="w-3.5 h-3.5" /> {jd.interviewDate}
                   </Label>
                   <Input
                     type="date"
@@ -820,7 +950,7 @@ export default function JobDetails() {
           {/* Quick Actions */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold text-sm">{t('jobdetails.actions')}</CardTitle>
+              <CardTitle className="font-semibold text-sm">{jd.actions}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {effectiveJob.url && (
@@ -838,12 +968,12 @@ export default function JobDetails() {
                   }}
                 >
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    {t('jobdetails.applyNow')}
+                    {jd.applyNow}
                   </Button>
                 </a>
               )}
               <Button variant="outline" className="w-full" onClick={() => navigate(createPageUrl("Applications"))}>
-                {t('jobdetails.viewAllApplications')}
+                {jd.viewAllApplications}
               </Button>
             </CardContent>
           </Card>
