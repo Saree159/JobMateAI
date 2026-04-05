@@ -262,7 +262,7 @@ export default function JobDetails() {
         className="mb-4 md:mb-6 -ml-2"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
-        {isHebrew ? t('jobdetails.backToJobs') : 'Back to Jobs'}
+        {t('jobdetails.backToJobs')}
       </Button>
 
       {/* Job Header */}
@@ -299,24 +299,24 @@ export default function JobDetails() {
                 }`}>
                   {matchScore}%
                 </div>
-                <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.match') : 'Match'}</p>
+                <p className="text-xs text-gray-500">{t('jobdetails.match')}</p>
               </div>
               <div className="hidden md:block border-t border-gray-200 pt-3 space-y-2.5">
                 {user?.target_role && (
                   <div>
-                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.yourRole') : 'Your Role'}</p>
+                    <p className="text-xs text-gray-500">{t('jobdetails.yourRole')}</p>
                     <p className="text-sm text-gray-900 font-medium truncate">{user.target_role}</p>
                   </div>
                 )}
                 {user?.years_of_experience != null && (
                   <div>
-                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.yourExperience') : 'Your Experience'}</p>
-                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} {isHebrew ? t('jobdetails.yrs') : 'yrs'}</p>
+                    <p className="text-xs text-gray-500">{t('jobdetails.yourExperience')}</p>
+                    <p className="text-sm text-gray-900 font-medium">{user.years_of_experience} {t('jobdetails.yrs')}</p>
                   </div>
                 )}
                 {requiredYears && (
                   <div>
-                    <p className="text-xs text-gray-500">{isHebrew ? t('jobdetails.required') : 'Required'}</p>
+                    <p className="text-xs text-gray-500">{t('jobdetails.required')}</p>
                     <p className={`text-sm font-medium ${
                       user?.years_of_experience != null
                         ? user.years_of_experience >= requiredYears ? 'text-green-400' : 'text-amber-400'
@@ -355,7 +355,7 @@ export default function JobDetails() {
           {/* Description */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold">{isHebrew ? t('jobdetails.jobDescription') : 'Job Description'}</CardTitle>
+              <CardTitle className="font-semibold">{t('jobdetails.jobDescription')}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{effectiveJob.description}</p>
@@ -368,11 +368,11 @@ export default function JobDetails() {
           ) : (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold">{isHebrew ? t('jobdetails.aiCoverLetter') : 'AI Cover Letter Generator'}</CardTitle>
+                <CardTitle className="font-semibold">{t('jobdetails.aiCoverLetter')}</CardTitle>
               </CardHeader>
               <CardContent className="text-center py-6">
                 <p className="text-sm text-gray-400 mb-4">
-                  {isHebrew ? t('jobdetails.saveJobFirstDesc') : 'Save this job to generate a personalized cover letter.'}
+                  {t('jobdetails.saveJobFirstDesc')}
                 </p>
                 <Button
                   variant="outline"
@@ -380,8 +380,8 @@ export default function JobDetails() {
                   disabled={lazyTrackMutation.isPending}
                 >
                   {lazyTrackMutation.isPending
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.saving') : 'Saving…'}</>
-                    : <><Bookmark className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.saveJobFirst') : 'Save Job First'}</>}
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.saving')}</>
+                    : <><Bookmark className="w-4 h-4 mr-2" />{t('jobdetails.saveJobFirst')}</>}
                 </Button>
               </CardContent>
             </Card>
@@ -393,7 +393,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <ScanSearch className="w-5 h-5 text-purple-600" />
-                  {isHebrew ? t('jobdetails.resumeGapAnalysis') : 'Resume Gap Analysis'}
+                  {t('jobdetails.resumeGapAnalysis')}
                 </CardTitle>
                 <Button
                   variant="outline"
@@ -403,11 +403,11 @@ export default function JobDetails() {
                   className="text-purple-600 border-purple-300 hover:bg-purple-100"
                 >
                   {analyzeGapsMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.analyzing') : 'Analyzing…'}</>
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.analyzing')}</>
                   ) : showGapAnalysis ? (
-                    <>{isHebrew ? t('jobdetails.reanalyze') : '🔄 Re-analyze'}</>
+                    <>{t('jobdetails.reanalyze')}</>
                   ) : (
-                    <><ScanSearch className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.analyzeGaps') : 'Analyze Gaps'}</>
+                    <><ScanSearch className="w-4 h-4 mr-2" />{t('jobdetails.analyzeGaps')}</>
                   )}
                 </Button>
               </div>
@@ -425,7 +425,7 @@ export default function JobDetails() {
                           : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
                       }`}
                     >
-                      {isHebrew ? t('jobdetails.useSavedResume') : '📄 Use Saved Resume'}
+                      {t('jobdetails.useSavedResume')}
                     </button>
                   )}
                   <button
@@ -436,7 +436,7 @@ export default function JobDetails() {
                         : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
                     }`}
                   >
-                    {isHebrew ? t('jobdetails.uploadNewResume') : '⬆️ Upload New Resume'}
+                    {t('jobdetails.uploadNewResume')}
                   </button>
                 </div>
                 {gapResumeSource === 'upload' && (
@@ -466,16 +466,16 @@ export default function JobDetails() {
                   {gapAnalysis.gaps?.length > 0 && (
                     <div className="space-y-4">
                       <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                        {isHebrew ? t('jobdetails.answerToTailor') : 'Answer these to tailor your CV:'}
+                        {t('jobdetails.answerToTailor')}
                       </p>
                       {gapAnalysis.gaps.map((gap, i) => (
                         <div key={i} className="bg-white rounded-lg border border-purple-100 p-4 space-y-3">
                           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                            {isHebrew ? t('jobdetails.missing') : 'Missing:'} {gap.requirement}
+                            {t('jobdetails.missing')} {gap.requirement}
                           </p>
                           <p className="text-sm text-gray-700">💬 {gap.question}</p>
                           <Textarea
-                            placeholder={isHebrew ? t('jobdetails.answerPlaceholder') : 'Your answer…'}
+                            placeholder={t('jobdetails.answerPlaceholder')}
                             value={gapAnswers[i] || ''}
                             onChange={(e) => setGapAnswers(prev => ({ ...prev, [i]: e.target.value }))}
                             className="min-h-[72px] text-sm resize-none bg-gray-50 border-purple-100 focus:border-purple-400"
@@ -492,19 +492,19 @@ export default function JobDetails() {
                       disabled={generateTailoredCvMutation.isPending || !hasAnswers}
                     >
                       {generateTailoredCvMutation.isPending ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.generatingCV') : 'Generating Tailored CV…'}</>
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.generatingCV')}</>
                       ) : (
-                        <>{isHebrew ? t('jobdetails.generateTailoredCV') : '✨ Generate Tailored CV'}</>
+                        <>{t('jobdetails.generateTailoredCV')}</>
                       )}
                     </Button>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between bg-white rounded-lg border border-purple-100 p-3">
                         <p className="text-sm font-semibold text-purple-700">
-                          {isHebrew ? t('jobdetails.tailoredCVReady') : 'Tailored CV ready!'}
+                          {t('jobdetails.tailoredCVReady')}
                         </p>
                         <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={downloadCV}>
-                          <FileDown className="w-4 h-4 mr-2" /> {isHebrew ? t('jobdetails.downloadDocx') : 'Download .docx'}
+                          <FileDown className="w-4 h-4 mr-2" /> {t('jobdetails.downloadDocx')}
                         </Button>
                       </div>
                       {tailoredCv.diff?.length > 0 && (
@@ -531,16 +531,14 @@ export default function JobDetails() {
                         onClick={() => generateTailoredCvMutation.mutate()}
                         disabled={generateTailoredCvMutation.isPending}
                       >
-                        {isHebrew ? t('jobdetails.regenerateCV') : '✨ Regenerate CV'}
+                        {t('jobdetails.regenerateCV')}
                       </Button>
                     </div>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {isHebrew
-                    ? t('jobdetails.gapAnalysisPlaceholder')
-                    : 'Click "Analyze Gaps" to compare your resume against this job and find what\'s missing. Answer the questions to generate a tailored CV.'}
+                  {t('jobdetails.gapAnalysisPlaceholder')
                 </p>
               )}
             </CardContent>
@@ -552,11 +550,11 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <StickyNote className="w-5 h-5 text-blue-600" />
-                  {isHebrew ? t('jobdetails.notes') : 'Notes & Reminders'}
+                  {t('jobdetails.notes')}
                 </CardTitle>
                 {trackedJobId && !isEditingNotes && (
                   <Button variant="ghost" size="sm" onClick={() => setIsEditingNotes(true)}>
-                    {isHebrew ? t('common.edit') : 'Edit'}
+                    {t('common.edit')}
                   </Button>
                 )}
               </div>
@@ -567,7 +565,7 @@ export default function JobDetails() {
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder={isHebrew ? t('jobdetails.notesPlaceholder') : 'Add interview notes, follow-up reminders, or any other information...'}
+                    placeholder={t('jobdetails.notesPlaceholder')}
                     className="min-h-[120px]"
                   />
                   <div className="flex gap-2">
@@ -577,10 +575,10 @@ export default function JobDetails() {
                       className="flex items-center gap-2"
                     >
                       {updateNotesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      {isHebrew ? t('jobdetails.saveNotes') : 'Save'}
+                      {t('jobdetails.saveNotes')}
                     </Button>
                     <Button variant="outline" onClick={() => { setNotes(job?.notes || ''); setIsEditingNotes(false); }}>
-                      {isHebrew ? t('common.cancel') : 'Cancel'}
+                      {t('common.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -589,9 +587,9 @@ export default function JobDetails() {
                   {notes ? (
                     <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{notes}</p>
                   ) : trackedJobId ? (
-                    <p className="text-gray-400 italic text-sm">{isHebrew ? t('jobdetails.noNotesYet') : "No notes yet. Click Edit to add notes."}</p>
+                    <p className="text-gray-400 italic text-sm">{t('jobdetails.noNotesYet')}</p>
                   ) : (
-                    <p className="text-gray-400 italic text-sm">{isHebrew ? t('jobdetails.saveJobToAddNotes') : 'Save this job to your tracker to add notes.'}</p>
+                    <p className="text-gray-400 italic text-sm">{t('jobdetails.saveJobToAddNotes')}</p>
                   )}
                 </div>
               )}
@@ -604,7 +602,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-blue-600" />
-                  {isHebrew ? t('jobdetails.interviewPrep') : 'Interview Preparation'}
+                  {t('jobdetails.interviewPrep')}
                 </CardTitle>
                 {!showInterviewQuestions && (
                   <Button
@@ -615,9 +613,9 @@ export default function JobDetails() {
                     className="text-blue-600 border-indigo-300 hover:bg-indigo-100"
                   >
                     {generateQuestionsMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.generating') : 'Generating...'}</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.generating')}</>
                     ) : (
-                      <><Lightbulb className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.generateQuestions') : 'Generate Questions'}</>
+                      <><Lightbulb className="w-4 h-4 mr-2" />{t('jobdetails.generateQuestions')}</>
                     )}
                   </Button>
                 )}
@@ -628,7 +626,7 @@ export default function JobDetails() {
                 <div className="space-y-6">
                   {interviewQuestions.behavioral && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.behavioralQuestions') : '💼 Behavioral Questions'}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.behavioralQuestions')}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.behavioral.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -638,7 +636,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.technical && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.technicalQuestions') : '⚙️ Technical Questions'}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.technicalQuestions')}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.technical.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -648,7 +646,7 @@ export default function JobDetails() {
                   )}
                   {interviewQuestions.company_specific && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.questionsToAsk') : '🏢 Questions to Ask Them'}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.questionsToAsk')}</h4>
                       <ul className="space-y-2">
                         {interviewQuestions.company_specific.map((q, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-indigo-300 py-1">{q}</li>
@@ -657,12 +655,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateQuestionsMutation.mutate()} className="w-full">
-                    {isHebrew ? t('jobdetails.regenerateQuestions') : '🔄 Regenerate Questions'}
+                    {t('jobdetails.regenerateQuestions')}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {isHebrew ? t('jobdetails.interviewPrepPlaceholder') : 'Click "Generate Questions" to get AI-powered interview prep questions tailored to this job.'}
+                  {t('jobdetails.interviewPrepPlaceholder')}
                 </p>
               )}
             </CardContent>
@@ -674,7 +672,7 @@ export default function JobDetails() {
               <div className="flex items-center justify-between">
                 <CardTitle className="font-semibold flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-600" />
-                  {isHebrew ? t('jobdetails.salaryInsights') : 'Salary Insights'}
+                  {t('jobdetails.salaryInsights')}
                 </CardTitle>
                 {!showSalaryEstimate && (
                   <Button
@@ -685,9 +683,9 @@ export default function JobDetails() {
                     className="text-green-600 border-green-300 hover:bg-green-900/40"
                   >
                     {generateSalaryMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isHebrew ? t('jobdetails.estimating') : 'Estimating...'}</>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />{t('jobdetails.estimating')}</>
                     ) : (
-                      <><TrendingUp className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.estimateSalary') : 'Estimate Salary'}</>
+                      <><TrendingUp className="w-4 h-4 mr-2" />{t('jobdetails.estimateSalary')}</>
                     )}
                   </Button>
                 )}
@@ -697,25 +695,25 @@ export default function JobDetails() {
               {showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.estimatedRange') : '💰 Estimated Range'}</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.estimatedRange')}</h4>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
-                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.minimum') : 'Minimum'}</p>
+                        <p className="text-sm text-gray-400">{t('jobdetails.minimum')}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.median') : 'Median'}</p>
+                        <p className="text-sm text-gray-400">{t('jobdetails.median')}</p>
                         <p className="text-2xl font-bold text-green-600">${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">{isHebrew ? t('jobdetails.maximum') : 'Maximum'}</p>
+                        <p className="text-sm text-gray-400">{t('jobdetails.maximum')}</p>
                         <p className="text-xl font-bold text-green-700">${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
                   {salaryEstimate.insights && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.keyInsights') : '💡 Key Insights'}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.keyInsights')}</h4>
                       <ul className="space-y-2">
                         {salaryEstimate.insights.map((insight, idx) => (
                           <li key={idx} className="text-sm text-gray-600 pl-4 border-l-2 border-green-300 py-1">{insight}</li>
@@ -725,7 +723,7 @@ export default function JobDetails() {
                   )}
                   {salaryEstimate.factors && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">{isHebrew ? t('jobdetails.salaryFactors') : '📊 Salary Factors'}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('jobdetails.salaryFactors')}</h4>
                       <div className="space-y-2">
                         {Object.entries(salaryEstimate.factors).map(([key, value], idx) => (
                           <div key={idx} className="text-sm">
@@ -737,12 +735,12 @@ export default function JobDetails() {
                     </div>
                   )}
                   <Button variant="outline" size="sm" onClick={() => generateSalaryMutation.mutate()} className="w-full">
-                    {isHebrew ? t('jobdetails.recalculate') : '🔄 Recalculate Estimate'}
+                    {t('jobdetails.recalculate')}
                   </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  {isHebrew ? t('jobdetails.salaryPlaceholder') : 'Click "Estimate Salary" to get AI-powered salary insights for this position.'}
+                  {t('jobdetails.salaryPlaceholder')}
                 </p>
               )}
             </CardContent>
@@ -765,8 +763,8 @@ export default function JobDetails() {
               disabled={lazyTrackMutation.isPending}
             >
               {lazyTrackMutation.isPending
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isHebrew ? t('jobdetails.saving') : 'Saving…'}</>
-                : <><Bookmark className="w-4 h-4 mr-2" />{isHebrew ? t('jobdetails.saveToMyJobs') : 'Save to My Jobs'}</>}
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('jobdetails.saving')}</>
+                : <><Bookmark className="w-4 h-4 mr-2" />{t('jobdetails.saveToMyJobs')}</>}
             </Button>
           )}
 
@@ -774,22 +772,22 @@ export default function JobDetails() {
           {trackedJobId && (
             <Card className="border border-gray-100">
               <CardHeader>
-                <CardTitle className="font-semibold text-sm">{isHebrew ? t('jobdetails.applicationStatus') : 'Application Status'}</CardTitle>
+                <CardTitle className="font-semibold text-sm">{t('jobdetails.applicationStatus')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">{isHebrew ? t('jobdetails.status') : 'Status'}</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('jobdetails.status')}</p>
                   <p className="font-medium capitalize">{job?.status || 'saved'}</p>
                 </div>
                 {job?.created_at && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">{isHebrew ? t('jobdetails.added') : 'Added'}</p>
+                    <p className="text-xs text-gray-400 mb-1">{t('jobdetails.added')}</p>
                     <p className="font-medium text-sm">{new Date(job.created_at).toLocaleDateString()}</p>
                   </div>
                 )}
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> {isHebrew ? t('jobdetails.appliedDate') : 'Applied Date'}
+                    <Calendar className="w-3.5 h-3.5" /> {t('jobdetails.appliedDate')}
                   </Label>
                   <Input
                     type="date"
@@ -803,7 +801,7 @@ export default function JobDetails() {
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <Calendar className="w-3.5 h-3.5" /> {isHebrew ? t('jobdetails.interviewDate') : 'Interview Date'}
+                    <Calendar className="w-3.5 h-3.5" /> {t('jobdetails.interviewDate')}
                   </Label>
                   <Input
                     type="date"
@@ -822,7 +820,7 @@ export default function JobDetails() {
           {/* Quick Actions */}
           <Card className="border border-gray-100">
             <CardHeader>
-              <CardTitle className="font-semibold text-sm">{isHebrew ? t('jobdetails.actions') : 'Actions'}</CardTitle>
+              <CardTitle className="font-semibold text-sm">{t('jobdetails.actions')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {effectiveJob.url && (
@@ -840,12 +838,12 @@ export default function JobDetails() {
                   }}
                 >
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    {isHebrew ? t('jobdetails.applyNow') : 'Apply Now'}
+                    {t('jobdetails.applyNow')}
                   </Button>
                 </a>
               )}
               <Button variant="outline" className="w-full" onClick={() => navigate(createPageUrl("Applications"))}>
-                {isHebrew ? t('jobdetails.viewAllApplications') : 'View All Applications'}
+                {t('jobdetails.viewAllApplications')}
               </Button>
             </CardContent>
           </Card>
