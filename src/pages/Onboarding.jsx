@@ -155,12 +155,15 @@ export default function Onboarding() {
       : [],
     availability: user?.availability || "",
     work_mode_preference: user?.work_mode_preference || "remote",
-    location_preference: user?.location_preference || "",
+    location_preference: user?.location_preference
+      ? user.location_preference.split(",").map(s => s.trim()).filter(Boolean)
+      : [],
     skills: Array.isArray(user?.skills)
       ? user.skills
       : (user?.skills ? user.skills.split(",").map(s => s.trim()).filter(Boolean) : []),
   }));
   const [skillInput, setSkillInput]       = useState("");
+  const [locationInput, setLocationInput] = useState("");
   const [error, setError]                 = useState("");
   const [isUploading, setIsUploading]     = useState(false);
   const [resumeUploaded, setResumeUploaded] = useState(false);
@@ -249,7 +252,7 @@ export default function Onboarding() {
       target_role: role,
       skills: formData.skills,
       work_mode_preference: formData.work_mode_preference,
-      location_preference: formData.location_preference,
+      location_preference: formData.location_preference.join(","),
       min_salary_preference: formData.min_salary_preference,
       max_salary_preference: formData.max_salary_preference,
       industry_preference: formData.industry_preference.join(","),
@@ -513,28 +516,46 @@ export default function Onboarding() {
                     ))}
                   </div>
                   <div className="space-y-3">
-                    <label className="text-sm text-gray-500 font-medium">Preferred city or region</label>
+                    <label className="text-sm text-gray-500 font-medium">Preferred cities or regions (pick all that apply)</label>
                     <div className="flex flex-wrap gap-2">
-                      {ISRAELI_LOCATIONS.map((city) => (
-                        <button
-                          key={city}
-                          type="button"
-                          onClick={() => setFormData((p) => ({ ...p, location_preference: city }))}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full border text-sm font-medium transition-all duration-150",
-                            formData.location_preference === city
-                              ? "border-blue-600 bg-blue-50 text-blue-700 shadow-sm"
-                              : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-gray-50"
-                          )}
-                        >
-                          {city}
-                        </button>
-                      ))}
+                      {ISRAELI_LOCATIONS.map((city) => {
+                        const selected = formData.location_preference.includes(city);
+                        return (
+                          <button
+                            key={city}
+                            type="button"
+                            onClick={() => setFormData((p) => ({
+                              ...p,
+                              location_preference: selected
+                                ? p.location_preference.filter(l => l !== city)
+                                : [...p.location_preference, city],
+                            }))}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full border text-sm font-medium transition-all duration-150",
+                              selected
+                                ? "border-blue-600 bg-blue-50 text-blue-700 shadow-sm"
+                                : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                            )}
+                          >
+                            {selected ? "✓ " : ""}{city}
+                          </button>
+                        );
+                      })}
                     </div>
                     <Input
-                      placeholder="Or type a custom city / region…"
-                      value={formData.location_preference}
-                      onChange={(e) => setFormData((p) => ({ ...p, location_preference: e.target.value }))}
+                      placeholder="Or type a custom city and press Enter…"
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = locationInput.trim();
+                          if (val && !formData.location_preference.includes(val)) {
+                            setFormData((p) => ({ ...p, location_preference: [...p.location_preference, val] }));
+                          }
+                          setLocationInput('');
+                        }
+                      }}
                       className="h-12 rounded-xl text-base"
                     />
                   </div>

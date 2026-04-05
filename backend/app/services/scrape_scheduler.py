@@ -277,7 +277,8 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 category = cat
                 break
 
-        location = user.location_preference or ""
+        # location_preference may be comma-separated (multiple locations); use the first for search
+        location = (user.location_preference or "").split(",")[0].strip()
         drushim_url = f"https://www.drushim.co.il/jobs/subcat/{category}"
         cache = get_cache()
 

@@ -30,9 +30,23 @@ export default function Profile() {
     return [];
   };
 
+  const LOCATION_OPTIONS = [
+    "Tel Aviv Area", "Central Israel", "Jerusalem Area", "Haifa Area",
+    "North Israel", "South Israel", "Sharon Area",
+    "Tel Aviv", "Jerusalem", "Haifa", "Beer Sheva",
+    "Herzliya", "Ramat Gan", "Petah Tikva", "Netanya", "Ra'anana", "Modiin",
+  ];
+
+  const normalizeLocations = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    return val.split(',').map(s => s.trim()).filter(Boolean);
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [skillInput, setSkillInput] = useState('');
+  const [locationInput, setLocationInput] = useState('');
   const [success, setSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -238,7 +252,7 @@ export default function Profile() {
       target_role: user?.target_role || '',
       years_of_experience: user?.years_of_experience ?? '',
       skills: normalizeSkills(user?.skills),
-      location_preference: user?.location_preference || '',
+      location_preference: normalizeLocations(user?.location_preference),
       work_mode_preference: user?.work_mode_preference || '',
       bio: user?.bio || '',
       min_salary_preference: user?.min_salary_preference ?? '',
@@ -255,7 +269,7 @@ export default function Profile() {
       target_role: formData.target_role || undefined,
       years_of_experience: formData.years_of_experience !== '' ? parseInt(formData.years_of_experience) : undefined,
       skills: formData.skills,
-      location_preference: formData.location_preference || undefined,
+      location_preference: formData.location_preference.length > 0 ? formData.location_preference.join(',') : undefined,
       work_mode_preference: formData.work_mode_preference || undefined,
       min_salary_preference: formData.min_salary_preference !== '' ? parseInt(formData.min_salary_preference) : undefined,
       max_salary_preference: formData.max_salary_preference !== '' ? parseInt(formData.max_salary_preference) : undefined,
@@ -661,13 +675,65 @@ export default function Profile() {
             <div className="space-y-2">
               <Label>{t('profile.locationPref')}</Label>
               {isEditing ? (
-                <Input
-                  value={formData.location_preference}
-                  onChange={(e) => setFormData({ ...formData, location_preference: e.target.value })}
-                  placeholder={t('profile.locationPlaceholder')}
-                />
+                <div className="space-y-2">
+                  {/* Selected locations */}
+                  {formData.location_preference.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {formData.location_preference.map((loc) => (
+                        <Badge key={loc} variant="secondary" className="text-sm py-1 px-2.5">
+                          {loc}
+                          <button
+                            onClick={() => setFormData({ ...formData, location_preference: formData.location_preference.filter(l => l !== loc) })}
+                            className="ltr:ml-1.5 rtl:mr-1.5 hover:text-red-500"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {/* Preset chips */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {LOCATION_OPTIONS.filter(l => !formData.location_preference.includes(l)).map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, location_preference: [...formData.location_preference, loc] })}
+                        className="px-2.5 py-1 rounded-full border border-gray-200 text-xs text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      >
+                        + {loc}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Custom location input */}
+                  <div className="flex gap-2">
+                    <Input
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = locationInput.trim();
+                          if (val && !formData.location_preference.includes(val)) {
+                            setFormData({ ...formData, location_preference: [...formData.location_preference, val] });
+                          }
+                          setLocationInput('');
+                        }
+                      }}
+                      placeholder="Type a city and press Enter…"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                </div>
               ) : (
-                <p className="text-gray-900 font-medium">{user.location_preference || t('common.notSet')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {normalizeLocations(user.location_preference).length > 0
+                    ? normalizeLocations(user.location_preference).map((loc) => (
+                        <Badge key={loc} variant="secondary" className="text-sm">{loc}</Badge>
+                      ))
+                    : <p className="text-gray-900 font-medium">{t('common.notSet')}</p>
+                  }
+                </div>
               )}
             </div>
 
