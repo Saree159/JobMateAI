@@ -767,8 +767,8 @@ class LinkedInJobSearchScraper(JobScraper):
     _DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 
     PAGE_SIZE = 25           # LinkedIn guest API page size (fixed)
-    FREE_LIMIT = 15          # jobs returned for free-tier users
-    PRO_LIMIT  = 50          # jobs returned for pro users
+    FREE_LIMIT = 20          # jobs returned per scrape call
+    PRO_LIMIT  = 20          # same cap for all tiers
 
     @staticmethod
     def _scraper_url(target_url: str) -> str:

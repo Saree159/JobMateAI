@@ -308,13 +308,9 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         fresh_linkedin = False
         if source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role:
             li_at = user.linkedin_li_at
-            li_limit = (
-                LinkedInJobSearchScraper.PRO_LIMIT
-                if getattr(user, "subscription_tier", "free") == "pro"
-                else LinkedInJobSearchScraper.FREE_LIMIT
-            )
-            # Per-location limit keeps total at ~li_limit after dedup
-            per_loc_limit = max(LinkedInJobSearchScraper.FREE_LIMIT, li_limit // max(len(locations), 1))
+            LINKEDIN_TOTAL_LIMIT = 20
+            # Spread the 20-job budget across locations, minimum 5 per location
+            per_loc_limit = max(5, LINKEDIN_TOTAL_LIMIT // max(len(locations), 1))
             seen_ids: set = set()
             li_fresh_any = False
             li_scraper = LinkedInJobSearchScraper()
@@ -345,6 +341,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                         seen_ids.add(jid)
                         linkedin_jobs.append(j)
             fresh_linkedin = li_fresh_any
+            linkedin_jobs = linkedin_jobs[:20]  # hard cap — never exceed 20 total
         linkedin_jobs = linkedin_jobs or []
         for j in linkedin_jobs:
             j.setdefault("source", "linkedin")
