@@ -149,6 +149,9 @@ function SourceCard({ source, onUpdate }) {
   const [toggling, setToggling] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const [triggerResult, setTriggerResult] = useState(null);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState(null);
+  const [confirmPurge, setConfirmPurge] = useState(false);
   const [editSchedule, setEditSchedule] = useState(false);
   const [hour, setHour] = useState(source.schedule_hour);
   const [minute, setMinute] = useState(source.schedule_minute);
@@ -174,6 +177,20 @@ function SourceCard({ source, onUpdate }) {
       setTriggerResult({ ok: false });
     } finally {
       setTriggering(false);
+    }
+  }
+
+  async function purge() {
+    setPurging(true);
+    setPurgeResult(null);
+    setConfirmPurge(false);
+    try {
+      const r = await adminApi.purgeSavedJobsBySource(source.source);
+      setPurgeResult({ ok: true, deleted: r.deleted });
+    } catch {
+      setPurgeResult({ ok: false });
+    } finally {
+      setPurging(false);
     }
   }
 
@@ -280,8 +297,8 @@ function SourceCard({ source, onUpdate }) {
         <p className="text-[11px] text-gray-600 italic">{source.notes}</p>
       )}
 
-      {/* Trigger button */}
-      <div className="flex items-center gap-3">
+      {/* Action buttons */}
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={trigger}
           disabled={triggering}
@@ -290,14 +307,29 @@ function SourceCard({ source, onUpdate }) {
           <Play className={`w-3 h-3 ${triggering ? 'animate-spin' : ''}`} />
           {triggering ? 'Clearing cache…' : 'Force refresh'}
         </button>
-        {triggerResult?.ok && (
-          <span className="text-xs text-emerald-400">
-            ✓ Cleared {triggerResult.cleared} cache entries
-          </span>
+
+        {/* Purge saved jobs */}
+        {!confirmPurge ? (
+          <button
+            onClick={() => setConfirmPurge(true)}
+            disabled={purging}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs rounded-lg transition-colors disabled:opacity-50"
+          >
+            {purging ? <RefreshCw className="w-3 h-3 animate-spin" /> : '🗑'}
+            {purging ? 'Purging…' : 'Purge saved jobs'}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-400">Delete all user-saved {meta.label} jobs?</span>
+            <button onClick={purge} className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors">Yes, delete</button>
+            <button onClick={() => setConfirmPurge(false)} className="text-xs px-2 py-1 bg-white/5 hover:bg-white/10 text-gray-400 rounded-md transition-colors">Cancel</button>
+          </div>
         )}
-        {triggerResult?.ok === false && (
-          <span className="text-xs text-red-400">Failed</span>
-        )}
+
+        {triggerResult?.ok && <span className="text-xs text-emerald-400">✓ Cleared {triggerResult.cleared} cache entries</span>}
+        {triggerResult?.ok === false && <span className="text-xs text-red-400">Refresh failed</span>}
+        {purgeResult?.ok && <span className="text-xs text-emerald-400">✓ Deleted {purgeResult.deleted} saved jobs</span>}
+        {purgeResult?.ok === false && <span className="text-xs text-red-400">Purge failed</span>}
       </div>
 
       {/* Fetch logs */}

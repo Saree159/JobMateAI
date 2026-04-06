@@ -43,6 +43,12 @@ export const adminApi = {
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
   },
   triggerSource: (source) => post(`/api/admin/sources/${source}/trigger`),
+  purgeSavedJobsBySource: (source) => {
+    return fetch(`${API_BASE_URL}/api/admin/sources/${source}/saved-jobs`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Key': ADMIN_KEY },
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  },
   triggerAllSources: () => post('/api/admin/sources/trigger-all'),
   getSourceLogs: (source, limit = 50) => get(`/api/admin/sources/${source}/logs?limit=${limit}`),
   getAllSourceLogs: (limit = 100) => get(`/api/admin/sources/logs/all?limit=${limit}`),

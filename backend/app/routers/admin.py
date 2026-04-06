@@ -1200,6 +1200,19 @@ async def trigger_source(
                        "Jobs will be re-fetched on the next user request."}
 
 
+@router.delete("/sources/{source}/saved-jobs")
+def purge_saved_jobs_by_source(
+    source: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    """Delete all user-saved jobs that came from the given source."""
+    from app.models import Job
+    deleted = db.query(Job).filter(Job.source == source).delete(synchronize_session=False)
+    db.commit()
+    return {"ok": True, "source": source, "deleted": deleted}
+
+
 @router.post("/sources/trigger-all")
 async def trigger_all_sources(
     db: Session = Depends(get_db),
