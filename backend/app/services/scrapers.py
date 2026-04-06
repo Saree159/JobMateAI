@@ -812,9 +812,9 @@ class LinkedInJobSearchScraper(JobScraper):
         max_pages = 6  # cap at 6 requests regardless of limit
         exp_filter = self._exp_filter(years_of_experience)
 
-        try:
-            pages_fetched = 0
-            while len(jobs) < limit and pages_fetched < max_pages:
+        pages_fetched = 0
+        while len(jobs) < limit and pages_fetched < max_pages:
+            try:
                 raw_search_url = self._SEARCH_URL.format(
                     keywords=quote_plus(role),
                     location=quote_plus(location),
@@ -833,35 +833,39 @@ class LinkedInJobSearchScraper(JobScraper):
                         logger.warning(f"LinkedIn guest search returned {resp.status_code}")
                         break
 
-                    soup = BeautifulSoup(resp.text, "html.parser")
-                    cards = soup.select("li")
-                    logger.info(f"LinkedIn page start={offset}: {len(cards)} cards for '{role}' in '{location}'")
+                soup = BeautifulSoup(resp.text, "html.parser")
+                cards = soup.select("li")
+                logger.info(f"LinkedIn page start={offset}: {len(cards)} cards for '{role}' in '{location}'")
 
-                    page_jobs = []
-                    for card in cards:
-                        job = self._parse_card(card)
-                        if job and job.get("title") and job.get("job_id"):
-                            page_jobs.append(job)
+                page_jobs = []
+                for card in cards:
+                    job = self._parse_card(card)
+                    if job and job.get("title") and job.get("job_id"):
+                        page_jobs.append(job)
 
-                    if not page_jobs:
-                        break  # LinkedIn has no more results
+                if not page_jobs:
+                    break  # no more results on this page
 
-                    jobs.extend(page_jobs)
-                    offset += len(page_jobs)  # advance by actual returned count, not PAGE_SIZE
-                    pages_fetched += 1
+                jobs.extend(page_jobs)
+                offset += len(page_jobs)
+                pages_fetched += 1
 
-            jobs = jobs[:limit]
+            except Exception as e:
+                logger.warning(f"LinkedIn page fetch error (start={offset}): {e}")
+                break  # stop paging but keep whatever was collected so far
 
-            if not jobs:
-                return []
+        jobs = jobs[:limit]
 
-            # Fetch full descriptions for ALL returned jobs
-            await self._enrich_descriptions(jobs)
-            return jobs
-
-        except Exception as e:
-            logger.error(f"LinkedIn guest search error: {e}")
+        if not jobs:
             return []
+
+        # Fetch full descriptions — best-effort, don't discard jobs if it fails
+        try:
+            await self._enrich_descriptions(jobs)
+        except Exception as e:
+            logger.warning(f"LinkedIn enrich error: {e}")
+
+        return jobs
 
     async def _enrich_descriptions(self, jobs: List[Dict]) -> None:
         """Fetch full description for each job from the guest detail API."""
