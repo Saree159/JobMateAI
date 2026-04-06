@@ -2,7 +2,7 @@
 AI services for JobMate AI.
 Provides match scoring and cover letter generation using OpenAI GPT.
 """
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from openai import OpenAI
 from app.config import settings
 from app.services.usage_logger import log_ai_usage
@@ -25,7 +25,7 @@ def _user_seniority_bucket(years: int) -> int:
     return 5                  # principal / director
 
 
-def _detect_job_seniority(job_title: str, job_description: str) -> int | None:
+def _detect_job_seniority(job_title: str, job_description: str) -> Optional[int]:
     """
     Detect expected experience level of a job and return a seniority bucket (0-5).
     Returns None if the level cannot be determined.
@@ -57,7 +57,7 @@ def _detect_job_seniority(job_title: str, job_description: str) -> int | None:
     return None
 
 
-def _experience_multiplier(user_years: int | None, job_title: str, job_description: str) -> float:
+def _experience_multiplier(user_years: Optional[int], job_title: str, job_description: str) -> float:
     """
     Return a score multiplier based on how well the user's experience level
     matches the job's expected level.
@@ -83,7 +83,7 @@ def calculate_match_score(
     target_role: str,
     job_title: str,
     job_description: str,
-    years_of_experience: int | None = None,
+    years_of_experience: Optional[int] = None,
 ) -> Tuple[float, List[str], List[str]]:
     """
     Calculate a match score between user profile and job posting.
