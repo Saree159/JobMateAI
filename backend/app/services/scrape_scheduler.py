@@ -341,7 +341,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                     log_id = _log_fetch_start("linkedin")
                     logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role} location={location!r}")
                     try:
-                        loc_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=per_loc_limit)
+                        loc_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=per_loc_limit, years_of_experience=user.years_of_experience)
                         if loc_jobs:
                             cache.set(cache_key_li, loc_jobs, ttl=CACHE_TTL_ROLE)
                             li_fresh_any = True

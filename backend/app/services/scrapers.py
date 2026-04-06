@@ -740,10 +740,29 @@ class LinkedInJobSearchScraper(JobScraper):
 
     # Guest search API — returns HTML with job cards (no auth needed)
     # sortBy=DD sorts by date posted (most recent first)
+    # f_E optional experience level filter: 1=Internship,2=Entry,3=Associate,4=Mid-Senior,5=Director
     _SEARCH_URL = (
         "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
-        "?keywords={keywords}&location={location}&start={start}&count={count}&sortBy=DD"
+        "?keywords={keywords}&location={location}&start={start}&count={count}&sortBy=DD{exp_filter}"
     )
+
+    # Map years_of_experience → LinkedIn f_E codes
+    _EXP_LEVEL_MAP = [
+        (0,  "2"),      # 0 years  → Entry level
+        (2,  "3"),      # 1-2 yrs  → Associate
+        (5,  "4"),      # 3-5 yrs  → Mid-Senior
+        (99, ""),       # 6+ yrs   → no filter
+    ]
+
+    @classmethod
+    def _exp_filter(cls, years_of_experience: Optional[int]) -> str:
+        """Return the f_E query string segment for the given experience level."""
+        if years_of_experience is None:
+            return ""
+        for threshold, code in cls._EXP_LEVEL_MAP:
+            if years_of_experience <= threshold:
+                return f"&f_E={code}" if code else ""
+        return ""
     # Guest job detail API — returns HTML with full description (no auth needed)
     _DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 
@@ -777,10 +796,12 @@ class LinkedInJobSearchScraper(JobScraper):
         li_at: Optional[str] = None,
         start: int = 0,
         limit: int = FREE_LIMIT,
+        years_of_experience: Optional[int] = None,
     ) -> List[Dict]:
         """
         Search LinkedIn via Guest API and enrich ALL returned jobs with full descriptions.
         Fetches as many pages as needed to reach `limit` results.
+        Pass years_of_experience to filter by LinkedIn experience level (f_E).
         """
         import httpx
         from urllib.parse import quote_plus
@@ -789,6 +810,7 @@ class LinkedInJobSearchScraper(JobScraper):
         jobs: List[Dict] = []
         offset = start
         max_pages = 6  # cap at 6 requests regardless of limit
+        exp_filter = self._exp_filter(years_of_experience)
 
         try:
             pages_fetched = 0
@@ -798,6 +820,7 @@ class LinkedInJobSearchScraper(JobScraper):
                     location=quote_plus(location),
                     start=offset,
                     count=self.PAGE_SIZE,
+                    exp_filter=exp_filter,
                 )
                 search_url = self._scraper_url(raw_search_url)
                 client_kwargs = dict(headers=self._HEADERS, timeout=30, follow_redirects=True)
