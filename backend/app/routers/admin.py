@@ -1305,6 +1305,76 @@ def get_all_logs(
 
 
 # ---------------------------------------------------------------------------
+# LinkedIn scraper debug
+# ---------------------------------------------------------------------------
+
+@router.get("/linkedin-debug")
+async def linkedin_debug(
+    role: str = "software engineer",
+    location: str = "",
+    _: None = Depends(verify_admin),
+):
+    """
+    Fire one real LinkedIn guest-API request (via ScraperAPI if configured)
+    and return the raw HTML snippet + parsed card count so you can diagnose
+    selector breakage without tailing logs.
+    """
+    import httpx, os
+    from urllib.parse import quote_plus, quote as _q
+    from bs4 import BeautifulSoup
+
+    SEARCH_URL = (
+        "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+        "?keywords={keywords}&location={location}&start=0&count=10&sortBy=DD"
+    )
+    HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    raw_url = SEARCH_URL.format(
+        keywords=quote_plus(role),
+        location=quote_plus(location),
+    )
+    key = os.environ.get("SCRAPERAPI_KEY", "")
+    fetch_url = (
+        f"https://api.scraperapi.com/?api_key={key}&url={_q(raw_url, safe='')}&render=false"
+        if key else raw_url
+    )
+
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, timeout=30, follow_redirects=True) as client:
+            resp = await client.get(fetch_url)
+        status = resp.status_code
+        html = resp.text
+        soup = BeautifulSoup(html, "html.parser")
+        li_count = len(soup.select("li"))
+        # Try common title selectors
+        selectors_found = {
+            "h3.base-search-card__title":       len(soup.select("h3.base-search-card__title")),
+            "h3.job-card-list__title":           len(soup.select("h3.job-card-list__title")),
+            "span.entity-result__title-text":    len(soup.select("span.entity-result__title-text")),
+            "a[data-tracking-control-name]":     len(soup.select("a[data-tracking-control-name]")),
+            "[data-entity-urn]":                 len(soup.select("[data-entity-urn]")),
+            "div.base-card":                     len(soup.select("div.base-card")),
+        }
+        return {
+            "status_code": status,
+            "via_scraperapi": bool(key),
+            "html_length": len(html),
+            "li_count": li_count,
+            "selectors_found": selectors_found,
+            "html_preview": html[:1500],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ---------------------------------------------------------------------------
 # Waitlist
 # ---------------------------------------------------------------------------
 
