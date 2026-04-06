@@ -430,12 +430,15 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 seen.add(k)
                 deduped_skills.append(s)
 
+        user_years_exp = getattr(user, "years_of_experience", None)
+
         def score_job(job):
             score, _, _ = calculate_match_score(
                 deduped_skills,
                 target_role,
                 job.get("title") or "",
                 job.get("description") or "",
+                years_of_experience=user_years_exp,
             )
             return score
 

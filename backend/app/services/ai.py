@@ -15,22 +15,86 @@ import re
 client = OpenAI(api_key=settings.openai_api_key)
 
 
+def _user_seniority_bucket(years: int) -> int:
+    """Map years of experience to a seniority bucket (0-5)."""
+    if years <= 0:  return 0  # intern / entry
+    if years <= 2:  return 1  # junior
+    if years <= 5:  return 2  # mid
+    if years <= 9:  return 3  # senior
+    if years <= 14: return 4  # lead / staff
+    return 5                  # principal / director
+
+
+def _detect_job_seniority(job_title: str, job_description: str) -> int | None:
+    """
+    Detect expected experience level of a job and return a seniority bucket (0-5).
+    Returns None if the level cannot be determined.
+    """
+    text = f"{job_title} {job_description[:800]}".lower()
+
+    # Explicit year mentions are the strongest signal
+    m = re.search(r'(\d+)\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience', text)
+    if m:
+        return _user_seniority_bucket(int(m.group(1)))
+    m = re.search(r'(\d+)\s*[-–]\s*(\d+)\s*(?:years?|yrs?)', text)
+    if m:
+        avg = (int(m.group(1)) + int(m.group(2))) // 2
+        return _user_seniority_bucket(avg)
+
+    # Keyword-based fallback
+    if re.search(r'\b(intern|internship|student|trainee)\b', text):
+        return 0
+    if re.search(r'\b(entry.?level|junior|jr\.?|fresh.?grad|new.?grad|graduate)\b', text):
+        return 1
+    if re.search(r'\b(associate|mid.?level|intermediate)\b', text):
+        return 2
+    if re.search(r'\b(senior|sr\.?)\b', text):
+        return 3
+    if re.search(r'\b(lead|staff|principal|architect)\b', text):
+        return 4
+    if re.search(r'\b(director|head of|vp\b|vice president|chief)\b', text):
+        return 5
+    return None
+
+
+def _experience_multiplier(user_years: int | None, job_title: str, job_description: str) -> float:
+    """
+    Return a score multiplier based on how well the user's experience level
+    matches the job's expected level.
+
+    Bucket distance → multiplier:
+      0 (perfect match)  → 1.00
+      1 off              → 0.82
+      2 off              → 0.60
+      3+ off             → 0.38
+    """
+    if user_years is None:
+        return 1.0
+    job_bucket = _detect_job_seniority(job_title, job_description)
+    if job_bucket is None:
+        return 1.0  # unknown job seniority — don't penalize
+    user_bucket = _user_seniority_bucket(user_years)
+    diff = abs(user_bucket - job_bucket)
+    return {0: 1.00, 1: 0.82, 2: 0.60}.get(diff, 0.38)
+
+
 def calculate_match_score(
     user_skills: List[str],
     target_role: str,
     job_title: str,
-    job_description: str
+    job_description: str,
+    years_of_experience: int | None = None,
 ) -> Tuple[float, List[str], List[str]]:
     """
     Calculate a match score between user profile and job posting.
 
-    Uses a three-component hybrid:
-    1. Direct skill matching (45%) — whole-word regex against full job text,
-       no hardcoded tech whitelist so every skill the user listed is checked.
-    2. TF-IDF cosine similarity (45%) — bigrams included so multi-word skills
-       like "machine learning" or "power bi" are captured semantically.
-    3. Role-title bonus (up to 10%) — rewards jobs whose title contains the
-       user's target role words.
+    Four-component hybrid:
+    1. Direct skill matching (45%) — whole-word regex, no hardcoded tech whitelist.
+    2. TF-IDF cosine similarity with bigrams (45%) — semantic overlap.
+    3. Role-title bonus (10%) — rewards jobs whose title matches target role words.
+    4. Experience-level multiplier — applied to the base score.
+       A junior applying to a senior role can drop to ~38% of base score;
+       a perfect-level match keeps 100%.
 
     Returns:
         Tuple of (match_score 0-100, matched_skills, missing_skills)
@@ -41,7 +105,7 @@ def calculate_match_score(
     # Full job text — title weighted more by repeating it
     job_text = f"{job_title} {job_title} {job_description}".lower()
 
-    # 1. Direct skill matching — no regex whitelist, check every user skill
+    # 1. Direct skill matching — every user skill checked, no whitelist
     matched_skills = []
     for skill in user_skills:
         pattern = r'\b' + re.escape(skill.lower()) + r'\b'
@@ -65,15 +129,17 @@ def calculate_match_score(
     except Exception:
         semantic_similarity = 0.0
 
-    # 3. Role-title bonus — up to 0.10 added before final scaling
+    # 3. Role-title bonus (up to 0.10)
     role_keywords = [w for w in target_role.lower().split() if len(w) > 3]
     title_lower = job_title.lower()
     matched_role_words = sum(1 for w in role_keywords if w in title_lower)
     role_bonus = (matched_role_words / len(role_keywords) * 0.10) if role_keywords else 0.0
 
-    # Combine: 45% exact skill + 45% semantic + 10% role-title
-    raw = skill_match_ratio * 0.45 + semantic_similarity * 0.45 + role_bonus
-    final_score = min(round(raw * 100, 2), 100.0)
+    # 4. Experience-level multiplier
+    exp_mult = _experience_multiplier(years_of_experience, job_title, job_description)
+
+    base = skill_match_ratio * 0.45 + semantic_similarity * 0.45 + role_bonus
+    final_score = min(round(base * exp_mult * 100, 2), 100.0)
 
     return final_score, matched_skills, missing_skills
 
