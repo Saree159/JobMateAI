@@ -359,7 +359,7 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 db.query(IngestJob)
                 .filter(IngestJob.source == "linkedin", IngestJob.last_seen_at >= cutoff)
                 .order_by(IngestJob.last_seen_at.desc())
-                .limit(100)
+                .limit(20)
                 .all()
             )
             for row in rows:
