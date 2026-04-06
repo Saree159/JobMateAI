@@ -18,6 +18,7 @@ class WorkModePreference(str, Enum):
 
 class JobStatus(str, Enum):
     """Job application statuses."""
+    INTERESTING = "interesting"
     SAVED = "saved"
     APPLIED = "applied"
     INTERVIEW = "interview"

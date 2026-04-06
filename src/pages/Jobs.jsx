@@ -8,7 +8,7 @@ import { createPageUrl } from "@/utils";
 import {
   Plus, Search, Briefcase, Loader2, RefreshCw,
   Bookmark, CheckCircle2, ExternalLink, Building2, MapPin,
-  Linkedin, Globe, Zap,
+  Linkedin, Globe, Zap, ChevronDown,
 } from "lucide-react";
 import ScraperLoader from "@/components/jobs/ScraperLoader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import AddJobDialog from "../components/jobs/AddJobDialog";
-import JobCard from "../components/jobs/JobCard";
 import JobFilters from "../components/jobs/JobFilters";
 
 const PAGE_SIZE = 20;
@@ -142,6 +141,105 @@ function DiscoverCard({ job, onSelect, onSave, saving, saved }) {
   );
 }
 
+// ── Status config ─────────────────────────────────────────────────────────────
+const JOB_STATUSES = [
+  { value: "interesting", label: "Interesting",  color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "saved",       label: "Saved",        color: "bg-slate-100 text-slate-600 border-slate-200" },
+  { value: "applied",     label: "Applied",      color: "bg-violet-100 text-violet-700 border-violet-200" },
+  { value: "interview",   label: "Interview",    color: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "offer",       label: "Offer",        color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "rejected",    label: "Rejected",     color: "bg-red-100 text-red-600 border-red-200" },
+];
+
+function StatusPill({ status, jobId, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const cfg = JOB_STATUSES.find((s) => s.value === status) || JOB_STATUSES[0];
+
+  const handleSelect = async (val) => {
+    setOpen(false);
+    if (val === status) return;
+    setSaving(true);
+    try {
+      await jobApi.update(jobId, { status: val });
+      onChanged(jobId, val);
+    } catch {
+      toast.error("Failed to update status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={saving}
+        className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-opacity ${cfg.color} ${saving ? "opacity-50" : "hover:opacity-80"}`}
+      >
+        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : cfg.label}
+        <ChevronDown className="w-3 h-3 opacity-60" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px]">
+          {JOB_STATUSES.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => handleSelect(s.value)}
+              className={`w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-gray-50 transition-colors ${s.value === status ? "opacity-50 cursor-default" : ""}`}
+            >
+              <span className={`inline-block px-2 py-0.5 rounded-full border ${s.color}`}>{s.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Saved job list row ────────────────────────────────────────────────────────
+function SavedJobRow({ job, onStatusChange, onOpen }) {
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+      onClick={() => onOpen(job)}
+    >
+      {/* Match score */}
+      <div className="shrink-0 w-10 text-center">
+        <MatchBadge score={job.matchScore || 0} />
+      </div>
+
+      {/* Title + meta */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 truncate">{job.title || "Untitled"}</p>
+        <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400 flex-wrap">
+          {job.company && <span className="flex items-center gap-0.5"><Building2 className="w-3 h-3" />{job.company}</span>}
+          {job.location && <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{job.location}</span>}
+        </div>
+      </div>
+
+      {/* Source */}
+      <div className="hidden sm:block shrink-0">
+        <SourceBadge source={job.source} />
+      </div>
+
+      {/* Status pill */}
+      <div className="shrink-0">
+        <StatusPill status={job.status} jobId={job.id} onChanged={onStatusChange} />
+      </div>
+
+      {/* Open button */}
+      <button
+        className="shrink-0 p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+        onClick={(e) => { e.stopPropagation(); onOpen(job); }}
+        title="Open job details"
+      >
+        <ExternalLink className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function Jobs() {
   const { t } = useTranslation();
@@ -156,6 +254,8 @@ export default function Jobs() {
   const [filters, setFilters] = useState({ status: "all", job_type: "all", experience_level: "all", location: "" });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [savedUrls, setSavedUrls] = useState(new Set());
+  // optimistic status overrides: {jobId: newStatus}
+  const [statusOverrides, setStatusOverrides] = useState({});
 
   // My tracked jobs
   const { data: myJobs = [], isLoading: myLoading } = useQuery({
@@ -207,11 +307,12 @@ export default function Jobs() {
   // ── Filtered "My Jobs" ──────────────────────────────────────────────────
   const filteredMyJobs = myJobs
     .filter((job) => {
+      const effectiveStatus = statusOverrides[job.id] ?? job.status;
       const q = searchQuery.toLowerCase();
       return (
         (!q || job.title?.toLowerCase().includes(q) || job.company?.toLowerCase().includes(q)) &&
         (!filters.location || job.location?.toLowerCase().includes(filters.location.toLowerCase())) &&
-        (filters.status === "all" || job.status === filters.status)
+        (filters.status === "all" || effectiveStatus === filters.status)
       );
     })
     .map((job) => ({
@@ -378,34 +479,49 @@ export default function Jobs() {
         </>
       )}
 
-      {/* ── MY APPLICATIONS TAB ── */}
+      {/* ── SAVED JOBS TAB ── */}
       {tab === "my" && (
         <>
-          <div className="bg-white border border-gray-100 rounded-xl p-4 mb-6 shadow-sm">
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <Input
-                  placeholder={t("jobs.searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 bg-gray-50 border-gray-200 text-sm"
-                />
-              </div>
-              <JobFilters filters={filters} setFilters={setFilters} />
+          {/* Search + status filter */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Input
+                placeholder="Search saved jobs…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 bg-gray-50 border-gray-200 text-sm"
+              />
+            </div>
+            {/* Status filter pills */}
+            <div className="flex gap-1.5 flex-wrap">
+              {[{ value: "all", label: "All" }, ...JOB_STATUSES].map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setFilters((f) => ({ ...f, status: s.value }))}
+                  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                    filters.status === s.value
+                      ? "bg-gray-800 text-white border-gray-800"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
           </div>
 
           {myLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="border border-gray-100">
-                  <CardContent className="p-6 space-y-4">
-                    <Skeleton className="h-5 w-3/4" />
+                <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                  <Skeleton className="h-6 w-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
                     <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-4 w-full" />
-                  </CardContent>
-                </Card>
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
               ))}
             </div>
           ) : filteredMyJobs.length === 0 ? (
@@ -414,7 +530,7 @@ export default function Jobs() {
                 <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-500 mb-2">No saved jobs yet</h3>
                 <p className="text-gray-500 mb-6">
-                  {searchQuery || filters.location ? t("jobs.adjustFilters") : "Save interesting jobs from Discover to find them here."}
+                  {searchQuery || filters.status !== "all" ? "Try adjusting filters." : "Save interesting jobs from Discover to find them here."}
                 </p>
                 <Button variant="outline" onClick={() => setTab("discover")}>
                   <Zap className="w-4 h-4 mr-2" /> Browse Jobs
@@ -422,9 +538,22 @@ export default function Jobs() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
+              {/* Table header */}
+              <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-gray-50 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                <div className="w-10 text-center">Match</div>
+                <div className="flex-1">Job</div>
+                <div className="hidden sm:block w-24">Source</div>
+                <div className="w-28">Status</div>
+                <div className="w-8" />
+              </div>
               {filteredMyJobs.map((job) => (
-                <JobCard key={job.id} job={job} onView={() => navigate(createPageUrl("JobDetails") + `?id=${job.id}`)} />
+                <SavedJobRow
+                  key={job.id}
+                  job={{ ...job, status: statusOverrides[job.id] ?? job.status }}
+                  onStatusChange={(id, val) => setStatusOverrides((o) => ({ ...o, [id]: val }))}
+                  onOpen={() => navigate(createPageUrl("JobDetails") + `?id=${job.id}`)}
+                />
               ))}
             </div>
           )}
