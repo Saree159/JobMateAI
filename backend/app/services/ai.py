@@ -23,57 +23,59 @@ def calculate_match_score(
 ) -> Tuple[float, List[str], List[str]]:
     """
     Calculate a match score between user profile and job posting.
-    
-    Uses a hybrid approach:
-    1. Exact keyword matching for skills
-    2. TF-IDF cosine similarity for semantic matching
-    
-    Args:
-        user_skills: List of user's skills
-        target_role: User's target job role
-        job_title: Job posting title
-        job_description: Job posting description
-    
+
+    Uses a three-component hybrid:
+    1. Direct skill matching (45%) — whole-word regex against full job text,
+       no hardcoded tech whitelist so every skill the user listed is checked.
+    2. TF-IDF cosine similarity (45%) — bigrams included so multi-word skills
+       like "machine learning" or "power bi" are captured semantically.
+    3. Role-title bonus (up to 10%) — rewards jobs whose title contains the
+       user's target role words.
+
     Returns:
-        Tuple of (match_score, matched_skills, missing_skills)
-        - match_score: 0-100 score
-        - matched_skills: Skills found in job description
-        - missing_skills: Skills not found
+        Tuple of (match_score 0-100, matched_skills, missing_skills)
     """
     if not user_skills:
         return 0.0, [], []
-    
-    # Normalize job text
-    job_text = f"{job_title} {job_description}".lower()
-    
-    # 1. Exact skill matching (50% weight)
+
+    # Full job text — title weighted more by repeating it
+    job_text = f"{job_title} {job_title} {job_description}".lower()
+
+    # 1. Direct skill matching — no regex whitelist, check every user skill
     matched_skills = []
     for skill in user_skills:
-        # Check for whole word match
         pattern = r'\b' + re.escape(skill.lower()) + r'\b'
         if re.search(pattern, job_text):
             matched_skills.append(skill)
-    
+
     missing_skills = [s for s in user_skills if s not in matched_skills]
-    skill_match_ratio = len(matched_skills) / len(user_skills) if user_skills else 0
-    
-    # 2. Semantic matching using TF-IDF (50% weight)
+    skill_match_ratio = len(matched_skills) / len(user_skills)
+
+    # 2. TF-IDF semantic similarity with bigrams
     try:
-        user_profile_text = f"{target_role} {' '.join(user_skills)}"
-        vectorizer = TfidfVectorizer(stop_words='english')
+        user_profile_text = f"{target_role} {target_role} {' '.join(user_skills)}"
+        vectorizer = TfidfVectorizer(
+            stop_words='english',
+            ngram_range=(1, 2),
+            min_df=1,
+            sublinear_tf=True,
+        )
         tfidf_matrix = vectorizer.fit_transform([user_profile_text, job_text])
-        semantic_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    except:
-        # Fallback if TF-IDF fails (e.g., too few words)
+        semantic_similarity = float(cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0])
+    except Exception:
         semantic_similarity = 0.0
-    
-    # Combine scores (50% exact match, 50% semantic)
-    final_score = (skill_match_ratio * 0.5 + semantic_similarity * 0.5) * 100
-    
-    # Cap at 100
-    final_score = min(100.0, final_score)
-    
-    return round(final_score, 2), matched_skills, missing_skills
+
+    # 3. Role-title bonus — up to 0.10 added before final scaling
+    role_keywords = [w for w in target_role.lower().split() if len(w) > 3]
+    title_lower = job_title.lower()
+    matched_role_words = sum(1 for w in role_keywords if w in title_lower)
+    role_bonus = (matched_role_words / len(role_keywords) * 0.10) if role_keywords else 0.0
+
+    # Combine: 45% exact skill + 45% semantic + 10% role-title
+    raw = skill_match_ratio * 0.45 + semantic_similarity * 0.45 + role_bonus
+    final_score = min(round(raw * 100, 2), 100.0)
+
+    return final_score, matched_skills, missing_skills
 
 
 async def generate_cover_letter(

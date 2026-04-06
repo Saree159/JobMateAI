@@ -62,21 +62,6 @@ ROLE_CATEGORY_MAP = [
       "devops", "cloud", "engineer"], "71"),
 ]
 
-_SKILL_PATTERNS = [
-    r'\b(Python|JavaScript|TypeScript|Java|C\+\+|C#|Ruby|PHP|Swift|Kotlin|Go|Rust|Scala|R)\b',
-    r'\b(React|Angular|Vue|Node\.?js|Django|Flask|Spring|\.NET|Laravel|Rails|Express|FastAPI|Next\.js)\b',
-    r'\b(SQL|MySQL|PostgreSQL|MongoDB|Redis|Oracle|SQLite|Cassandra|Elasticsearch)\b',
-    r'\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins|Git|CI/CD|Terraform|Ansible|Linux)\b',
-    r'\b(HTML|CSS|REST|GraphQL|Machine Learning|AI|DevOps|Agile|Scrum)\b',
-]
-
-
-def _extract_tech(text: str) -> set:
-    found = set()
-    for pat in _SKILL_PATTERNS:
-        for m in _re.findall(pat, text, _re.IGNORECASE):
-            found.add(m.lower())
-    return found
 
 
 def user_cache_key(user_id: int) -> str:
@@ -435,6 +420,8 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             return None
 
         # ── Score ────────────────────────────────────────────────────────────
+        from app.services.ai import calculate_match_score
+
         seen: set = set()
         deduped_skills = []
         for s in user_skills:
@@ -442,20 +429,15 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
             if k not in seen:
                 seen.add(k)
                 deduped_skills.append(s)
-        user_set = {s.lower() for s in deduped_skills}
-        role_keywords = [w for w in target_role.split() if len(w) > 3]
 
         def score_job(job):
-            if not user_set:
-                return 0
-            job_title  = (job.get("title") or "").lower()
-            job_desc   = (job.get("description") or "").lower()
-            job_skills_listed = {s.lower() for s in (job.get("skills") or [])}
-            job_tech   = _extract_tech(f"{job_title} {job_desc}") | job_skills_listed
-            forward    = len(user_set & job_tech) / len(user_set) if user_set else 0
-            backward   = len(user_set & job_tech) / len(job_tech) if job_tech else 0
-            role_bonus = 0.12 if any(rk in job_title for rk in role_keywords) else 0
-            return round(min((forward * 0.50 + backward * 0.38 + role_bonus) * 100, 100))
+            score, _, _ = calculate_match_score(
+                deduped_skills,
+                target_role,
+                job.get("title") or "",
+                job.get("description") or "",
+            )
+            return score
 
         scored = sorted(
             [{**j, "match_score": score_job(j)} for j in jobs],
