@@ -345,7 +345,8 @@ async def fetch_job_full_description(
         if is_linkedin and user_id:
             user_obj = db.query(User).filter(User.id == user_id).first()
             if user_obj:
-                li_at = user_obj.linkedin_li_at
+                from app.crypto import decrypt_field_safe
+                li_at = decrypt_field_safe(user_obj.linkedin_li_at)
 
         logger.info(f"description fetch: linkedin={is_linkedin} auth={'yes' if li_at else 'no'} url={url[:80]}")
 
@@ -969,7 +970,8 @@ async def scrape_linkedin_jobs(
         if user_id:
             user = db.query(User).filter(User.id == user_id).first()
             if user:
-                li_at = user.linkedin_li_at
+                from app.crypto import decrypt_field_safe
+                li_at = decrypt_field_safe(user.linkedin_li_at)
                 if getattr(user, "subscription_tier", "free") == "pro":
                     job_limit = LinkedInJobSearchScraper.PRO_LIMIT
 

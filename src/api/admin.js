@@ -1,9 +1,13 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'changeme-admin';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('hirematex_auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 async function get(endpoint) {
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: { 'X-Admin-Key': ADMIN_KEY },
+    headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Admin API error: ${res.status}`);
   return res.json();
@@ -12,7 +16,7 @@ async function get(endpoint) {
 async function post(endpoint) {
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
-    headers: { 'X-Admin-Key': ADMIN_KEY },
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -38,7 +42,7 @@ export const adminApi = {
   updateSource: (source, body) => {
     return fetch(`${API_BASE_URL}/api/admin/sources/${source}`, {
       method: 'PATCH',
-      headers: { 'X-Admin-Key': ADMIN_KEY, 'Content-Type': 'application/json' },
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
   },
@@ -46,7 +50,7 @@ export const adminApi = {
   purgeSavedJobsBySource: (source) => {
     return fetch(`${API_BASE_URL}/api/admin/sources/${source}/saved-jobs`, {
       method: 'DELETE',
-      headers: { 'X-Admin-Key': ADMIN_KEY },
+      headers: getAuthHeaders(),
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
   },
   triggerAllSources: () => post('/api/admin/sources/trigger-all'),
@@ -62,7 +66,7 @@ export const adminApi = {
   deleteUser:  (userId) => {
     return fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       method: 'DELETE',
-      headers: { 'X-Admin-Key': ADMIN_KEY },
+      headers: getAuthHeaders(),
     }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
   },
 };

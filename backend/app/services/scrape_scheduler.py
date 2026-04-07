@@ -35,6 +35,24 @@ import random
 import re as _re
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+
+
+def normalize_url(url: str) -> str:
+    """Normalize URL by stripping tracking params and canonicalizing."""
+    if not url:
+        return ""
+    url = url.strip()
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme:
+            parsed = urlparse("https://" + url)
+        q = parse_qsl(parsed.query, keep_blank_values=True)
+        filtered = [(k, v) for (k, v) in q if not k.startswith("utm_") and k not in ("fbclid", "gclid")]
+        new_parsed = parsed._replace(query=urlencode(sorted(filtered)))
+        return urlunparse(new_parsed)
+    except Exception:
+        return url
 
 import pytz
 
@@ -178,7 +196,6 @@ async def _persist_scraped_jobs(jobs: list, source: str) -> int:
     """
     from app.database import SessionLocal
     from app.models import IngestJob
-    from app.routers.ingest import normalize_url
 
     if not jobs:
         return 0
@@ -307,7 +324,8 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
         linkedin_jobs = []
         fresh_linkedin = False
         if source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role:
-            li_at = user.linkedin_li_at
+            from app.crypto import decrypt_field_safe
+            li_at = decrypt_field_safe(user.linkedin_li_at)
             LINKEDIN_TOTAL_LIMIT = 20
             # Spread the 20-job budget across locations, minimum 5 per location
             per_loc_limit = max(5, LINKEDIN_TOTAL_LIMIT // max(len(locations), 1))

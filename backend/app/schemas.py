@@ -66,7 +66,6 @@ class UserUpdate(BaseModel):
     subscription_end_date: Optional[datetime] = None
     paypal_payer_id: Optional[str] = None
     paypal_subscription_id: Optional[str] = None
-    linkedin_li_at: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -244,30 +243,6 @@ class AnalyticsDashboard(BaseModel):
     match_score_distribution: dict  # {range: count} e.g. {"0-20": 5, "21-40": 10}
     top_companies: List[dict]  # [{company: str, count: int}]
     status_funnel: dict  # Conversion rates between stages
-
-
-# Ingestion Schemas
-class IngestJobItem(BaseModel):
-    title: Optional[str] = None
-    company: Optional[str] = None
-    location: Optional[str] = None
-    url: Optional[str] = None
-    raw: Optional[dict] = None
-
-
-class IngestEmailRequest(BaseModel):
-    source: str
-    runId: Optional[str] = None
-    email: dict
-    jobs: List[IngestJobItem]
-
-
-class IngestEmailResponse(BaseModel):
-    emailId: str
-    alreadyProcessed: bool
-    inserted: int
-    updated: int
-    skipped: int
 
 
 # Feed job API schemas

@@ -4,13 +4,14 @@ Handles user registration, profile management, and authentication.
 """
 import logging
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 import bcrypt
 from jose import JWTError, jwt
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta
@@ -142,7 +143,8 @@ def make_usage_gate(feature: str):
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("10/hour")
+def create_user(request: Request, user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Create a new user account.
     
@@ -401,7 +403,8 @@ async def linkedin_connect_headless(
         if not li_at:
             raise HTTPException(status_code=401, detail="Login failed — wrong email or password")
 
-        user.linkedin_li_at = li_at
+        from app.crypto import encrypt_field
+        user.linkedin_li_at = encrypt_field(li_at)
         user.updated_at = datetime.utcnow()
         db.commit()
 
@@ -416,7 +419,8 @@ async def linkedin_connect_headless(
 
 
 @router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("20/hour")
+def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Simple login endpoint (for testing).
     

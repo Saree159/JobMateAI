@@ -261,27 +261,6 @@ class FeedJobStatus(str, enum.Enum):
     IGNORED = "ignored"
 
 
-class IngestEvent(Base):
-    """Records each ingestion attempt from an external source (e.g., n8n)."""
-    __tablename__ = "ingest_events"
-
-    id = Column(Integer, primary_key=True, index=True)
-    source = Column(String(100), nullable=False)
-    run_id = Column(String(255), nullable=True)
-    email_id = Column(String(255), unique=True, index=True, nullable=False)
-    received_at = Column(DateTime, nullable=False)
-    subject = Column(String(500), nullable=True)
-    snippet = Column(Text, nullable=True)
-    payload = Column(Text, nullable=True)  # Raw JSON payload for debugging
-    processed = Column(Integer, default=0, nullable=False)  # 0 = not processed, 1 = processed
-    inserted = Column(Integer, default=0, nullable=False)
-    updated = Column(Integer, default=0, nullable=False)
-    skipped = Column(Integer, default=0, nullable=False)
-    error = Column(Text, nullable=True)
-
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-
 class AIUsageLog(Base):
     """Logs every OpenAI API call with token counts and estimated cost."""
     __tablename__ = "ai_usage_log"

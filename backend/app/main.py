@@ -6,10 +6,13 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import init_db
-from app.routers import users, jobs, resume, notifications, alerts, analytics, ingest, billing, admin
+from app.limiter import limiter
+from app.routers import users, jobs, resume, notifications, alerts, analytics, billing, admin
 from app.routers import linkedin_auth
 
 
@@ -40,23 +43,27 @@ app = FastAPI(
     title="JobMate AI API",
     description="""
     Backend API for JobMate AI - An intelligent job search management platform.
-    
+
     ## Features
-    
+
     * **User Management**: Create and manage user profiles with skills and preferences
     * **Job Tracking**: Add and track job applications through the pipeline
     * **AI Match Scoring**: Calculate compatibility scores between user skills and jobs
     * **Cover Letter Generation**: Generate tailored cover letters using AI
-    
+
     ## Authentication
-    
-    Currently using simple JWT tokens. For production, implement OAuth2 with refresh tokens.
+
+    JWT-based authentication. Admin endpoints require a token belonging to an admin email.
     """,
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Attach rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
@@ -70,7 +77,6 @@ app.add_middleware(
 # Include routers
 app.include_router(users.router)
 app.include_router(jobs.router)
-app.include_router(ingest.router)
 app.include_router(resume.router)
 app.include_router(notifications.router)
 app.include_router(alerts.router)

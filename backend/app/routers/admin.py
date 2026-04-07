@@ -1,9 +1,9 @@
 """
 Admin statistics router.
 Returns aggregated real data for the HireMatrix admin dashboard.
-All endpoints require the X-Admin-Key header to match settings.admin_api_key.
+All endpoints require a valid JWT token belonging to an admin email.
 """
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text, cast, Date, extract
 from datetime import datetime, timedelta
@@ -12,7 +12,7 @@ from typing import Optional
 
 import json as _json
 from app.database import get_db
-from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, IngestEvent, AIUsageLog, UserSession, UserEvent, SourceConfig, FetchLog
+from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, AIUsageLog, UserSession, UserEvent, SourceConfig, FetchLog
 import logging
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
@@ -22,20 +22,15 @@ from app.routers.users import get_current_user
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-def verify_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")):
-    """Dependency: reject requests that don't carry the correct admin key."""
-    if not x_admin_key or x_admin_key != settings.admin_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing admin key",
-        )
-
-
-def verify_admin_user(current_user: User = Depends(get_current_user)):
+def verify_admin(current_user: User = Depends(get_current_user)):
     """Dependency: allow access only to users whose email is in admin_emails_list."""
     if current_user.email.lower() not in settings.admin_emails_list:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+# Alias kept so all call sites work without changes
+verify_admin_user = verify_admin
 
 
 def month_label(dt: datetime) -> str:
@@ -43,7 +38,7 @@ def month_label(dt: datetime) -> str:
 
 
 @router.get("/stats")
-def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+def admin_stats(db: Session = Depends(get_db), _: User = Depends(verify_admin)):
     """Return all aggregated stats for the admin dashboard."""
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -150,15 +145,6 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     ).scalar() or 0
     ingest_week = db.query(func.count(IngestJob.id)).filter(
         IngestJob.created_at >= week_start
-    ).scalar() or 0
-
-    # ── Ingest events ─────────────────────────────────────────────────────────
-    total_events = db.query(func.count(IngestEvent.id)).scalar() or 0
-    processed_events = db.query(func.count(IngestEvent.id)).filter(
-        IngestEvent.processed == 1
-    ).scalar() or 0
-    failed_events = db.query(func.count(IngestEvent.id)).filter(
-        IngestEvent.error.isnot(None), IngestEvent.error != ""
     ).scalar() or 0
 
     # ── AI Usage Log ─────────────────────────────────────────────────────────
@@ -363,9 +349,6 @@ def admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
             "new_week": ingest_week,
             "by_source": ingest_by_source,
             "by_status": ingest_by_status,
-            "total_events": total_events,
-            "processed_events": processed_events,
-            "failed_events": failed_events,
         },
         "ai_usage": {
             "total_calls": ai_total_calls,
@@ -401,7 +384,7 @@ def admin_users_list(
     limit: int = 50,
     offset: int = 0,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Return paginated user list for admin."""
     users = (
@@ -433,7 +416,7 @@ def admin_users_detail(
     offset: int = 0,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Return rich per-user details with AI token usage, job counts and last login."""
     query = db.query(User)
@@ -547,7 +530,7 @@ def admin_users_detail(
 def admin_block_user(
     user_id: int,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Block a user — they will be prevented from logging in."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -562,7 +545,7 @@ def admin_block_user(
 def admin_unblock_user(
     user_id: int,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Unblock a previously blocked user."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -577,7 +560,7 @@ def admin_unblock_user(
 def admin_delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Permanently delete a user and all their data."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -595,7 +578,7 @@ def admin_delete_user(
 def behavior_summary(
     days: int = 30,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Aggregated behavior stats: event counts, top pages, daily trend."""
     cutoff = datetime.utcnow() - timedelta(days=days)
@@ -661,7 +644,7 @@ def behavior_stream(
     limit: int = 100,
     event: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Recent event stream with user info."""
     q = db.query(UserEvent, User.email, User.full_name).outerjoin(
@@ -690,7 +673,7 @@ def behavior_stream(
 def behavior_per_user(
     days: int = 30,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Per-user event counts and last seen, sorted by activity."""
     cutoff = datetime.utcnow() - timedelta(days=days)
@@ -726,7 +709,7 @@ def behavior_per_user(
 @router.post("/backfill-events")
 def backfill_events(
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """
     One-time (idempotent) backfill: synthesise UserEvent rows from existing
@@ -838,7 +821,7 @@ def get_user_activity(
     user_id: int,
     limit: int = 150,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Return recent events + summary for a single user."""
     events = (
@@ -886,7 +869,7 @@ def get_user_activity(
 @router.get("/user-analytics")
 def get_user_analytics(
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """
     Aggregated user-behavior analytics.
@@ -1118,7 +1101,7 @@ _DEFAULT_SOURCES = [
 ]
 
 @router.get("/sources")
-def list_sources(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+def list_sources(db: Session = Depends(get_db), _: User = Depends(verify_admin)):
     """Return all source configs, auto-seeding defaults if the table is empty."""
     rows = db.query(SourceConfig).order_by(SourceConfig.source).all()
     if not rows:
@@ -1140,7 +1123,7 @@ def update_source(
     source: str,
     body: SourceUpdate,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Toggle a source on/off, update schedule time, or update notes."""
     row = db.query(SourceConfig).filter(SourceConfig.source == source).first()
@@ -1179,7 +1162,7 @@ def update_source(
 async def trigger_source(
     source: str,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """
     Manually trigger a cache-clear + re-scrape for a single source.
@@ -1204,7 +1187,7 @@ async def trigger_source(
 def purge_saved_jobs_by_source(
     source: str,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Delete all user-saved jobs that came from the given source."""
     from app.models import Job
@@ -1216,7 +1199,7 @@ def purge_saved_jobs_by_source(
 @router.post("/sources/trigger-all")
 async def trigger_all_sources(
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Clear role-level caches for all ENABLED sources and all per-user caches."""
     from app.services.cache import get_cache
@@ -1247,7 +1230,7 @@ def get_source_logs(
     source: str,
     limit: int = 50,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Return recent fetch logs for a source, newest first."""
     rows = (
@@ -1278,7 +1261,7 @@ def get_source_logs(
 def get_all_logs(
     limit: int = 100,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """Return recent fetch logs across all sources, newest first."""
     rows = (
@@ -1312,7 +1295,7 @@ def get_all_logs(
 async def linkedin_debug(
     role: str = "software engineer",
     location: str = "",
-    _: None = Depends(verify_admin),
+    _: User = Depends(verify_admin),
 ):
     """
     Fire one real LinkedIn guest-API request (via ScraperAPI if configured)

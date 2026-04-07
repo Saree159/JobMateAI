@@ -189,9 +189,16 @@ async def upload_resume(
         user.location_preference = parsed_data["location_preference"]
         updated_fields.append("location_preference")
     
-    # Always store the resume file for later use
+    # Store resume — prefer Azure Blob Storage, fall back to DB
+    from app.services.blob_storage import upload_resume
+    blob_name = upload_resume(user.id, file.filename, content)
     user.resume_filename = file.filename
-    user.resume_content = content
+    if blob_name:
+        # Store blob reference in resume_filename, clear DB blob
+        user.resume_filename = blob_name
+        user.resume_content = None
+    else:
+        user.resume_content = content
     updated_fields.append("resume")
 
     db.commit()
@@ -218,16 +225,26 @@ async def get_saved_resume(
 ):
     """Download the user's saved resume file."""
     user = db.query(User).filter(User.id == current_user.id).first()
-    if not user or not user.resume_content:
+    if not user or not user.resume_filename:
         raise HTTPException(status_code=404, detail="No saved resume found")
 
-    media_type = "application/pdf" if user.resume_filename and user.resume_filename.endswith(".pdf") else \
+    # Try blob storage first, fall back to DB content
+    from app.services.blob_storage import download_resume
+    content = download_resume(user.resume_filename)
+    if content is None:
+        content = user.resume_content
+    if not content:
+        raise HTTPException(status_code=404, detail="No saved resume found")
+
+    # Derive the display filename from the blob path (may be "user_1/resume.pdf")
+    display_name = user.resume_filename.split("/")[-1]
+    media_type = "application/pdf" if display_name.endswith(".pdf") else \
                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
     return StreamingResponse(
-        io.BytesIO(user.resume_content),
+        io.BytesIO(content),
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{user.resume_filename}"'}
+        headers={"Content-Disposition": f'attachment; filename="{display_name}"'}
     )
 
 
