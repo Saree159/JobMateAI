@@ -220,7 +220,23 @@ export const jobApi = {
    */
   topMatches: async (userId, forceRefresh = false) => {
     const url = `/api/jobs/top-matches?user_id=${userId}${forceRefresh ? '&force_refresh=true' : ''}`;
-    return apiRequest(url);
+    const fullUrl = `${API_BASE_URL}${url}`;
+    const token = localStorage.getItem('hirematex_auth_token');
+    const response = await fetch(fullUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+    if (response.status === 429) {
+      const err = await response.json().catch(() => ({}));
+      return { jobs: [], total_scraped: 0, cached: true, rate_limited: true, rate_limit_message: err.detail || 'Daily refresh limit reached.' };
+    }
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP error ${response.status}`);
+    }
+    return response.json();
   },
 };
 

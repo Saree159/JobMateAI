@@ -414,17 +414,64 @@ export default function Jobs() {
             <Button
               variant="outline" size="sm"
               onClick={() => { refetchDiscover(); setVisibleCount(PAGE_SIZE); }}
-              disabled={discoverRefetching}
+              disabled={discoverRefetching || discoverLoading}
               className="shrink-0"
+              title={discoverData?.rate_limited ? "Daily limit reached — upgrade for unlimited refreshes" : "Refresh jobs"}
             >
-              {discoverRefetching
+              {discoverRefetching || discoverLoading
                 ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <RefreshCw className="w-4 h-4" />}
+                : <RefreshCw className={`w-4 h-4 ${discoverData?.rate_limited ? "text-amber-400" : ""}`} />}
             </Button>
           </div>
 
-          {discoverLoading ? (
-            <ScraperLoader message="Finding your top job matches…" />
+          {discoverLoading || discoverRefetching ? (
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/40 overflow-hidden">
+              <ScraperLoader message="Finding your top job matches…" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 pb-6 opacity-30 pointer-events-none select-none">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-36 rounded-xl bg-white border border-gray-200 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ) : discoverData?.rate_limited ? (
+            <>
+              {/* Rate-limit banner */}
+              <div className="flex items-start gap-3 mb-5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+                <Zap className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Daily refresh limit reached</p>
+                  <p className="text-xs text-amber-600 mt-0.5">{discoverData.rate_limit_message} Showing your last cached results.</p>
+                </div>
+                <Button
+                  size="sm"
+                  className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white h-7 text-xs"
+                  onClick={() => navigate(createPageUrl("Pricing"))}
+                >
+                  Upgrade
+                </Button>
+              </div>
+              {/* Still show cached jobs if any from previous load */}
+              {filteredDiscoverJobs.length === 0 ? (
+                <Card className="border border-gray-100">
+                  <CardContent className="text-center py-16">
+                    <p className="text-gray-400 text-sm">No cached jobs available. Come back tomorrow for fresh results.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visibleJobs.map((job, idx) => (
+                    <DiscoverCard
+                      key={`${job.source}-${job.url || idx}`}
+                      job={job}
+                      onSelect={handleSelectJob}
+                      onSave={(j) => saveJobMutation.mutate(j)}
+                      saving={saveJobMutation.isPending}
+                      saved={savedUrls.has(job.url)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           ) : filteredDiscoverJobs.length === 0 ? (
             <Card className="border border-gray-100">
               <CardContent className="text-center py-20">
