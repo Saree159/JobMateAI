@@ -8,7 +8,7 @@ import { createPageUrl } from "@/utils";
 import {
   Plus, Search, Briefcase, Loader2, RefreshCw,
   Bookmark, CheckCircle2, ExternalLink, Building2, MapPin,
-  Linkedin, Globe, Zap, ChevronDown,
+  Linkedin, Globe, Zap, ChevronDown, Trash2,
 } from "lucide-react";
 import ScraperLoader from "@/components/jobs/ScraperLoader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -198,10 +198,10 @@ function StatusPill({ status, jobId, onChanged }) {
 }
 
 // ── Saved job list row ────────────────────────────────────────────────────────
-function SavedJobRow({ job, onStatusChange, onOpen }) {
+function SavedJobRow({ job, onStatusChange, onOpen, onDelete }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+      className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group"
       onClick={() => onOpen(job)}
     >
       {/* Match score */}
@@ -235,6 +235,15 @@ function SavedJobRow({ job, onStatusChange, onOpen }) {
         title="Open job details"
       >
         <ExternalLink className="w-4 h-4" />
+      </button>
+
+      {/* Delete button */}
+      <button
+        className="shrink-0 p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+        onClick={(e) => { e.stopPropagation(); onDelete(job.id); }}
+        title="Remove saved job"
+      >
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );
@@ -278,6 +287,15 @@ export default function Jobs() {
         ).catch(() => {});
       }
     },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: (jobId) => jobApi.delete(jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["jobs", user?.id]);
+      toast.success("Job removed.");
+    },
+    onError: () => toast.error("Failed to remove job."),
   });
 
   const saveJobMutation = useMutation({
@@ -546,6 +564,7 @@ export default function Jobs() {
                 <div className="hidden sm:block w-24">Source</div>
                 <div className="w-28">Status</div>
                 <div className="w-8" />
+                <div className="w-8" />
               </div>
               {filteredMyJobs.map((job) => (
                 <SavedJobRow
@@ -553,6 +572,7 @@ export default function Jobs() {
                   job={{ ...job, status: statusOverrides[job.id] ?? job.status }}
                   onStatusChange={(id, val) => setStatusOverrides((o) => ({ ...o, [id]: val }))}
                   onOpen={() => navigate(createPageUrl("JobDetails") + `?id=${job.id}`)}
+                  onDelete={(id) => deleteJobMutation.mutate(id)}
                 />
               ))}
             </div>

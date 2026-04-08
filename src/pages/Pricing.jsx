@@ -4,50 +4,38 @@ import { useAuth } from "@/lib/AuthContext";
 import { userApi } from "@/api/jobmate";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Check,
-  Sparkles,
-  Crown,
-  Star,
-  Loader2,
+  Check, X, Loader2, Crown, Zap, ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import WaitlistDialog from "@/components/ui/WaitlistDialog";
 
 const MONTHLY_PRICE = 69;
-const ANNUAL_PRICE = 588; // ₪49/mo × 12
+const ANNUAL_PRICE = 588;
 
-const plans = {
-  free: {
-    name: "Free",
-    icon: Sparkles,
-    features: [
-      "Up to 5 job matches per day",
-      "Basic job matching algorithm",
-      "Manual job entry",
-      "Application tracking",
-      "Email support",
-    ],
-  },
-  pro: {
-    name: "Pro",
-    icon: Crown,
-    popular: true,
-    features: [
-      "Unlimited job matches",
-      "AI-powered cover letter generation",
-      "Advanced matching algorithm",
-      "Job URL extraction",
-      "Priority email support",
-      "Interview preparation tips",
-      "Salary insights",
-      "Application analytics",
-    ],
-  },
-};
+const FREE_FEATURES = [
+  { text: "2 job refreshes per day", included: true },
+  { text: "AI match scoring", included: true },
+  { text: "Application tracking", included: true },
+  { text: "Manual job entry", included: true },
+  { text: "AI cover letter generation", included: false },
+  { text: "Unlimited job refreshes", included: false },
+  { text: "Priority support", included: false },
+  { text: "Interview prep tips", included: false },
+];
+
+const PRO_FEATURES = [
+  { text: "Unlimited job refreshes", included: true },
+  { text: "AI match scoring", included: true },
+  { text: "Application tracking", included: true },
+  { text: "AI cover letter generation", included: true },
+  { text: "Advanced matching algorithm", included: true },
+  { text: "Priority support", included: true },
+  { text: "Interview prep tips", included: true },
+  { text: "Salary insights", included: true },
+];
 
 export default function Pricing() {
   const { t } = useTranslation();
@@ -60,12 +48,15 @@ export default function Pricing() {
   const currentPlan = user?.subscription_tier || "free";
   const isPro = currentPlan === "pro";
 
+  const monthlyPrice = billingPeriod === "annual" ? Math.round(ANNUAL_PRICE / 12) : MONTHLY_PRICE;
+  const annualTotal = ANNUAL_PRICE;
+  const savings = MONTHLY_PRICE * 12 - ANNUAL_PRICE;
+
   const handleCancelSubscription = async () => {
     if (!window.confirm("Are you sure you want to cancel your Pro subscription?")) return;
     setLoadingCancel(true);
     try {
       await billingApi.cancelSubscription();
-      // Refresh user from backend so subscription_tier reflects 'free'
       const freshUser = await userApi.getById(user.id);
       updateUser(freshUser);
       toast.success("Subscription cancelled. You are now on the Free plan.");
@@ -77,204 +68,190 @@ export default function Pricing() {
   };
 
   return (
-    <div className="p-4 md:p-10 overflow-x-hidden">
+    <div className="min-h-screen bg-gray-50 px-4 py-12">
       <WaitlistDialog open={showWaitlist} onClose={() => setShowWaitlist(false)} />
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4">
-            {t('pricing.title')}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+            Simple, transparent pricing
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            {t('pricing.subtitle')}
+          <p className="text-gray-500 text-lg max-w-xl mx-auto">
+            Start free, upgrade when you're ready to accelerate your job search.
           </p>
         </div>
 
-        {/* Current Plan Badge */}
-        {user && (
-          <div className="text-center mb-8">
-            <Badge className={`text-base px-5 py-2 ${isPro ? "bg-blue-600" : "bg-gray-600"}`}>
-              {`${t('pricing.currentPlan')}: ${isPro ? t('pricing.currentPlanPro') : t('pricing.currentPlanFree')}`}
-            </Badge>
-          </div>
-        )}
-
-        {/* Billing Period Toggle */}
-        <div className="flex items-center justify-center gap-4 mb-10">
-          <span className={`font-medium ${billingPeriod === "monthly" ? "text-gray-900" : "text-gray-400"}`}>
-            {t('pricing.monthly')}
-          </span>
+        {/* Billing toggle */}
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <span className={`text-sm font-medium ${billingPeriod === "monthly" ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
           <button
             onClick={() => setBillingPeriod(p => p === "monthly" ? "annual" : "monthly")}
-            className={`relative w-14 h-7 rounded-full transition-colors ${
-              billingPeriod === "annual" ? "bg-blue-600" : "bg-gray-300"
-            }`}
+            className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${billingPeriod === "annual" ? "bg-blue-600" : "bg-gray-200"}`}
           >
-            <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-              billingPeriod === "annual" ? "translate-x-7" : ""
-            }`} />
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${billingPeriod === "annual" ? "translate-x-5" : ""}`} />
           </button>
-          <span className={`font-medium ${billingPeriod === "annual" ? "text-gray-900" : "text-gray-400"}`}>
-            {t('pricing.annual')}
-          </span>
+          <span className={`text-sm font-medium ${billingPeriod === "annual" ? "text-gray-900" : "text-gray-400"}`}>Annual</span>
           {billingPeriod === "annual" && (
-            <Badge className="bg-green-100 text-green-700 border-green-200">{t('pricing.save')}</Badge>
+            <span className="text-xs font-semibold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
+              Save ₪{savings}
+            </span>
           )}
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {Object.entries(plans).map(([key, plan]) => {
-            const PlanIcon = plan.icon;
-            const isCurrentPlan = currentPlan === key;
+        {/* Cards */}
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
 
-            const priceDisplay = key === "free"
-              ? { main: "₪0", sub: t('pricing.forever') }
-              : billingPeriod === "monthly"
-                ? { main: `₪${MONTHLY_PRICE}`, sub: t('pricing.perMonth') }
-                : { main: `₪${ANNUAL_PRICE}`, sub: `per year (₪${Math.round(ANNUAL_PRICE / 12)}/mo)` };
+          {/* Free */}
+          <div className={`bg-white rounded-2xl border p-8 flex flex-col ${!isPro ? "border-gray-900 ring-1 ring-gray-900" : "border-gray-200"}`}>
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Free</span>
+                {!isPro && <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">Current plan</span>}
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-4xl font-bold text-gray-900">₪0</span>
+                <span className="text-gray-400 text-sm">/ forever</span>
+              </div>
+              <p className="text-gray-500 text-sm">Everything you need to get started.</p>
+            </div>
 
-            return (
-              <Card
-                key={key}
-                className={`border transition-all ${
-                  plan.popular ? "border-blue-600" : "border-gray-100"
-                } ${isCurrentPlan ? "ring-2 ring-blue-200" : ""}`}
-              >
-                <CardHeader className="text-center pb-8 pt-8">
-                  {plan.popular && (
-                    <Badge className="mb-4 bg-blue-600 self-center">
-                      <Star className="w-3 h-3 mr-1" />
-                      {t('pricing.mostPopular')}
-                    </Badge>
-                  )}
+            <div className="space-y-3 flex-1 mb-8">
+              {FREE_FEATURES.map((f, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  {f.included
+                    ? <div className="w-4 h-4 rounded-full bg-gray-900 flex items-center justify-center shrink-0"><Check className="w-2.5 h-2.5 text-white" strokeWidth={3} /></div>
+                    : <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><X className="w-2.5 h-2.5 text-gray-400" strokeWidth={3} /></div>
+                  }
+                  <span className={`text-sm ${f.included ? "text-gray-700" : "text-gray-400"}`}>{f.text}</span>
+                </div>
+              ))}
+            </div>
 
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-lg ${
-                    key === "pro" ? "bg-blue-600" : "bg-gray-600"
-                  } flex items-center justify-center`}>
-                    <PlanIcon className="w-8 h-8 text-gray-900" />
+            <Button
+              variant="outline"
+              className="w-full border-gray-200 text-gray-600 h-11"
+              disabled={!isPro}
+              onClick={isPro ? handleCancelSubscription : undefined}
+            >
+              {isPro ? (loadingCancel ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Cancelling...</> : "Downgrade to Free") : "Current Plan"}
+            </Button>
+          </div>
+
+          {/* Pro */}
+          <div className={`bg-gray-900 rounded-2xl p-8 flex flex-col relative overflow-hidden ${isPro ? "ring-2 ring-blue-500" : ""}`}>
+            {/* glow */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-violet-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="mb-6 relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-white/60 uppercase tracking-wider">Pro</span>
+                  <span className="text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5" />Most popular
+                  </span>
+                </div>
+                {isPro && <span className="text-xs font-medium bg-white/10 text-white/70 px-2.5 py-1 rounded-full">Current plan</span>}
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-4xl font-bold text-white">₪{monthlyPrice}</span>
+                <span className="text-white/40 text-sm">/ mo</span>
+              </div>
+              {billingPeriod === "annual" && (
+                <p className="text-white/40 text-xs">Billed ₪{annualTotal}/year</p>
+              )}
+              <p className="text-white/50 text-sm mt-1">Unlimited access to all features.</p>
+            </div>
+
+            <div className="space-y-3 flex-1 mb-8 relative">
+              {PRO_FEATURES.map((f, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                   </div>
+                  <span className="text-sm text-white/80">{f.text}</span>
+                </div>
+              ))}
+            </div>
 
-                  <CardTitle className="text-3xl mb-2">{plan.name}</CardTitle>
-                  <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl font-bold text-gray-900">{priceDisplay.main}</span>
-                    <span className="text-gray-400 text-sm">/ {priceDisplay.sub}</span>
-                  </div>
-
-                  {isCurrentPlan && (
-                    <Badge variant="outline" className="mt-2 self-center">
-                      <Check className="w-3 h-3 mr-1" />
-                      {t('pricing.yourPlan')}
-                    </Badge>
-                  )}
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  {/* Features */}
-                  <div className="space-y-3">
-                    {plan.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 text-green-600" />
-                        </div>
-                        <span className="text-gray-300">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Action Button */}
-                  <div className="pt-6">
-                    {key === "free" ? (
-                      isCurrentPlan ? (
-                        <Button variant="outline" className="w-full" disabled>
-                          Current Plan
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={handleCancelSubscription}
-                          disabled={loadingCancel}
-                        >
-                          {loadingCancel ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('pricing.cancelling')}</>
-                          ) : t('pricing.downgradeToFree')}
-                        </Button>
-                      )
-                    ) : (
-                      isCurrentPlan ? (
-                        <Button
-                          variant="outline"
-                          className="w-full border-red-200 text-red-600 hover:bg-red-900/30"
-                          onClick={handleCancelSubscription}
-                          disabled={loadingCancel}
-                        >
-                          {loadingCancel ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('pricing.cancelling')}</>
-                          ) : t('pricing.cancelSubscription')}
-                        </Button>
-                      ) : (
-                        <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-gray-900 font-medium py-6 text-lg"
-                          onClick={() => setShowWaitlist(true)}
-                        >
-                          <Crown className="w-5 h-5 mr-2" />
-                          Join Pro Waitlist
-                        </Button>
-                      )
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+            <div className="relative">
+              {isPro ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 h-11 bg-transparent"
+                  onClick={handleCancelSubscription}
+                  disabled={loadingCancel}
+                >
+                  {loadingCancel ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Cancelling...</> : "Cancel Subscription"}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold h-11 group"
+                  onClick={() => setShowWaitlist(true)}
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Join Pro Waitlist
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform" />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Feature Comparison Table */}
-        <Card className="border border-gray-100 mb-12">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-center">{t('pricing.featureComparison')}</CardTitle>
-            <CardDescription className="text-center">{t('pricing.featureComparisonSubtitle')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2">
-                    <th className="text-left py-4 px-4">{t('pricing.feature')}</th>
-                    <th className="text-center py-4 px-4">{t('pricing.free')}</th>
-                    <th className="text-center py-4 px-4 bg-blue-900/20 rounded-t-lg">{t('pricing.pro')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    [t('pricing.jobMatchesPerDay'), "5", t('pricing.unlimited')],
-                    ["AI Cover Letter Generator", "❌", "✅"],
-                    ["Job URL Extraction", "❌", "✅"],
-                    ["Application Tracking", "✅", "✅"],
-                    ["Priority Support", "❌", "✅"],
-                    ["Interview Prep Tips", "❌", "✅"],
-                  ].map(([feature, free, pro], idx, arr) => (
-                    <tr key={idx} className={idx < arr.length - 1 ? "border-b" : ""}>
-                      <td className="py-4 px-4 font-medium">{feature}</td>
-                      <td className="text-center py-4 px-4">{free}</td>
-                      <td className="text-center py-4 px-4 bg-blue-900/20">{pro}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Comparison table */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-10">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Feature comparison</h2>
+          </div>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left py-3 px-6 text-xs font-medium text-gray-400 uppercase tracking-wider">Feature</th>
+                <th className="text-center py-3 px-6 text-xs font-medium text-gray-400 uppercase tracking-wider w-24">Free</th>
+                <th className="text-center py-3 px-6 text-xs font-medium text-gray-400 uppercase tracking-wider w-24">Pro</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {[
+                ["Job refreshes / day", "2", "Unlimited"],
+                ["AI match scoring", true, true],
+                ["Application tracking", true, true],
+                ["AI cover letter generation", false, true],
+                ["Interview prep tips", false, true],
+                ["Priority support", false, true],
+              ].map(([feature, free, pro], i) => (
+                <tr key={i} className="hover:bg-gray-50/50">
+                  <td className="py-3.5 px-6 text-sm text-gray-700">{feature}</td>
+                  <td className="py-3.5 px-6 text-center">
+                    {typeof free === "boolean"
+                      ? free
+                        ? <Check className="w-4 h-4 text-gray-500 mx-auto" />
+                        : <X className="w-4 h-4 text-gray-300 mx-auto" />
+                      : <span className="text-sm text-gray-600 font-medium">{free}</span>
+                    }
+                  </td>
+                  <td className="py-3.5 px-6 text-center">
+                    {typeof pro === "boolean"
+                      ? pro
+                        ? <Check className="w-4 h-4 text-blue-600 mx-auto" />
+                        : <X className="w-4 h-4 text-gray-300 mx-auto" />
+                      : <span className="text-sm text-blue-600 font-semibold">{pro}</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Footer */}
         <div className="text-center">
-          <p className="text-gray-400 mb-6">
-            {t('pricing.questions')} {t('pricing.contactUs')} <a href="mailto:hirematrix.ai@gmail.com" className="text-blue-600 underline">hirematrix.ai@gmail.com</a>
+          <p className="text-gray-400 text-sm mb-4">
+            Questions? <a href="mailto:hirematrix.ai@gmail.com" className="text-blue-600 hover:underline">hirematrix.ai@gmail.com</a>
           </p>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
-            {t('pricing.backToDashboard')}
+          <Button variant="ghost" size="sm" onClick={() => navigate(createPageUrl("Dashboard"))} className="text-gray-400 hover:text-gray-600">
+            Back to Dashboard
           </Button>
         </div>
 
