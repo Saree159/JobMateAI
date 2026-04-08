@@ -301,6 +301,24 @@ async def get_top_matching_jobs(
             logger.info(f"Profile changed for user {user_id} — invalidating cache")
             cache.delete(key)
 
+    # ── Daily scrape rate limit for free users ────────────────────────────────
+    FREE_DAILY_SCRAPE_LIMIT = 2
+    if (user.subscription_tier or "free") == "free":
+        from datetime import date
+        scrape_count_key = f"scrape_count:u{user_id}:{date.today().isoformat()}"
+        count = cache.get(scrape_count_key) or 0
+        if count >= FREE_DAILY_SCRAPE_LIMIT:
+            # Return cached result if available, else empty
+            cached = cache.get(key)
+            if cached:
+                return {**cached, "jobs": cached["jobs"][:limit], "cached": True, "rate_limited": True}
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Free plan is limited to {FREE_DAILY_SCRAPE_LIMIT} job refreshes per day. Upgrade to Pro for unlimited refreshes.",
+            )
+        # Increment counter (TTL = 25 h to safely span midnight)
+        cache.set(scrape_count_key, count + 1, ttl=25 * 3600)
+
     logger.info(f"Cache MISS top-matches for user {user_id} — scraping...")
     result = await fetch_and_cache_top_matches(user_id)
 
