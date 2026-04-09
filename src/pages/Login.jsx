@@ -27,7 +27,7 @@ export default function Login() {
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/jobs');
     }
   }, [isAuthenticated, navigate]);
 
@@ -58,7 +58,7 @@ export default function Login() {
         if (!result.user?.target_role) {
           navigate('/onboarding');
         } else {
-          navigate('/dashboard');
+          navigate('/jobs');
         }
       } else if (result.error === 'EMAIL_NOT_VERIFIED') {
         setUnverifiedEmail(formData.email);
