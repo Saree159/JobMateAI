@@ -512,3 +512,48 @@ def join_waitlist(
     db.add(WaitlistEntry(email=email, full_name=name or None))
     db.commit()
     return {"message": "You're on the waitlist!", "already_exists": False}
+
+
+# ---------------------------------------------------------------------------
+# Forgot / Reset Password
+# ---------------------------------------------------------------------------
+
+@router.post("/forgot-password")
+def forgot_password(
+    body: dict,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Send a password-reset email. Always returns 200 to avoid email enumeration.
+    """
+    from app.services.email import send_password_reset_email
+    email = (body.get("email") or "").strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        token = secrets.token_urlsafe(32)
+        user.reset_token = token
+        user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        background_tasks.add_task(send_password_reset_email, user.email, user.full_name or "", token)
+    return {"message": "If that email is registered you'll receive a reset link shortly."}
+
+
+@router.post("/reset-password")
+def reset_password(
+    body: dict,
+    db: Session = Depends(get_db),
+):
+    """Consume a reset token and update the password."""
+    token = (body.get("token") or "").strip()
+    new_password = body.get("new_password") or ""
+    if not token or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Invalid request.")
+    user = db.query(User).filter(User.reset_token == token).first()
+    if not user or not user.reset_token_expiry or user.reset_token_expiry < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Reset link is invalid or has expired.")
+    user.password_hash = hash_password(new_password)
+    user.reset_token = None
+    user.reset_token_expiry = None
+    db.commit()
+    return {"message": "Password updated successfully."}

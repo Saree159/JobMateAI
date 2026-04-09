@@ -69,6 +69,10 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     verification_token = Column(String(64), nullable=True, unique=True, index=True)
 
+    # Password reset
+    reset_token = Column(String(64), nullable=True, unique=True, index=True)
+    reset_token_expiry = Column(DateTime, nullable=True)
+
     # Admin moderation
     is_blocked = Column(Boolean, default=False, nullable=False)
 

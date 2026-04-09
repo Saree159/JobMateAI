@@ -15,6 +15,8 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import VerifyEmail from './pages/VerifyEmail';
 import VerifyEmailConfirm from './pages/VerifyEmailConfirm';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AdminLayout from './admin/AdminLayout';
 import AdminOverview from './admin/pages/Overview';
 import AdminRevenue from './admin/pages/Revenue';
@@ -33,6 +35,7 @@ import AdminBehavior from './admin/pages/Behavior';
 import AdminUserAnalytics from './admin/pages/UserAnalytics';
 import AdminSources from './admin/pages/Sources';
 import AdminWaitlist from './admin/pages/Waitlist';
+import AdminScrapeUsage from './admin/pages/ScrapeUsage';
 
 // Apply saved language direction on every page load
 const lang = localStorage.getItem('hirematex_lang') || 'en';
@@ -69,6 +72,8 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
       
@@ -121,6 +126,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/user-analytics" element={adminEl(<AdminLayout><AdminUserAnalytics /></AdminLayout>)} />
           <Route path="/admin/sources" element={adminEl(<AdminLayout><AdminSources /></AdminLayout>)} />
           <Route path="/admin/waitlist" element={adminEl(<AdminLayout><AdminWaitlist /></AdminLayout>)} />
+          <Route path="/admin/scrape-usage" element={adminEl(<AdminLayout><AdminScrapeUsage /></AdminLayout>)} />
         </>;
       })()}
 
