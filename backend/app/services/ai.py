@@ -2,7 +2,7 @@
 AI services for JobMate AI.
 Provides match scoring and cover letter generation using OpenAI GPT.
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from openai import OpenAI
 from app.config import settings
 from app.services.usage_logger import log_ai_usage
@@ -99,49 +99,82 @@ def calculate_match_score(
     Returns:
         Tuple of (match_score 0-100, matched_skills, missing_skills)
     """
-    if not user_skills:
-        return 0.0, [], []
+    results = calculate_match_scores_batch(
+        user_skills, target_role,
+        [{"title": job_title, "description": job_description}],
+        years_of_experience=years_of_experience,
+    )
+    return results[0]
 
-    # Full job text — title weighted more by repeating it
-    job_text = f"{job_title} {job_title} {job_description}".lower()
 
-    # 1. Direct skill matching — every user skill checked, no whitelist
-    matched_skills = []
-    for skill in user_skills:
-        pattern = r'\b' + re.escape(skill.lower()) + r'\b'
-        if re.search(pattern, job_text):
-            matched_skills.append(skill)
+def calculate_match_scores_batch(
+    user_skills: List[str],
+    target_role: str,
+    jobs: list,
+    years_of_experience: Optional[int] = None,
+) -> List[Tuple[float, List[str], List[str]]]:
+    """
+    Score all jobs in a single vectorizer pass — O(1) fit instead of O(n).
 
-    missing_skills = [s for s in user_skills if s not in matched_skills]
-    skill_match_ratio = len(matched_skills) / len(user_skills)
+    Fits TfidfVectorizer once on the user profile + all job texts, then
+    computes cosine similarities for every job in a single matrix operation.
+    Dramatically faster than calling calculate_match_score() in a loop.
 
-    # 2. TF-IDF semantic similarity with bigrams
+    Returns:
+        List of (match_score 0-100, matched_skills, missing_skills) — one per job.
+    """
+    if not user_skills or not jobs:
+        return [(0.0, [], []) for _ in jobs]
+
+    user_profile_text = f"{target_role} {target_role} {' '.join(user_skills)}"
+    job_texts = [
+        f"{j.get('title', '')} {j.get('title', '')} {j.get('description', '')}".lower()
+        for j in jobs
+    ]
+
+    # Single vectorizer fit over all texts at once
     try:
-        user_profile_text = f"{target_role} {target_role} {' '.join(user_skills)}"
         vectorizer = TfidfVectorizer(
             stop_words='english',
             ngram_range=(1, 2),
             min_df=1,
             sublinear_tf=True,
         )
-        tfidf_matrix = vectorizer.fit_transform([user_profile_text, job_text])
-        semantic_similarity = float(cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0])
+        tfidf_matrix = vectorizer.fit_transform([user_profile_text] + job_texts)
+        user_vec = tfidf_matrix[0:1]
+        job_vecs = tfidf_matrix[1:]
+        similarities = cosine_similarity(user_vec, job_vecs)[0]  # shape: (n_jobs,)
     except Exception:
-        semantic_similarity = 0.0
+        similarities = [0.0] * len(jobs)
 
-    # 3. Role-title bonus (up to 0.10)
     role_keywords = [w for w in target_role.lower().split() if len(w) > 3]
-    title_lower = job_title.lower()
-    matched_role_words = sum(1 for w in role_keywords if w in title_lower)
-    role_bonus = (matched_role_words / len(role_keywords) * 0.10) if role_keywords else 0.0
 
-    # 4. Experience-level multiplier
-    exp_mult = _experience_multiplier(years_of_experience, job_title, job_description)
+    results = []
+    for i, job in enumerate(jobs):
+        job_text = job_texts[i]
+        title = (job.get("title") or "").lower()
+        description = job.get("description") or ""
 
-    base = skill_match_ratio * 0.45 + semantic_similarity * 0.45 + role_bonus
-    final_score = min(round(base * exp_mult * 100, 2), 100.0)
+        # Direct skill matching
+        matched_skills = [
+            s for s in user_skills
+            if re.search(r'\b' + re.escape(s.lower()) + r'\b', job_text)
+        ]
+        missing_skills = [s for s in user_skills if s not in matched_skills]
+        skill_match_ratio = len(matched_skills) / len(user_skills)
 
-    return final_score, matched_skills, missing_skills
+        # Role-title bonus
+        matched_role_words = sum(1 for w in role_keywords if w in title)
+        role_bonus = (matched_role_words / len(role_keywords) * 0.10) if role_keywords else 0.0
+
+        # Experience multiplier
+        exp_mult = _experience_multiplier(years_of_experience, job.get("title", ""), description)
+
+        base = skill_match_ratio * 0.45 + float(similarities[i]) * 0.45 + role_bonus
+        score = min(round(base * exp_mult * 100, 2), 100.0)
+        results.append((score, matched_skills, missing_skills))
+
+    return results
 
 
 async def generate_cover_letter(
@@ -423,7 +456,7 @@ async def estimate_salary(
     skills_str = ", ".join(skills[:10]) if skills else "general technical skills"
     exp_str = f"{experience_years} years" if experience_years else "mid-level"
     
-    prompt = f"""Estimate the salary range for this job position:
+    prompt = f"""Estimate the monthly salary range for this job position in Israel:
 
 Job Title: {job_title}
 Location: {location}
@@ -431,28 +464,32 @@ Experience: {exp_str}
 Key Skills: {skills_str}
 Company Size: {company_size or 'medium-sized company'}
 
-Provide a realistic salary estimation in USD (annual). Consider:
-1. Current market rates for this role
-2. Location cost of living
+Provide a realistic monthly salary estimation in Israeli Shekels (ILS / ₪). Base your estimate on:
+1. Current Israeli tech job market rates (Israeli salaries, not US/global)
+2. Location within Israel (Tel Aviv / Center pays more than periphery)
 3. Experience level
-4. In-demand skills premium
-5. Company size impact
+4. In-demand skills premium in the Israeli market
+5. Company size impact (startups vs large corps)
+
+All salary numbers must be MONTHLY gross salary in ILS (Israeli Shekels).
+Typical Israeli tech monthly salaries range from ₪12,000 (junior) to ₪35,000+ (senior/lead).
 
 Return your response as JSON with this structure:
 {{
-  "currency": "USD",
+  "currency": "ILS",
+  "period": "monthly",
   "min_salary": <number>,
   "max_salary": <number>,
   "median_salary": <number>,
   "insights": [
     "Insight 1 about the salary range",
-    "Insight 2 about market conditions",
+    "Insight 2 about Israeli market conditions",
     "Insight 3 about growth potential"
   ],
   "factors": {{
-    "location_impact": "High cost of living area adds 20-30%",
-    "skills_premium": "High demand skills like X add 10-15%",
-    "experience_factor": "Senior level adds 40-50%"
+    "location_impact": "Tel Aviv center adds 10-20% over other regions",
+    "skills_premium": "High demand skills in Israeli market",
+    "experience_factor": "Senior level adds significant premium"
   }}
 }}"""
 
@@ -481,40 +518,41 @@ Return your response as JSON with this structure:
         return salary_data
         
     except Exception as e:
-        # Fallback salary estimation
-        base_salary = 70000
-        
+        # Fallback salary estimation — monthly ILS, Israeli market
+        base_salary = 18000  # mid-level monthly ILS baseline
+
         # Adjust for experience
         if experience_years:
             if experience_years < 2:
-                base_salary = 60000
+                base_salary = 12000
             elif experience_years < 5:
-                base_salary = 80000
+                base_salary = 18000
             elif experience_years < 10:
-                base_salary = 110000
+                base_salary = 25000
             else:
-                base_salary = 140000
-        
-        # Simple location adjustment
+                base_salary = 32000
+
+        # Location adjustment within Israel
         location_lower = location.lower() if location else ""
-        if any(city in location_lower for city in ["san francisco", "new york", "seattle"]):
-            base_salary = int(base_salary * 1.4)
-        elif any(city in location_lower for city in ["austin", "boston", "chicago"]):
-            base_salary = int(base_salary * 1.2)
-        
+        if any(city in location_lower for city in ["tel aviv", "תל אביב", "herzliya", "herzelia", "ramat gan"]):
+            base_salary = int(base_salary * 1.15)
+        elif any(city in location_lower for city in ["jerusalem", "ירושלים", "haifa", "חיפה"]):
+            base_salary = int(base_salary * 1.05)
+
         return {
-            "currency": "USD",
-            "min_salary": int(base_salary * 0.8),
+            "currency": "ILS",
+            "period": "monthly",
+            "min_salary": int(base_salary * 0.85),
             "max_salary": int(base_salary * 1.3),
             "median_salary": base_salary,
             "insights": [
-                f"Estimated based on {job_title} market rates",
-                "Salary varies by company and negotiation",
-                "Consider total compensation including benefits"
+                f"Estimated based on {job_title} market rates in Israel",
+                "Salary varies by company, negotiation, and benefits package",
+                "Consider total compensation including stock options and bonuses"
             ],
             "factors": {
-                "location_impact": "Adjusted for location cost of living",
-                "skills_premium": "Based on technical skill requirements",
+                "location_impact": "Tel Aviv / Center region commands highest salaries in Israel",
+                "skills_premium": "Based on technical skill requirements in Israeli market",
                 "experience_factor": f"Adjusted for {exp_str} experience"
             },
             "error": str(e),

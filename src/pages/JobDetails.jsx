@@ -925,19 +925,22 @@ export default function JobDetails() {
               ) : showSalaryEstimate && salaryEstimate ? (
                 <div className="space-y-6">
                   <div className="bg-white p-4 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">{jd.estimatedRange}</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900">{jd.estimatedRange}</h4>
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">monthly · ILS</span>
+                    </div>
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
                         <p className="text-sm text-gray-400">{jd.minimum}</p>
-                        <p className="text-xl font-bold text-green-700">${salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">{jd.median}</p>
-                        <p className="text-2xl font-bold text-green-600">${salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-2xl font-bold text-green-600">₪{salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">{jd.maximum}</p>
-                        <p className="text-xl font-bold text-green-700">${salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
