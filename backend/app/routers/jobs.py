@@ -761,6 +761,49 @@ async def estimate_job_salary(
         )
 
 
+@router.post("/jobs/salary-estimate-inline")
+async def estimate_salary_inline(
+    body: dict,
+    lang: str = "en",
+    current_user: User = Depends(_gate_salary),
+):
+    """Salary estimate without a saved job — accepts title/location directly."""
+    try:
+        from app.services.ai import estimate_salary
+        salary_data = await estimate_salary(
+            job_title=body.get("title", "Unknown"),
+            location=body.get("location") or "Israel",
+            experience_years=current_user.years_of_experience or 5,
+            skills=current_user.skills_list,
+            company_size="medium",
+            language=lang,
+        )
+        return {"salary_estimate": salary_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to estimate salary: {str(e)}")
+
+
+@router.post("/jobs/interview-questions-inline")
+async def interview_questions_inline(
+    body: dict,
+    lang: str = "en",
+    current_user: User = Depends(_gate_interview),
+):
+    """Interview questions without a saved job — accepts title/company/description directly."""
+    try:
+        from app.services.ai import generate_interview_questions
+        questions = await generate_interview_questions(
+            job_title=body.get("title", "Unknown"),
+            company=body.get("company", ""),
+            job_description=body.get("description", ""),
+            user_skills=current_user.skills_list,
+            language=lang,
+        )
+        return {"questions": questions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate interview questions: {str(e)}")
+
+
 @router.post("/jobs/scrape-url")
 async def scrape_job_from_url(
     url: str = Query(..., description="URL of the job posting to scrape"),

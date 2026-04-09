@@ -302,12 +302,19 @@ export default function JobDetails() {
 
   const generateSalaryMutation = useMutation({
     mutationFn: async () => {
-      const id = await ensureTracked();
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const langParam = isHebrew ? '?lang=he' : '';
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/salary-estimate${langParam}`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
-      );
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` };
+      let response;
+      if (trackedJobId) {
+        response = await fetch(`${API}/api/jobs/${trackedJobId}/salary-estimate${langParam}`, { headers });
+      } else {
+        response = await fetch(`${API}/api/jobs/salary-estimate-inline${langParam}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: effectiveJob?.title, location: effectiveJob?.location }),
+        });
+      }
       if (!response.ok) {
         const d = await response.json().catch(() => ({}));
         throw new Error(response.status === 429 ? `daily_limit_reached:salary_estimate` : (d.detail || 'Failed to estimate salary'));
@@ -328,12 +335,19 @@ export default function JobDetails() {
 
   const generateQuestionsMutation = useMutation({
     mutationFn: async () => {
-      const id = await ensureTracked();
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const langParam = isHebrew ? '?lang=he' : '';
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/jobs/${id}/interview-questions${langParam}`,
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` } }
-      );
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('hirematex_auth_token')}` };
+      let response;
+      if (trackedJobId) {
+        response = await fetch(`${API}/api/jobs/${trackedJobId}/interview-questions${langParam}`, { headers });
+      } else {
+        response = await fetch(`${API}/api/jobs/interview-questions-inline${langParam}`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: effectiveJob?.title, company: effectiveJob?.company, description: effectiveJob?.description }),
+        });
+      }
       if (!response.ok) {
         const d = await response.json().catch(() => ({}));
         throw new Error(response.status === 429 ? `daily_limit_reached:interview_questions` : (d.detail || 'Failed to generate questions'));
@@ -367,8 +381,8 @@ export default function JobDetails() {
 
   const updateNotesMutation = useMutation({
     mutationFn: async (noteText) => {
-      const id = await ensureTracked();
-      return jobApi.update(parseInt(id), { notes: noteText });
+      if (!trackedJobId) throw new Error('Save the job first to add notes.');
+      return jobApi.update(parseInt(trackedJobId), { notes: noteText });
     },
     onSuccess: (updatedJob) => {
       queryClient.setQueryData(['job', jobId], updatedJob);
