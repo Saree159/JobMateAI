@@ -381,8 +381,8 @@ export default function JobDetails() {
 
   const updateNotesMutation = useMutation({
     mutationFn: async (noteText) => {
-      if (!trackedJobId) throw new Error('Save the job first to add notes.');
-      return jobApi.update(parseInt(trackedJobId), { notes: noteText });
+      const id = await ensureTracked();
+      return jobApi.update(parseInt(id), { notes: noteText });
     },
     onSuccess: (updatedJob) => {
       queryClient.setQueryData(['job', jobId], updatedJob);
