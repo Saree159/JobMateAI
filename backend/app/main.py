@@ -115,11 +115,36 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for monitoring."""
-    return {
-        "status": "healthy",
-        "database": "connected"
-    }
+    """Health check endpoint for monitoring — checks DB and Redis."""
+    from app.database import SessionLocal
+    from app.services.cache import cache
+    checks = {}
+
+    # DB check
+    try:
+        db = SessionLocal()
+        db.execute(__import__('sqlalchemy').text("SELECT 1"))
+        db.close()
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+
+    # Redis check
+    try:
+        if cache.redis_client:
+            cache.redis_client.ping()
+            checks["redis"] = "ok"
+        else:
+            checks["redis"] = "memory"
+    except Exception as e:
+        checks["redis"] = f"error: {e}"
+
+    healthy = all(v in ("ok", "memory") for v in checks.values())
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={"status": "healthy" if healthy else "degraded", **checks}
+    )
 
 
 if __name__ == "__main__":
