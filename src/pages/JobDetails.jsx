@@ -397,7 +397,15 @@ export default function JobDetails() {
       return response.json();
     },
     onSuccess: (data) => {
-      setSalaryEstimate(data.salary_estimate);
+      // Normalise field names — GPT sometimes returns camelCase variants
+      const raw = data.salary_estimate || data;
+      const estimate = {
+        ...raw,
+        min_salary:    raw.min_salary    || raw.minSalary    || raw.minimum || 0,
+        median_salary: raw.median_salary || raw.medianSalary || raw.median  || 0,
+        max_salary:    raw.max_salary    || raw.maxSalary    || raw.maximum || 0,
+      };
+      setSalaryEstimate(estimate);
       setShowSalaryEstimate(true);
       queryClient.invalidateQueries({ queryKey: ['usage-today'] });
       toast.success(isHebrew ? 'הערכת שכר הושלמה!' : 'Salary estimate generated!');

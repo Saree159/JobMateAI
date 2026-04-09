@@ -513,8 +513,13 @@ Return your response as JSON with this structure:
         )
         
         log_ai_usage(response.usage, feature="salary_estimate")
-        import json
+        import json, logging as _log
         salary_data = json.loads(response.choices[0].message.content)
+        _log.getLogger(__name__).info(f"salary_estimate raw: {salary_data}")
+        # Normalise field names in case GPT uses camelCase
+        salary_data.setdefault("min_salary",    salary_data.pop("minSalary",    salary_data.pop("minimum", 0)))
+        salary_data.setdefault("median_salary", salary_data.pop("medianSalary", salary_data.pop("median",  0)))
+        salary_data.setdefault("max_salary",    salary_data.pop("maxSalary",    salary_data.pop("maximum", 0)))
         return salary_data
         
     except Exception as e:
