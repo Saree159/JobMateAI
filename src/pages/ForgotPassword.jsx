@@ -22,7 +22,7 @@ export default function ForgotPassword() {
     if (!email.includes('@')) { setError('Please enter a valid email address.'); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/forgot-password`, {
+      const res = await fetch(`${API}/api/users/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
