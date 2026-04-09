@@ -932,15 +932,15 @@ export default function JobDetails() {
                     <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                       <div>
                         <p className="text-sm text-gray-400">{jd.minimum}</p>
-                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.min_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.min_salary ? Math.round(salaryEstimate.min_salary / 1000) + 'k' : 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">{jd.median}</p>
-                        <p className="text-2xl font-bold text-green-600">₪{salaryEstimate.median_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-2xl font-bold text-green-600">₪{salaryEstimate.median_salary ? Math.round(salaryEstimate.median_salary / 1000) + 'k' : 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">{jd.maximum}</p>
-                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.max_salary?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-xl font-bold text-green-700">₪{salaryEstimate.max_salary ? Math.round(salaryEstimate.max_salary / 1000) + 'k' : 'N/A'}</p>
                       </div>
                     </div>
                   </div>
