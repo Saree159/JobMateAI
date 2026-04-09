@@ -171,6 +171,81 @@ const JD = {
   },
 };
 
+// Section heading keywords to detect and render as titled sections
+const SECTION_HEADINGS = [
+  'responsibilities', 'requirements', 'qualifications', 'what you\'ll do',
+  'what we\'re looking for', 'what you will do', 'about the role', 'about the job',
+  'about us', 'about the company', 'nice to have', 'preferred', 'benefits',
+  'perks', 'skills', 'experience', 'education', 'who you are', 'the role',
+  'your role', 'your responsibilities', 'we offer', 'what we offer',
+  'תחומי אחריות', 'דרישות', 'כישורים', 'יתרון', 'אנחנו מציעים', 'אודותינו',
+];
+
+function FormattedJobDescription({ text }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const sections = [];
+  let current = { heading: null, items: [] };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    // Detect section heading: short line ending with colon, or matches known keywords
+    const isBullet = /^[-•*·▪▸►✓✔\u2022\u25CF\u25AA]/.test(line) || /^\d+[.)]\s/.test(line);
+    const strippedColon = line.endsWith(':') ? line.slice(0, -1).trim() : null;
+    const isHeading =
+      (strippedColon && strippedColon.length < 60) ||
+      SECTION_HEADINGS.some(h => line.toLowerCase().startsWith(h));
+
+    if (isHeading && !isBullet) {
+      if (current.items.length || current.heading) sections.push(current);
+      current = { heading: strippedColon || line, items: [] };
+    } else if (isBullet) {
+      // Strip bullet character
+      current.items.push({ type: 'bullet', text: line.replace(/^[-•*·▪▸►✓✔\u2022\u25CF\u25AA]\s*/, '').replace(/^\d+[.)]\s*/, '') });
+    } else {
+      current.items.push({ type: 'text', text: line });
+    }
+  }
+  if (current.items.length || current.heading) sections.push(current);
+
+  return (
+    <div className="space-y-5 text-sm text-gray-700">
+      {sections.map((sec, i) => (
+        <div key={i}>
+          {sec.heading && (
+            <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wide mb-2 pb-1 border-b border-gray-100">
+              {sec.heading}
+            </h4>
+          )}
+          {sec.items.some(it => it.type === 'bullet') ? (
+            <ul className="space-y-1.5">
+              {sec.items.map((it, j) =>
+                it.type === 'bullet' ? (
+                  <li key={j} className="flex gap-2 leading-relaxed">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                    <span>{it.text}</span>
+                  </li>
+                ) : (
+                  <li key={j} className="leading-relaxed">{it.text}</li>
+                )
+              )}
+            </ul>
+          ) : (
+            <div className="space-y-1.5">
+              {sec.items.map((it, j) => (
+                <p key={j} className="leading-relaxed">{it.text}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function JobDetails() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -555,7 +630,7 @@ export default function JobDetails() {
               <CardTitle className="font-semibold">{jd.jobDescription}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 whitespace-pre-wrap break-words overflow-hidden">{effectiveJob.description}</p>
+              <FormattedJobDescription text={effectiveJob.description} />
             </CardContent>
           </Card>
 
