@@ -125,6 +125,7 @@ class JobResponse(JobBase):
     id: int
     user_id: int
     ingest_job_id: Optional[int] = None  # Source feed job, if any
+    description: Optional[str] = None    # Not returned in list view (perf)
     match_score: Optional[float] = None
     cover_letter: Optional[str] = None
     opening_sentence: Optional[str] = None

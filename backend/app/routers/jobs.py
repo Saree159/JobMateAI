@@ -249,15 +249,28 @@ def list_user_jobs(
             detail="Not authorized to list jobs for this user",
         )
 
-    # Build query — user is already verified via JWT
-    query = db.query(Job).filter(Job.user_id == user_id)
-    
+    # Build query — exclude heavy description column for faster list responses
+    from sqlalchemy import text
+    query = db.query(
+        Job.id, Job.user_id, Job.ingest_job_id, Job.title, Job.company,
+        Job.location, Job.apply_url, Job.status, Job.match_score,
+        Job.matched_skills, Job.missing_skills, Job.opening_sentence,
+        Job.notes, Job.source, Job.created_at, Job.updated_at,
+    ).filter(Job.user_id == user_id)
+
     if status_filter:
         query = query.filter(Job.status == status_filter)
-    
-    jobs = query.order_by(Job.created_at.desc()).all()
-    
-    return jobs
+
+    rows = query.order_by(Job.created_at.desc()).all()
+
+    # Convert named tuples back to Job-like dicts for the response serializer
+    cols = [
+        "id", "user_id", "ingest_job_id", "title", "company",
+        "location", "apply_url", "status", "match_score",
+        "matched_skills", "missing_skills", "opening_sentence",
+        "notes", "source", "created_at", "updated_at",
+    ]
+    return [dict(zip(cols, r)) for r in rows]
 
 
 @router.get("/jobs/top-matches")

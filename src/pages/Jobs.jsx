@@ -271,6 +271,7 @@ export default function Jobs() {
     queryKey: ["jobs", user?.id],
     queryFn: () => (user?.id ? jobApi.listByUser(user.id) : []),
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // All sources ranked by match score
@@ -291,11 +292,17 @@ export default function Jobs() {
 
   const deleteJobMutation = useMutation({
     mutationFn: (jobId) => jobApi.delete(jobId),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["jobs", user?.id]);
+    onMutate: async (jobId) => {
+      await queryClient.cancelQueries({ queryKey: ["jobs", user?.id] });
+      const previous = queryClient.getQueryData(["jobs", user?.id]);
+      queryClient.setQueryData(["jobs", user?.id], (old = []) => old.filter(j => j.id !== jobId));
       toast.success("Job removed.");
+      return { previous };
     },
-    onError: () => toast.error("Failed to remove job."),
+    onError: (_err, _jobId, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["jobs", user?.id], ctx.previous);
+      toast.error("Failed to remove job.");
+    },
   });
 
   const saveJobMutation = useMutation({
@@ -310,12 +317,22 @@ export default function Jobs() {
       source: job.source || "other",
       match_score: job.match_score ?? null,
     }),
-    onSuccess: (saved, job) => {
+    onMutate: async (job) => {
+      // Optimistic: mark as saved instantly
       setSavedUrls((prev) => new Set([...prev, job.url]));
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      toast.success(`"${saved.title}" added to Saved Jobs`);
+      toast.success(`"${job.title}" added to Saved Jobs`);
     },
-    onError: () => toast.error("Failed to save job"),
+    onSuccess: (saved) => {
+      // Update the cache with the real saved job from server
+      queryClient.setQueryData(["jobs", user?.id], (old = []) => {
+        const exists = old.some(j => j.id === saved.id);
+        return exists ? old : [saved, ...old];
+      });
+    },
+    onError: (_err, job) => {
+      setSavedUrls((prev) => { const s = new Set(prev); s.delete(job.url); return s; });
+      toast.error("Failed to save job");
+    },
   });
 
   const handleSelectJob = (job) => {
