@@ -10,13 +10,13 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import VerifyEmail from './pages/VerifyEmail';
 import VerifyEmailConfirm from './pages/VerifyEmailConfirm';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ComingSoon from './pages/ComingSoon';
 import AdminLayout from './admin/AdminLayout';
 import AdminOverview from './admin/pages/Overview';
 import AdminRevenue from './admin/pages/Revenue';
@@ -67,9 +67,12 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Public routes */}
+      {/* Coming soon — shown to unauthenticated visitors */}
+      <Route path="/coming-soon" element={<ComingSoon />} />
+
+      {/* Public routes — login kept for admin access */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<Navigate to="/coming-soon" replace />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -84,7 +87,7 @@ const AuthenticatedApp = () => {
             <MainPage />
           </LayoutWrapper>
         ) : (
-          <Navigate to="/login" replace />
+          <Navigate to="/coming-soon" replace />
         )
       } />
       
