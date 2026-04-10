@@ -256,12 +256,150 @@ async def fetch_and_cache_top_matches(user_id: int) -> Optional[dict]:
         return await _fetch_and_cache_top_matches_inner(user_id)
 
 
+async def _scrape_drushim(user, source_cfg, cache, category: str, drushim_url: str) -> list:
+    """Fetch Drushim jobs for a user's role. Returns job list (may be from cache)."""
+    from app.services.cache import make_jobs_cache_key
+    from app.services.scrapers import DrushimScraper
+
+    if not source_cfg.get("drushim", type("_", (), {"enabled": False})()).enabled:
+        logger.info("[scheduler] drushim disabled — skipping")
+        return []
+
+    drushim_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{category}").lower().strip('_')
+    cache_key = make_jobs_cache_key("drushim", drushim_role_key)
+    cached = cache.get(cache_key)
+    if cached:
+        for j in cached:
+            j.setdefault("source", "drushim")
+        return cached
+
+    log_id = _log_fetch_start("drushim")
+    logger.info(f"[scheduler] drushim scrape role={user.target_role} category={category}")
+    try:
+        jobs = await DrushimScraper().scrape_listing_async(drushim_url)
+        if jobs:
+            cache.set(cache_key, jobs, ttl=CACHE_TTL_ROLE)
+            _update_source_run("drushim", len(jobs))
+            _log_fetch_end(log_id, "success", len(jobs))
+            for j in jobs:
+                j.setdefault("source", "drushim")
+            n = await _persist_scraped_jobs(jobs, source="drushim")
+            logger.info(f"[scheduler] persisted {n} new drushim jobs")
+        else:
+            _log_fetch_end(log_id, "success", 0)
+        return jobs or []
+    except Exception as e:
+        logger.warning(f"[scheduler] drushim scrape failed: {e}")
+        _log_fetch_end(log_id, "error", 0, str(e))
+        return []
+
+
+async def _scrape_linkedin(user, source_cfg, cache, locations: list) -> list:
+    """Fetch LinkedIn jobs across all preferred locations in parallel. Returns merged list."""
+    from app.services.cache import make_jobs_cache_key
+    from app.services.scrapers import LinkedInJobSearchScraper
+
+    if not (source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role):
+        return []
+
+    from app.crypto import decrypt_field_safe
+    li_at = decrypt_field_safe(user.linkedin_li_at)
+    LINKEDIN_TOTAL_LIMIT = 20
+    per_loc_limit = max(5, LINKEDIN_TOTAL_LIMIT // max(len(locations), 1))
+    li_scraper = LinkedInJobSearchScraper()
+
+    async def _fetch_location(location: str) -> list:
+        li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
+        cache_key = make_jobs_cache_key("linkedin", li_role_key)
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+        log_id = _log_fetch_start("linkedin")
+        logger.info(f"[scheduler] linkedin scrape role={user.target_role} location={location!r}")
+        try:
+            loc_jobs = await li_scraper.search_async(
+                user.target_role, location,
+                li_at=li_at, limit=per_loc_limit,
+                years_of_experience=user.years_of_experience,
+            )
+            if loc_jobs:
+                cache.set(cache_key, loc_jobs, ttl=CACHE_TTL_ROLE)
+                _update_source_run("linkedin", len(loc_jobs))
+                _log_fetch_end(log_id, "success", len(loc_jobs))
+            else:
+                _log_fetch_end(log_id, "success", 0)
+            return loc_jobs or []
+        except Exception as e:
+            logger.warning(f"[scheduler] linkedin scrape failed location={location!r}: {e}")
+            _log_fetch_end(log_id, "error", 0, str(e))
+            return []
+
+    # All locations scraped in parallel
+    location_results = await asyncio.gather(*[_fetch_location(loc) for loc in locations])
+
+    # Merge + deduplicate across locations
+    seen_ids: set = set()
+    jobs: list = []
+    fresh_any = False
+    for loc_jobs in location_results:
+        for j in loc_jobs:
+            jid = j.get("job_id") or j.get("url")
+            if jid and jid not in seen_ids:
+                seen_ids.add(jid)
+                j.setdefault("source", "linkedin")
+                jobs.append(j)
+                fresh_any = True
+
+    jobs = jobs[:LINKEDIN_TOTAL_LIMIT]
+    if fresh_any and jobs:
+        n = await _persist_scraped_jobs(jobs, source="linkedin")
+        logger.info(f"[scheduler] persisted {n} new linkedin jobs")
+    return jobs
+
+
+async def _scrape_techmap(user, source_cfg, cache) -> list:
+    """Fetch TechMap jobs for a user's role. Returns job list (may be from cache)."""
+    from app.services.cache import make_jobs_cache_key
+
+    if not source_cfg.get("techmap", type("_", (), {"enabled": False})()).enabled:
+        logger.info("[scheduler] techmap disabled — skipping")
+        return []
+
+    from app.services.techmap import fetch_for_role as techmap_fetch
+    techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')
+    cache_key = make_jobs_cache_key("techmap", techmap_role_key)
+    cached = cache.get(cache_key)
+    if cached:
+        for j in cached:
+            j.setdefault("source", "techmap")
+        return cached
+
+    log_id = _log_fetch_start("techmap")
+    logger.info(f"[scheduler] techmap fetch role={user.target_role}")
+    try:
+        jobs = await techmap_fetch(user.target_role)
+        if jobs:
+            cache.set(cache_key, jobs, ttl=CACHE_TTL_ROLE)
+            _update_source_run("techmap", len(jobs))
+            _log_fetch_end(log_id, "success", len(jobs))
+            for j in jobs:
+                j.setdefault("source", "techmap")
+            n = await _persist_scraped_jobs(jobs, source="techmap")
+            logger.info(f"[scheduler] persisted {n} new techmap jobs")
+        else:
+            _log_fetch_end(log_id, "success", 0)
+        return jobs or []
+    except Exception as e:
+        logger.warning(f"[scheduler] techmap fetch failed: {e}")
+        _log_fetch_end(log_id, "error", 0, str(e))
+        return []
+
+
 async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
     """Inner implementation — called under the semaphore."""
     from app.database import SessionLocal
     from app.models import User
-    from app.services.cache import get_cache, make_jobs_cache_key
-    from app.services.scrapers import DrushimScraper, LinkedInJobSearchScraper
+    from app.services.cache import get_cache
 
     db = SessionLocal()
     try:
@@ -279,96 +417,39 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 category = cat
                 break
 
-        # location_preference may be comma-separated (multiple locations)
-        locations = [l.strip() for l in (user.location_preference or "").split(",") if l.strip()] or [""]
+        # Build location list — LinkedIn scrapes Israel only.
+        # Filter to known Israeli cities/regions; fall back to "Israel" if none match.
+        _ISRAEL_KEYWORDS = {
+            "israel", "tel aviv", "jerusalem", "haifa", "beer sheva", "beersheba",
+            "netanya", "herzliya", "raanana", "ra'anana", "petah tikva", "petah tiqwa",
+            "rishon lezion", "rishon", "rehovot", "holon", "bat yam", "ashdod",
+            "ashkelon", "eilat", "modiin", "modi'in", "kfar saba", "ramat gan",
+            "givatayim", "bnei brak", "beit shemesh", "nazareth", "hadera",
+            "central israel", "north israel", "south israel", "gush dan",
+        }
+        _raw_locs = [l.strip() for l in (user.location_preference or "").split(",") if l.strip()]
+        locations = [
+            l for l in _raw_locs
+            if any(kw in l.lower() for kw in _ISRAEL_KEYWORDS)
+        ] or ["Israel"]
         drushim_url = f"https://www.drushim.co.il/jobs/subcat/{category}"
         cache = get_cache()
-
         source_cfg = _load_source_configs()
 
-        # ── Drushim ──────────────────────────────────────────────────────────
-        drushim_jobs = []
-        if source_cfg.get("drushim", type("_", (), {"enabled": False})()).enabled:
-            drushim_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{category}").lower().strip('_')
-            cache_key_drushim = make_jobs_cache_key("drushim", drushim_role_key)
-            drushim_jobs = cache.get(cache_key_drushim)
-            fresh_drushim = False
-            if not drushim_jobs:
-                log_id = _log_fetch_start("drushim")
-                logger.info(f"[scheduler] drushim scrape for user {user_id} role={user.target_role} category={category}")
-                try:
-                    scraper = DrushimScraper()
-                    drushim_jobs = await scraper.scrape_listing_async(drushim_url)
-                    if drushim_jobs:
-                        cache.set(cache_key_drushim, drushim_jobs, ttl=CACHE_TTL_ROLE)
-                        fresh_drushim = True
-                        _update_source_run("drushim", len(drushim_jobs))
-                        _log_fetch_end(log_id, "success", len(drushim_jobs))
-                    else:
-                        _log_fetch_end(log_id, "success", 0)
-                except Exception as e:
-                    logger.warning(f"[scheduler] drushim scrape failed for user {user_id}: {e}")
-                    _log_fetch_end(log_id, "error", 0, str(e))
-                    drushim_jobs = []
-            drushim_jobs = drushim_jobs or []
-            for j in drushim_jobs:
-                j.setdefault("source", "drushim")
-            if fresh_drushim and drushim_jobs:
-                n = await _persist_scraped_jobs(drushim_jobs, source="drushim")
-                logger.info(f"[scheduler] persisted {n} new drushim jobs")
-        else:
-            logger.info("[scheduler] drushim disabled — skipping")
+        # ── Parallel source scraping ──────────────────────────────────────────
+        # All three sources run concurrently — each is I/O bound (HTTP via ScraperAPI).
+        drushim_jobs, linkedin_jobs, techmap_jobs = await asyncio.gather(
+            _scrape_drushim(user, source_cfg, cache, category, drushim_url),
+            _scrape_linkedin(user, source_cfg, cache, locations),
+            _scrape_techmap(user, source_cfg, cache),
+            return_exceptions=False,
+        )
+        # Safety: gather with return_exceptions=False will propagate — ensure lists
+        drushim_jobs = drushim_jobs if isinstance(drushim_jobs, list) else []
+        linkedin_jobs = linkedin_jobs if isinstance(linkedin_jobs, list) else []
+        techmap_jobs  = techmap_jobs  if isinstance(techmap_jobs,  list) else []
 
-        # ── LinkedIn ─────────────────────────────────────────────────────────
-        # Search each preferred location and merge results (deduplicated by job_id)
-        linkedin_jobs = []
-        fresh_linkedin = False
-        if source_cfg.get("linkedin", type("_", (), {"enabled": True})()).enabled and user.target_role:
-            from app.crypto import decrypt_field_safe
-            li_at = decrypt_field_safe(user.linkedin_li_at)
-            LINKEDIN_TOTAL_LIMIT = 20
-            # Spread the 20-job budget across locations, minimum 5 per location
-            per_loc_limit = max(5, LINKEDIN_TOTAL_LIMIT // max(len(locations), 1))
-            seen_ids: set = set()
-            li_fresh_any = False
-            li_scraper = LinkedInJobSearchScraper()
-            for location in locations:
-                li_role_key = _re.sub(r'\W+', '_', f"{user.target_role}_{location}").lower().strip('_')
-                cache_key_li = make_jobs_cache_key("linkedin", li_role_key)
-                loc_jobs = cache.get(cache_key_li)
-                if not loc_jobs:
-                    log_id = _log_fetch_start("linkedin")
-                    logger.info(f"[scheduler] linkedin scrape for user {user_id} role={user.target_role} location={location!r}")
-                    try:
-                        loc_jobs = await li_scraper.search_async(user.target_role, location, li_at=li_at, limit=per_loc_limit, years_of_experience=user.years_of_experience)
-                        if loc_jobs:
-                            cache.set(cache_key_li, loc_jobs, ttl=CACHE_TTL_ROLE)
-                            li_fresh_any = True
-                            _update_source_run("linkedin", len(loc_jobs))
-                            _log_fetch_end(log_id, "success", len(loc_jobs))
-                        else:
-                            _log_fetch_end(log_id, "success", 0)
-                    except Exception as e:
-                        logger.warning(f"[scheduler] linkedin scrape failed for user {user_id} location={location!r}: {e}")
-                        _log_fetch_end(log_id, "error", 0, str(e))
-                        loc_jobs = []
-                # Deduplicate across locations by job_id
-                for j in (loc_jobs or []):
-                    jid = j.get("job_id") or j.get("url")
-                    if jid and jid not in seen_ids:
-                        seen_ids.add(jid)
-                        linkedin_jobs.append(j)
-            fresh_linkedin = li_fresh_any
-            linkedin_jobs = linkedin_jobs[:20]  # hard cap — never exceed 20 total
-        linkedin_jobs = linkedin_jobs or []
-        for j in linkedin_jobs:
-            j.setdefault("source", "linkedin")
-
-        if fresh_linkedin and linkedin_jobs:
-            n = await _persist_scraped_jobs(linkedin_jobs, source="linkedin")
-            logger.info(f"[scheduler] persisted {n} new linkedin jobs")
-
-        # ── LinkedIn fallback: use n8n-ingested jobs when scraper is blocked ──
+        # ── LinkedIn DB fallback when live scrape returned nothing ─────────────
         if not linkedin_jobs:
             from datetime import timedelta
             from app.models import IngestJob
@@ -395,47 +476,14 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                     "source":      "linkedin",
                 })
             if rows:
-                logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from ingest_jobs fallback")
-
-        # ── TechMap ──────────────────────────────────────────────────────────
-        techmap_jobs = []
-        if source_cfg.get("techmap", type("_", (), {"enabled": False})()).enabled:
-            from app.services.techmap import fetch_for_role as techmap_fetch
-            techmap_role_key = _re.sub(r'\W+', '_', user.target_role).lower().strip('_')
-            cache_key_techmap = make_jobs_cache_key("techmap", techmap_role_key)
-            techmap_jobs = cache.get(cache_key_techmap)
-            fresh_techmap = False
-            if not techmap_jobs:
-                log_id = _log_fetch_start("techmap")
-                logger.info(f"[scheduler] techmap fetch for user {user_id} role={user.target_role}")
-                try:
-                    techmap_jobs = await techmap_fetch(user.target_role)
-                    if techmap_jobs:
-                        cache.set(cache_key_techmap, techmap_jobs, ttl=CACHE_TTL_ROLE)
-                        fresh_techmap = True
-                        _update_source_run("techmap", len(techmap_jobs))
-                        _log_fetch_end(log_id, "success", len(techmap_jobs))
-                    else:
-                        _log_fetch_end(log_id, "success", 0)
-                except Exception as e:
-                    logger.warning(f"[scheduler] techmap fetch failed for user {user_id}: {e}")
-                    _log_fetch_end(log_id, "error", 0, str(e))
-                    techmap_jobs = []
-            techmap_jobs = techmap_jobs or []
-            for j in techmap_jobs:
-                j.setdefault("source", "techmap")
-            if fresh_techmap and techmap_jobs:
-                n = await _persist_scraped_jobs(techmap_jobs, source="techmap")
-                logger.info(f"[scheduler] persisted {n} new techmap jobs")
-        else:
-            logger.info("[scheduler] techmap disabled — skipping")
+                logger.info(f"[scheduler] LinkedIn blocked — loaded {len(rows)} jobs from DB fallback")
 
         jobs = drushim_jobs + linkedin_jobs + techmap_jobs
         if not jobs:
             return None
 
-        # ── Score ────────────────────────────────────────────────────────────
-        from app.services.ai import calculate_match_score
+        # ── Batch scoring (single TF-IDF fit for all jobs) ────────────────────
+        from app.services.ai import calculate_match_scores_batch
 
         seen: set = set()
         deduped_skills = []
@@ -446,19 +494,10 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 deduped_skills.append(s)
 
         user_years_exp = getattr(user, "years_of_experience", None)
-
-        def score_job(job):
-            score, _, _ = calculate_match_score(
-                deduped_skills,
-                target_role,
-                job.get("title") or "",
-                job.get("description") or "",
-                years_of_experience=user_years_exp,
-            )
-            return score
+        scores = calculate_match_scores_batch(deduped_skills, target_role, jobs, user_years_exp)
 
         scored = sorted(
-            [{**j, "match_score": score_job(j)} for j in jobs],
+            [{**j, "match_score": scores[i][0]} for i, j in enumerate(jobs)],
             key=lambda x: x["match_score"],
             reverse=True,
         )
@@ -473,8 +512,8 @@ async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
                 "drushim":  len(drushim_jobs),
                 "techmap":  len(techmap_jobs),
             },
-            "cached_at":     datetime.utcnow().isoformat(),
-            "profile_hash":  profile_hash(user),
+            "cached_at":    datetime.utcnow().isoformat(),
+            "profile_hash": profile_hash(user),
         }
 
         cache.set(user_cache_key(user_id), result, ttl=CACHE_TTL_USER)
@@ -552,14 +591,17 @@ async def run_scheduler():
             cache.delete(user_cache_key(uid))
         logger.info(f"[scheduler] cleared top-matches cache for {len(user_ids)} users")
 
-        # Re-populate — shared role caches deduplicate scrapes across users
-        logger.info(f"[scheduler] re-populating {len(user_ids)} users...")
-        for uid in user_ids:
+        # Re-populate — all users fan out concurrently under the semaphore
+        # (MAX_CONCURRENT_SCRAPES=3 limits actual parallelism).
+        # Jitter spreads ScraperAPI bursts; users overlap under the semaphore.
+        logger.info(f"[scheduler] re-populating {len(user_ids)} users (concurrency={MAX_CONCURRENT_SCRAPES})...")
+
+        async def _refresh_user(uid: int) -> None:
+            await asyncio.sleep(random.uniform(0, 30))  # spread load
             try:
-                jitter = random.uniform(0, 30)
-                await asyncio.sleep(jitter)
                 await fetch_and_cache_top_matches(uid)
             except Exception as e:
                 logger.error(f"[scheduler] error refreshing user {uid}: {e}")
 
+        await asyncio.gather(*[_refresh_user(uid) for uid in user_ids])
         logger.info("[scheduler] daily refresh complete")
