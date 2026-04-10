@@ -55,6 +55,8 @@ const ADMIN_EMAILS = ['hirematrix.ai@gmail.com', 'saree.ali28@gmail.com', 'faizk
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, isAuthenticated, user } = useAuth();
 
+  const isAdmin = isAuthenticated && ADMIN_EMAILS.includes(user?.email?.toLowerCase());
+
   // Show loading spinner while checking auth
   if (isLoadingAuth) {
     return (
@@ -67,7 +69,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Coming soon — shown to unauthenticated visitors */}
+      {/* Coming soon — everyone except admins */}
       <Route path="/coming-soon" element={<ComingSoon />} />
 
       {/* Public routes — login kept for admin access */}
@@ -79,10 +81,10 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
-      
-      {/* Protected routes */}
+
+      {/* Protected routes — admins only until launch */}
       <Route path="/" element={
-        isAuthenticated ? (
+        isAdmin ? (
           <LayoutWrapper currentPageName={mainPageKey}>
             <MainPage />
           </LayoutWrapper>
@@ -90,27 +92,26 @@ const AuthenticatedApp = () => {
           <Navigate to="/coming-soon" replace />
         )
       } />
-      
+
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
           key={path}
           path={`/${path}`}
           element={
-            isAuthenticated ? (
+            isAdmin ? (
               <LayoutWrapper currentPageName={path}>
                 <Page />
               </LayoutWrapper>
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/coming-soon" replace />
             )
           }
         />
       ))}
-      
+
       {/* Admin routes — restricted to admin emails */}
       {(() => {
-        const isAdmin = isAuthenticated && ADMIN_EMAILS.includes(user?.email?.toLowerCase());
-        const adminEl = (el) => isAdmin ? el : <Navigate to={isAuthenticated ? "/" : "/login"} replace />;
+        const adminEl = (el) => isAdmin ? el : <Navigate to="/coming-soon" replace />;
         return <>
           <Route path="/admin" element={adminEl(<AdminLayout><AdminOverview /></AdminLayout>)} />
           <Route path="/admin/revenue" element={adminEl(<AdminLayout><AdminRevenue /></AdminLayout>)} />
