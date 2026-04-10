@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logo from '@/assets/logo.png';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://hirematrix-backend.grayglacier-5d8fe2aa.eastus2.azurecontainerapps.io';
 
@@ -37,12 +38,8 @@ export default function ComingSoon() {
       {/* Logo / Brand */}
       <div className="mb-10 text-center">
         <div className="inline-flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className="text-2xl font-bold tracking-tight">HireMateAI</span>
+          <img src={logo} alt="HireMatrix" className="h-10 w-auto" />
+          <span className="text-2xl font-bold tracking-tight">HireMatrix</span>
         </div>
         <p className="text-slate-400 text-sm uppercase tracking-widest font-medium">Your AI Job Search Assistant</p>
       </div>
@@ -107,7 +104,7 @@ export default function ComingSoon() {
         )}
       </div>
 
-      <p className="text-slate-600 text-xs mt-10">© 2026 HireMateAI · Built for the Israeli job market</p>
+      <p className="text-slate-600 text-xs mt-10">© 2026 HireMatrix · Built for the Israeli job market</p>
     </div>
   );
 }
