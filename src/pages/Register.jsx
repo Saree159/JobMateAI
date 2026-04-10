@@ -81,7 +81,7 @@ export default function Register() {
       return;
     }
 
-    regTrack.submitAttempt();
+    regTrack.submitAttempt(formData.email);
     setIsLoading(true);
 
     try {
@@ -109,7 +109,7 @@ export default function Register() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     if (e.target.name === 'email' && !firedEmail.current && e.target.value) {
       firedEmail.current = true;
-      regTrack.fieldEmail();
+      regTrack.fieldEmail(e.target.value);
     }
     if (e.target.name === 'password' && !firedPassword.current && e.target.value) {
       firedPassword.current = true;

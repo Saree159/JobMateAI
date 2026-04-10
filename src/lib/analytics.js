@@ -89,9 +89,9 @@ export function trackPublic(event, props = {}, page = null) {
 /** Registration funnel helpers — fire from Register.jsx */
 export const regTrack = {
   start: () => trackPublic("registration_start"),
-  fieldEmail: () => trackPublic("registration_field_email"),
+  fieldEmail: (email) => trackPublic("registration_field_email", { email }),
   fieldPassword: () => trackPublic("registration_field_password"),
-  submitAttempt: () => trackPublic("registration_submit_attempt"),
+  submitAttempt: (email) => trackPublic("registration_submit_attempt", { email }),
   complete: (durationSeconds) =>
     trackPublic("registration_complete", { duration_seconds: durationSeconds }),
 };

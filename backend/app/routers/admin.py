@@ -3,7 +3,7 @@ Admin statistics router.
 Returns aggregated real data for the HireMatrix admin dashboard.
 All endpoints require a valid JWT token belonging to an admin email.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text, cast, Date, extract
 from datetime import datetime, timedelta
@@ -12,7 +12,7 @@ from typing import Optional
 
 import json as _json
 from app.database import get_db
-from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, AIUsageLog, UserSession, UserEvent, SourceConfig, FetchLog
+from app.models import User, Job, JobStatus, JobAlert, Application, IngestJob, AIUsageLog, UserSession, UserEvent, UserJobFeedStatus, SourceConfig, FetchLog
 import logging
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
@@ -556,6 +556,24 @@ def admin_unblock_user(
     return {"message": f"User {user.email} has been unblocked"}
 
 
+@router.post("/users/{user_id}/set-tier")
+def admin_set_user_tier(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin),
+    tier: str = Body(..., embed=True),
+):
+    """Set a user's subscription tier (free or pro)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if tier not in ("free", "pro"):
+        raise HTTPException(status_code=400, detail="Invalid tier. Must be 'free' or 'pro'.")
+    user.subscription_tier = tier
+    db.commit()
+    return {"ok": True, "user_id": user_id, "tier": tier}
+
+
 @router.delete("/users/{user_id}")
 def admin_delete_user(
     user_id: int,
@@ -567,6 +585,11 @@ def admin_delete_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     email = user.email
+    # Delete records that lack cascade on the User side
+    db.query(UserSession).filter(UserSession.user_id == user_id).delete()
+    db.query(UserJobFeedStatus).filter(UserJobFeedStatus.user_id == user_id).delete()
+    db.query(UserEvent).filter(UserEvent.user_id == user_id).delete()
+    db.query(AIUsageLog).filter(AIUsageLog.user_id == user_id).delete()
     db.delete(user)
     db.commit()
     return {"message": f"User {email} permanently deleted"}
@@ -654,19 +677,21 @@ def behavior_stream(
         q = q.filter(UserEvent.event == event)
     rows = q.order_by(UserEvent.created_at.desc()).limit(limit).all()
 
-    return [
-        {
+    result = []
+    for ev, email, name in rows:
+        props = _json.loads(ev.properties or "{}")
+        display_email = email or props.get("email")
+        result.append({
             "id": ev.id,
             "event": ev.event,
             "page": ev.page,
-            "properties": _json.loads(ev.properties or "{}"),
+            "properties": props,
             "session_id": ev.session_id,
             "created_at": ev.created_at.isoformat(),
-            "user_email": email,
+            "user_email": display_email,
             "user_name": name,
-        }
-        for ev, email, name in rows
-    ]
+        })
+    return result
 
 
 @router.get("/behavior/per-user")
@@ -1092,6 +1117,86 @@ def _source_row(row: "SourceConfig") -> dict:
         "notes":           row.notes,
         "updated_at":      row.updated_at.isoformat() if row.updated_at else None,
     }
+
+
+@router.get("/scraperapi-account")
+def admin_scraperapi_account(_: User = Depends(verify_admin)):
+    """Fetch live ScraperAPI account stats (credit usage, limit, concurrent slots)."""
+    import os
+    import httpx
+    key = os.environ.get("SCRAPERAPI_KEY", "")
+    if not key:
+        raise HTTPException(status_code=503, detail="SCRAPERAPI_KEY not configured")
+    try:
+        resp = httpx.get(
+            "https://api.scraperapi.com/account",
+            params={"api_key": key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "request_count":              data.get("requestCount", 0),
+            "request_limit":              data.get("requestLimit", 0),
+            "concurrent_request_count":   data.get("concurrentRequestCount", 0),
+            "concurrent_request_limit":   data.get("concurrentRequestLimit", 0),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ScraperAPI error: {e}")
+
+
+@router.get("/scrape-usage")
+def admin_scrape_usage(
+    db: Session = Depends(get_db),
+    _: User = Depends(verify_admin),
+):
+    """
+    Return per-user scrape counts from the cache.
+    Reads all `scrape_count:u{user_id}:{date}` keys and joins with user info.
+    """
+    from app.services.cache import get_cache
+    cache = get_cache()
+
+    raw = cache.get_keys_with_prefix("scrape_count:u")
+    # raw = { "scrape_count:u5:2026-04-09": 2, ... }
+
+    # Parse keys into (user_id, date, count)
+    rows = []
+    user_ids_needed = set()
+    for key, count in raw.items():
+        # key format: scrape_count:u{user_id}:{YYYY-MM-DD}
+        parts = key.split(":")
+        if len(parts) >= 3:
+            try:
+                user_id = int(parts[1].lstrip("u"))
+                date = parts[2]
+                rows.append({"user_id": user_id, "date": date, "count": int(count or 0)})
+                user_ids_needed.add(user_id)
+            except (ValueError, IndexError):
+                continue
+
+    # Load user info in one query
+    users_map = {}
+    if user_ids_needed:
+        for u in db.query(User).filter(User.id.in_(user_ids_needed)).all():
+            users_map[u.id] = {"email": u.email, "full_name": u.full_name, "tier": u.subscription_tier}
+
+    # Enrich rows with user info
+    enriched = []
+    for row in rows:
+        user_info = users_map.get(row["user_id"], {})
+        enriched.append({
+            "user_id":    row["user_id"],
+            "email":      user_info.get("email", "unknown"),
+            "full_name":  user_info.get("full_name", ""),
+            "tier":       user_info.get("tier", "free"),
+            "date":       row["date"],
+            "count":      row["count"],
+        })
+
+    # Sort by date desc, then count desc
+    enriched.sort(key=lambda x: (x["date"], x["count"]), reverse=True)
+    return enriched
 
 
 _DEFAULT_SOURCES = [
