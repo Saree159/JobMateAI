@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import VerifyEmail from './pages/VerifyEmail';
@@ -72,9 +73,9 @@ const AuthenticatedApp = () => {
       {/* Coming soon — everyone except admins */}
       <Route path="/coming-soon" element={<ComingSoon />} />
 
-      {/* Public routes — login kept for admin access */}
+      {/* Public routes */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Navigate to="/coming-soon" replace />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -82,16 +83,32 @@ const AuthenticatedApp = () => {
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
 
-      {/* All app routes redirect to coming soon */}
-      <Route path="/" element={<Navigate to="/coming-soon" replace />} />
+      {/* Protected routes */}
+      <Route path="/" element={
+        isAuthenticated ? (
+          <LayoutWrapper currentPageName={mainPageKey}>
+            <MainPage />
+          </LayoutWrapper>
+        ) : (
+          <Navigate to="/login" replace />
+        )
+      } />
 
-      {Object.entries(Pages).map(([path]) => (
-        <Route key={path} path={`/${path}`} element={<Navigate to="/coming-soon" replace />} />
+      {Object.entries(Pages).map(([path, Page]) => (
+        <Route key={path} path={`/${path}`} element={
+          isAuthenticated ? (
+            <LayoutWrapper currentPageName={path}>
+              <Page />
+            </LayoutWrapper>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } />
       ))}
 
       {/* Admin routes — restricted to admin emails */}
       {(() => {
-        const adminEl = (el) => isAdmin ? el : <Navigate to="/coming-soon" replace />;
+        const adminEl = (el) => isAdmin ? el : <Navigate to={isAuthenticated ? "/" : "/login"} replace />;
         return <>
           <Route path="/admin" element={adminEl(<AdminLayout><AdminOverview /></AdminLayout>)} />
           <Route path="/admin/revenue" element={adminEl(<AdminLayout><AdminRevenue /></AdminLayout>)} />

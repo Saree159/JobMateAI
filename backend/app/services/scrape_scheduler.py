@@ -395,17 +395,40 @@ async def _scrape_techmap(user, source_cfg, cache) -> list:
         return []
 
 
+FREE_SCRAPE_LIMIT = 2  # max scrapes per day for free-tier users
+
 async def _fetch_and_cache_top_matches_inner(user_id: int) -> Optional[dict]:
     """Inner implementation — called under the semaphore."""
     from app.database import SessionLocal
-    from app.models import User
+    from app.models import User, UsageQuota
     from app.services.cache import get_cache
+    from datetime import date as _date
 
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user or not user.target_role:
             return None
+
+        # ── Daily scrape quota for free users ────────────────────────────────
+        if (user.subscription_tier or "free") == "free":
+            today = _date.today().isoformat()
+            quota_row = (
+                db.query(UsageQuota)
+                .filter(UsageQuota.user_id == user_id, UsageQuota.feature == "scrape", UsageQuota.date == today)
+                .with_for_update()
+                .first()
+            )
+            used = quota_row.count if quota_row else 0
+            if used >= FREE_SCRAPE_LIMIT:
+                logger.info(f"[scheduler] user {user_id} hit free scrape limit ({FREE_SCRAPE_LIMIT}/day) — skipping")
+                return None
+            # Increment counter
+            if quota_row:
+                quota_row.count += 1
+            else:
+                db.add(UsageQuota(user_id=user_id, feature="scrape", date=today, count=1))
+            db.commit()
 
         user_skills = user.skills_list
         target_role = (user.target_role or "").lower()
