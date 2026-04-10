@@ -128,7 +128,8 @@ def root():
 def health_check():
     """Health check endpoint for monitoring — checks DB and Redis."""
     from app.database import SessionLocal
-    from app.services.cache import cache
+    from app.services.cache import get_cache
+    cache = get_cache()
     checks = {}
 
     # DB check
