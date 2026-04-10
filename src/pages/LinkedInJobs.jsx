@@ -58,11 +58,9 @@ export default function LinkedInJobs() {
       title: job.title,
       company: job.company || 'Unknown',
       location: job.location || '',
-      description: job.description || '',
-      url: job.url || '',
-      job_type: job.job_type || '',
-      status: 'saved',
-      source: 'linkedin',
+      description: job.description || job.title,
+      apply_url: job.url || job.apply_url || '',
+      ingest_job_id: job.ingest_job_id ?? null,
     }),
     onSuccess: (saved, job) => {
       setSavedUrls(prev => new Set([...prev, job.url]));

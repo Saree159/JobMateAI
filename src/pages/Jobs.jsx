@@ -311,12 +311,9 @@ export default function Jobs() {
       title: job.title,
       company: job.company || "Unknown",
       location: job.location || "",
-      description: job.description || "",
-      url: job.url || "",
-      job_type: job.job_type || "",
-      status: "interesting",
-      source: job.source || "other",
-      match_score: job.match_score ?? null,
+      description: job.description || job.title,
+      apply_url: job.url || job.apply_url || "",
+      ingest_job_id: job.ingest_job_id ?? null,
     }),
     onMutate: async (job) => {
       // Optimistic: mark as saved instantly
