@@ -73,9 +73,9 @@ const AuthenticatedApp = () => {
       {/* Coming soon — everyone except admins */}
       <Route path="/coming-soon" element={<ComingSoon />} />
 
-      {/* Public routes */}
+      {/* Public routes — login kept for admin access */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<Navigate to="/coming-soon" replace />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -83,27 +83,11 @@ const AuthenticatedApp = () => {
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
 
-      {/* Protected routes */}
-      <Route path="/" element={
-        isAuthenticated ? (
-          <LayoutWrapper currentPageName={mainPageKey}>
-            <MainPage />
-          </LayoutWrapper>
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      } />
+      {/* All app routes → coming soon for everyone */}
+      <Route path="/" element={<Navigate to="/coming-soon" replace />} />
 
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route key={path} path={`/${path}`} element={
-          isAuthenticated ? (
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } />
+      {Object.entries(Pages).map(([path]) => (
+        <Route key={path} path={`/${path}`} element={<Navigate to="/coming-soon" replace />} />
       ))}
 
       {/* Admin routes — restricted to admin emails */}
