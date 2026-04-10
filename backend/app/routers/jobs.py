@@ -200,16 +200,25 @@ def create_job(
             detail="Not authorized to create jobs for this user",
         )
 
+    # Resolve source from linked IngestJob if available
+    source = None
+    if job_data.ingest_job_id:
+        from app.models import IngestJob
+        ingest = db.query(IngestJob.source).filter(IngestJob.id == job_data.ingest_job_id).first()
+        if ingest:
+            source = ingest.source
+
     # Create job — optionally linked back to its IngestJob source
     db_job = Job(
         user_id=user_id,
-        ingest_job_id=job_data.ingest_job_id,  # may be None for manually-added jobs
+        ingest_job_id=job_data.ingest_job_id,
         title=job_data.title,
         company=job_data.company,
         location=job_data.location,
         description=job_data.description,
         apply_url=job_data.apply_url,
         status=JobStatus.SAVED,
+        source=source,
     )
     
     db.add(db_job)
