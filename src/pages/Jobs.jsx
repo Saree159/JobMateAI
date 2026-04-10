@@ -306,7 +306,7 @@ export default function Jobs() {
     },
   });
 
-  const saveJobMutation = useMutation({
+  const saveJobMutation = useMutation({ // v2
     mutationFn: (job) => jobApi.create(user.id, {
       title: job.title,
       company: job.company || "Unknown",
