@@ -441,7 +441,7 @@ export default function Jobs() {
 
           {discoverLoading || discoverRefetching ? (
             <div className="rounded-2xl border border-blue-100 bg-blue-50/40 overflow-hidden">
-              <ScraperLoader message="Finding your top job matches…" />
+              <ScraperLoader />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 px-6 pb-6 opacity-30 pointer-events-none select-none">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="h-36 rounded-xl bg-white border border-gray-200 animate-pulse" />

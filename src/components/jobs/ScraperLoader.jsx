@@ -1,25 +1,34 @@
 import React, { useEffect, useState } from "react";
 
-const MESSAGES = [
-  "Crawling job boards…",
-  "Scanning listings…",
-  "Sifting through results…",
-  "Fetching fresh data…",
-  "Almost there…",
-  "Analyzing matches…",
+const STAGES = [
+  { icon: "🔍", text: "Connecting to job boards…",          sub: "LinkedIn · Drushim · TechMap" },
+  { icon: "📡", text: "Scanning fresh listings…",            sub: "Filtering by your role & location" },
+  { icon: "🧠", text: "Running AI match scoring…",           sub: "Comparing your skills to each job" },
+  { icon: "📊", text: "Ranking top matches…",                sub: "Sorting by relevance & fit" },
+  { icon: "🎯", text: "Personalizing your feed…",            sub: "Based on your profile & preferences" },
+  { icon: "✨", text: "Almost ready…",                       sub: "Applying final filters" },
+  { icon: "💼", text: "Pulling in Israeli market data…",     sub: "Tel Aviv · Herzliya · Remote IL" },
+  { icon: "🔗", text: "Fetching job descriptions…",          sub: "Getting the full details for each role" },
 ];
 
 export default function ScraperLoader({ message }) {
-  const [msgIdx, setMsgIdx] = useState(0);
+  const [stageIdx, setStageIdx] = useState(0);
   const [tick, setTick] = useState(0);
+  const [fadeIn, setFadeIn] = useState(true);
 
   useEffect(() => {
     const msgTimer = setInterval(() => {
-      setMsgIdx((i) => (i + 1) % MESSAGES.length);
-    }, 2200);
+      setFadeIn(false);
+      setTimeout(() => {
+        setStageIdx((i) => (i + 1) % STAGES.length);
+        setFadeIn(true);
+      }, 300);
+    }, 2800);
     const tickTimer = setInterval(() => setTick((t) => t + 1), 80);
     return () => { clearInterval(msgTimer); clearInterval(tickTimer); };
   }, []);
+
+  const stage = STAGES[stageIdx];
 
   return (
     <div className="flex flex-col items-center justify-center py-16 select-none w-full">
@@ -55,21 +64,41 @@ export default function ScraperLoader({ message }) {
       </div>
 
       {/* Status text */}
-      <div className="mt-2 text-center space-y-1">
-        <p className="text-sm font-medium text-blue-600 animate-pulse">
-          {message || MESSAGES[msgIdx]}
-        </p>
+      <div className="mt-2 text-center space-y-1 min-h-[56px]" style={{ transition: 'opacity 0.3s', opacity: fadeIn ? 1 : 0 }}>
+        {message ? (
+          <p className="text-sm font-medium text-blue-600 animate-pulse">{message}</p>
+        ) : (
+          <>
+            <p className="text-sm font-semibold text-blue-700">
+              <span className="mr-1.5">{stage.icon}</span>{stage.text}
+            </p>
+            <p className="text-xs text-blue-400/80">{stage.sub}</p>
+          </>
+        )}
         <div className="flex items-center justify-center gap-1 mt-2">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
               className="w-1.5 h-1.5 rounded-full bg-blue-400"
-              style={{
-                animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
-              }}
+              style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
             />
           ))}
         </div>
+      </div>
+
+      {/* Stage progress dots */}
+      <div className="flex items-center gap-1.5 mt-3">
+        {STAGES.map((_, i) => (
+          <div
+            key={i}
+            className="rounded-full transition-all duration-500"
+            style={{
+              width: i === stageIdx ? 16 : 5,
+              height: 5,
+              backgroundColor: i === stageIdx ? '#3b82f6' : i < stageIdx ? '#93c5fd' : '#e2e8f0',
+            }}
+          />
+        ))}
       </div>
 
       <style>{`
