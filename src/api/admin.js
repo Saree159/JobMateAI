@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'; // v2
 
 function getAuthHeaders() {
   const token = localStorage.getItem('hirematex_auth_token');
@@ -60,9 +60,19 @@ export const adminApi = {
   getBehaviorStream: (limit = 60) => get(`/api/admin/behavior/stream?limit=${limit}`),
   getBehaviorPerUser: (days = 30) => get(`/api/admin/behavior/per-user?days=${days}`),
 
+  getScrapeUsage:       () => get('/api/admin/scrape-usage'),
+  getScraperApiAccount: () => get('/api/admin/scraperapi-account'),
+
   // User moderation
   blockUser:   (userId) => post(`/api/admin/users/${userId}/block`),
   unblockUser: (userId) => post(`/api/admin/users/${userId}/unblock`),
+  setUserTier: (userId, tier) => {
+    return fetch(`${API_BASE_URL}/api/admin/users/${userId}/set-tier`, {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier }),
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  },
   deleteUser:  (userId) => {
     return fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       method: 'DELETE',
