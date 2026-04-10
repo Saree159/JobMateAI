@@ -164,12 +164,8 @@ class Job(Base):
     missing_skills = Column(Text, nullable=True)   # comma-separated missing skills
     source = Column(String(50), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    __table_args__ = (
-        __import__('sqlalchemy').Index('ix_jobs_user_created', 'user_id', 'created_at'),
-    )
 
     # Relationships
     user = relationship("User", back_populates="jobs")
