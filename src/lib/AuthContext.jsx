@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { userApi } from '@/api/jobmate';
+import { userApi, jobApi } from '@/api/jobmate';
 import { toast } from 'sonner';
+import { queryClientInstance } from '@/lib/query-client';
 
 const AuthContext = createContext();
 
@@ -64,7 +65,15 @@ export const AuthProvider = ({ children }) => {
       const userId = extractUserIdFromToken(response.access_token);
       
       if (userId) {
-        const userData = await userApi.getById(userId);
+        // Fire user fetch and jobs prefetch in parallel
+        const [userData] = await Promise.all([
+          userApi.getById(userId),
+          queryClientInstance.prefetchQuery({
+            queryKey: ['jobs', userId],
+            queryFn: () => jobApi.listByUser(userId),
+            staleTime: 5 * 60 * 1000,
+          }),
+        ]);
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         setUser(userData);
         setIsAuthenticated(true);
