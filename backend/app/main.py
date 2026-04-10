@@ -20,9 +20,20 @@ from app.routers import linkedin_auth
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: init DB, start background scheduler, clean up on exit."""
+    import asyncio, concurrent.futures
     print("Starting JobMate AI Backend...")
-    init_db()
-    print("Database initialized")
+    loop = asyncio.get_event_loop()
+    try:
+        # Run sync DB init in a thread so it cannot block the event loop
+        await asyncio.wait_for(
+            loop.run_in_executor(None, init_db),
+            timeout=30,
+        )
+        print("Database initialized")
+    except asyncio.TimeoutError:
+        print("WARNING: Database init timed out — continuing without full migration")
+    except Exception as e:
+        print(f"WARNING: Database init error: {e} — continuing")
     print(f"Server running on http://{settings.host}:{settings.port}")
     print(f"API docs available at http://localhost:{settings.port}/docs")
 
