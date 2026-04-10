@@ -1147,56 +1147,35 @@ def admin_scraperapi_account(_: User = Depends(verify_admin)):
 
 @router.get("/scrape-usage")
 def admin_scrape_usage(
+    days: int = 30,
     db: Session = Depends(get_db),
     _: User = Depends(verify_admin),
 ):
-    """
-    Return per-user scrape counts from the cache.
-    Reads all `scrape_count:u{user_id}:{date}` keys and joins with user info.
-    """
-    from app.services.cache import get_cache
-    cache = get_cache()
+    """Return per-user scrape counts from UsageQuota DB table."""
+    from app.models import UsageQuota
+    from datetime import date, timedelta
 
-    raw = cache.get_keys_with_prefix("scrape_count:u")
-    # raw = { "scrape_count:u5:2026-04-09": 2, ... }
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
 
-    # Parse keys into (user_id, date, count)
-    rows = []
-    user_ids_needed = set()
-    for key, count in raw.items():
-        # key format: scrape_count:u{user_id}:{YYYY-MM-DD}
-        parts = key.split(":")
-        if len(parts) >= 3:
-            try:
-                user_id = int(parts[1].lstrip("u"))
-                date = parts[2]
-                rows.append({"user_id": user_id, "date": date, "count": int(count or 0)})
-                user_ids_needed.add(user_id)
-            except (ValueError, IndexError):
-                continue
+    rows = (
+        db.query(UsageQuota, User.email, User.full_name, User.subscription_tier)
+        .outerjoin(User, UsageQuota.user_id == User.id)
+        .filter(UsageQuota.feature == "scrape", UsageQuota.date >= cutoff)
+        .order_by(UsageQuota.date.desc(), UsageQuota.count.desc())
+        .all()
+    )
 
-    # Load user info in one query
-    users_map = {}
-    if user_ids_needed:
-        for u in db.query(User).filter(User.id.in_(user_ids_needed)).all():
-            users_map[u.id] = {"email": u.email, "full_name": u.full_name, "tier": u.subscription_tier}
-
-    # Enrich rows with user info
-    enriched = []
-    for row in rows:
-        user_info = users_map.get(row["user_id"], {})
-        enriched.append({
-            "user_id":    row["user_id"],
-            "email":      user_info.get("email", "unknown"),
-            "full_name":  user_info.get("full_name", ""),
-            "tier":       user_info.get("tier", "free"),
-            "date":       row["date"],
-            "count":      row["count"],
-        })
-
-    # Sort by date desc, then count desc
-    enriched.sort(key=lambda x: (x["date"], x["count"]), reverse=True)
-    return enriched
+    return [
+        {
+            "user_id":   q.user_id,
+            "email":     email or "unknown",
+            "full_name": full_name or "",
+            "tier":      tier or "free",
+            "date":      q.date,
+            "count":     q.count,
+        }
+        for q, email, full_name, tier in rows
+    ]
 
 
 _DEFAULT_SOURCES = [

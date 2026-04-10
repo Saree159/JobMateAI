@@ -130,7 +130,7 @@ export default function ScrapeUsagePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Scrape Usage</h1>
-          <p className="text-gray-400 text-sm mt-1">Daily job refresh counts per user (live from cache, 25h window)</p>
+          <p className="text-gray-400 text-sm mt-1">Daily job refresh counts per user · last 30 days</p>
         </div>
         <button
           onClick={load}
@@ -261,8 +261,7 @@ export default function ScrapeUsagePage() {
       </div>
 
       <p className="text-xs text-gray-600 text-center">
-        Data is read from the live cache — counts reset automatically after 25 hours.
-        Pro users have no scrape limit.
+        Data sourced from DB · resets daily at midnight UTC · Pro users have no scrape limit.
       </p>
     </div>
   );
