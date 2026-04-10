@@ -82,31 +82,11 @@ const AuthenticatedApp = () => {
       <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="/payment-cancel" element={<PaymentCancel />} />
 
-      {/* Protected routes — admins only until launch */}
-      <Route path="/" element={
-        isAdmin ? (
-          <LayoutWrapper currentPageName={mainPageKey}>
-            <MainPage />
-          </LayoutWrapper>
-        ) : (
-          <Navigate to="/coming-soon" replace />
-        )
-      } />
+      {/* All app routes redirect to coming soon */}
+      <Route path="/" element={<Navigate to="/coming-soon" replace />} />
 
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            isAdmin ? (
-              <LayoutWrapper currentPageName={path}>
-                <Page />
-              </LayoutWrapper>
-            ) : (
-              <Navigate to="/coming-soon" replace />
-            )
-          }
-        />
+      {Object.entries(Pages).map(([path]) => (
+        <Route key={path} path={`/${path}`} element={<Navigate to="/coming-soon" replace />} />
       ))}
 
       {/* Admin routes — restricted to admin emails */}
